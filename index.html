@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paella - Sistema de Pedidos</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f0eb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 500px;
+        }
+        h1 {
+            color: #D85A30;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #555;
+            margin-bottom: 30px;
+        }
+        .btn {
+            display: inline-block;
+            margin: 10px;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.2s;
+        }
+        .btn-primary {
+            background: #D85A30;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #b94722;
+            transform: scale(1.02);
+        }
+        .btn-secondary {
+            background: #2c3e50;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #1e2b38;
+        }
+        .ip-info {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+        .ip-info strong {
+            color: #D85A30;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🥘 Bienvenid@ a La Paella Mérida</h1>
+        <p>Sistema de pedidos y administración</p>
+        <a href="cotizador1.1.html" class="btn btn-primary">📝 Nuevo Pedido</a>
+        <a href="admin.html" class="btn btn-secondary">📊 Panel Administración</a>
+        <div class="ip-info">
+            💡 Desde otro dispositivo (celular, otra compu) usa:<br>
+            <strong id="ipLocal">cargando...</strong><br>
+            <small>ej: http://192.168.x.x:3001</small>
+        </div>
+    </div>
+    <script>
+        fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('ipLocal').innerText = data.ip;
+            })
+            .catch(() => {
+                document.getElementById('ipLocal').innerText = 'ver en la consola del servidor';
+            });
+    </script>
+</body>
+</html>

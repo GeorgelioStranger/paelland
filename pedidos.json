@@ -1,0 +1,226 @@
+[
+  {
+    "id": 1775716419537,
+    "nombre": "Arthur Jasso",
+    "telefono": "+52 1 55 3222 2778",
+    "tipo": "evento",
+    "itemsDetalle": [
+      {
+        "nombre": "Paella mar y tierra",
+        "personas": 10,
+        "precio_por_persona": 200,
+        "subtotal": 2000
+      },
+      {
+        "nombre": "Paella negra",
+        "personas": 0,
+        "precio_por_persona": 200,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Paella de carnes",
+        "personas": 0,
+        "precio_por_persona": 180,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Fideuá",
+        "personas": 0,
+        "precio_por_persona": 200,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Vegetariana",
+        "personas": 0,
+        "precio_por_persona": 170,
+        "subtotal": 0
+      }
+    ],
+    "tipoEntrega": "domicilio",
+    "direccion": "Parque Central, Olivo 6",
+    "horaEntrega": "14:30",
+    "fechaEntrega": "2026-04-09",
+    "total": 2050,
+    "status": "Entregado",
+    "createdAt": "2026-04-09T06:33:39.537Z"
+  },
+  {
+    "id": 1775716455839,
+    "nombre": "Nacho Arandilla",
+    "telefono": "+52 1 999 955 0981",
+    "tipo": "evento",
+    "itemsDetalle": [
+      {
+        "nombre": "Paella mar y tierra",
+        "personas": 10,
+        "precio_por_persona": 200,
+        "subtotal": 2000
+      },
+      {
+        "nombre": "Paella negra",
+        "personas": 0,
+        "precio_por_persona": 200,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Paella de carnes",
+        "personas": 0,
+        "precio_por_persona": 180,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Fideuá",
+        "personas": 0,
+        "precio_por_persona": 200,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Vegetariana",
+        "personas": 0,
+        "precio_por_persona": 170,
+        "subtotal": 0
+      }
+    ],
+    "tipoEntrega": "pickup",
+    "direccion": "",
+    "horaEntrega": "12:15",
+    "fechaEntrega": "2026-04-09",
+    "total": 2000,
+    "status": "Entregado",
+    "createdAt": "2026-04-09T06:34:15.839Z"
+  },
+  {
+    "id": 1775717835935,
+    "nombre": "Boda Vale y Pablo ",
+    "telefono": "+503 7844 7095",
+    "tipo": "evento",
+    "itemsDetalle": [
+      {
+        "nombre": "Paella mar y tierra",
+        "personas": 70,
+        "precio_por_persona": 200,
+        "subtotal": 14000
+      },
+      {
+        "nombre": "Paella negra",
+        "personas": 0,
+        "precio_por_persona": 200,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Paella de carnes",
+        "personas": 70,
+        "precio_por_persona": 180,
+        "subtotal": 12600
+      },
+      {
+        "nombre": "Fideuá",
+        "personas": 0,
+        "precio_por_persona": 200,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Vegetariana",
+        "personas": 0,
+        "precio_por_persona": 170,
+        "subtotal": 0
+      }
+    ],
+    "tipoEntrega": "domicilio",
+    "direccion": "Progreso km 27",
+    "horaEntrega": "19:00",
+    "fechaEntrega": "2026-04-11",
+    "total": 27400,
+    "status": "Pendiente",
+    "createdAt": "2026-04-09T06:57:15.935Z"
+  },
+  {
+    "id": 1775718132275,
+    "nombre": "Alejandra Fitzmaurice",
+    "telefono": "+52 1 999 738 7211",
+    "tipo": "evento",
+    "itemsDetalle": [
+      {
+        "nombre": "Paella mar y tierra",
+        "personas": 0,
+        "precio_por_persona": 200,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Paella negra",
+        "personas": 8,
+        "precio_por_persona": 200,
+        "subtotal": 1600
+      },
+      {
+        "nombre": "Paella de carnes",
+        "personas": 0,
+        "precio_por_persona": 180,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Fideuá",
+        "personas": 0,
+        "precio_por_persona": 200,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Vegetariana",
+        "personas": 0,
+        "precio_por_persona": 170,
+        "subtotal": 0
+      }
+    ],
+    "tipoEntrega": "pickup",
+    "direccion": "",
+    "horaEntrega": "13:00",
+    "fechaEntrega": "2026-04-09",
+    "total": 1600,
+    "status": "Entregado",
+    "createdAt": "2026-04-09T07:02:12.275Z"
+  },
+  {
+    "id": 1775760533142,
+    "nombre": "Roberto Muñoz",
+    "telefono": "+52 1 999 292 3812",
+    "tipo": "evento",
+    "itemsDetalle": [
+      {
+        "nombre": "Paella mar y tierra",
+        "personas": 30,
+        "precio_por_persona": 200,
+        "subtotal": 6000
+      },
+      {
+        "nombre": "Paella negra",
+        "personas": 0,
+        "precio_por_persona": 200,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Paella de carnes",
+        "personas": 0,
+        "precio_por_persona": 180,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Fideuá",
+        "personas": 0,
+        "precio_por_persona": 200,
+        "subtotal": 0
+      },
+      {
+        "nombre": "Vegetariana",
+        "personas": 0,
+        "precio_por_persona": 170,
+        "subtotal": 0
+      }
+    ],
+    "tipoEntrega": "domicilio",
+    "direccion": "Privada Las Fincas, Casa Club",
+    "horaEntrega": "11:30",
+    "fechaEntrega": "2026-04-11",
+    "total": 6080,
+    "createdAt": "2026-04-09T18:48:53.142Z"
+  }
+]

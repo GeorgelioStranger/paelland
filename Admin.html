@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Paella - Autenticado</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f4f7fc;
+    margin: 0;
+    padding: 20px;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  h1 { font-size: 1.8rem; color: #D85A30; margin-bottom: 0.25rem; }
+  .subtitulo { color: #5a6874; margin-bottom: 1.5rem; border-left: 3px solid #D85A30; padding-left: 12px; }
+  .filtros {
+    background: white;
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+  }
+  .filtro-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 150px;
+  }
+  .filtro-group label { font-size: 0.75rem; font-weight: 600; color: #4b5563; text-transform: uppercase; }
+  .filtro-group input, .filtro-group select {
+    padding: 8px 12px;
+    border-radius: 40px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.85rem;
+    background: #f9fafb;
+  }
+  .btn-filtro {
+    background: #D85A30;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 40px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-limpiar { background: #6c757d; }
+  .btn-success { background: #28a745; }
+  .btn-excel { background: #1e6f3f; }
+  .tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 40px;
+    cursor: pointer;
+    color: #4a5b6e;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { background: #D85A30; color: white; box-shadow: 0 2px 6px rgba(216,90,48,0.3); }
+  .dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .card {
+    background: white;
+    border-radius: 20px;
+    padding: 16px 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    text-align: center;
+  }
+  .card h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: #5e6f8d; margin: 0 0 8px 0; }
+  .card .value { font-size: 2rem; font-weight: 800; color: #1e293b; }
+  .stats-container {
+    background: white;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  .resumen-diario {
+    background: #fef9f5;
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #f0e4db;
+  }
+  .resumen-diario h3 { margin: 0 0 16px 0; color: #D85A30; }
+  .resumen-fecha { margin-bottom: 16px; }
+  .resumen-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 12px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .stat-card h4 { margin: 0 0 8px 0; font-size: 0.85rem; color: #4b5563; }
+  .stat-card .big-number { font-size: 1.8rem; font-weight: bold; color: #D85A30; }
+  .comparacion {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .comparacion-item {
+    flex: 1;
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 12px;
+    text-align: center;
+  }
+  .graficas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+    margin-top: 20px;
+  }
+  .grafica-card {
+    background: #f9fafb;
+    border-radius: 20px;
+    padding: 20px;
+  }
+  .grafica-card h3 { margin: 0 0 16px 0; font-size: 1.2rem; color: #1e293b; text-align: center; }
+  canvas { max-height: 300px; width: 100%; }
+  .fecha {
+    margin-top: 28px;
+    background: #eef2f5;
+    border-radius: 16px;
+    padding: 12px 18px;
+  }
+  .fecha h2 { margin: 0 0 8px 0; font-size: 1.3rem; color: #0f2b3d; }
+  .pedido {
+    background: white;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border-left: 6px solid #D85A30;
+  }
+  .pedido strong { font-size: 1.1rem; color: #D85A30; }
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-left: 12px;
+  }
+  .pendiente { background: #ffedd5; color: #9b4a0c; }
+  .en-proceso { background: #dbeafe; color: #1e3a8a; }
+  .entregado { background: #dcfce7; color: #166534; }
+  .detalle-lista {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 8px 16px;
+    margin-top: 12px;
+    font-size: 0.85rem;
+  }
+  .detalle-lista ul { margin: 6px 0 0 18px; }
+  button {
+    background: none;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 40px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-right: 8px;
+    margin-top: 12px;
+  }
+  .btn-proceso { background: #facc15; color: #2c2b26; }
+  .btn-entregado { background: #22c55e; color: white; }
+  .btn-eliminar { background: #ef4444; color: white; }
+  .empty-message {
+    text-align: center;
+    background: white;
+    padding: 40px;
+    border-radius: 32px;
+    color: #6c7a91;
+  }
+  .cliente-card {
+    background: white;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-left: 6px solid #D85A30;
+    cursor: pointer;
+  }
+  .cliente-card:hover { transform: scale(0.99); background: #fef9f5; }
+  .cliente-header { display: flex; justify-content: space-between; flex-wrap: wrap; margin-bottom: 12px; }
+  .cliente-nombre { font-size: 1.3rem; font-weight: bold; color: #D85A30; }
+  .cliente-telefono { color: #5a6874; font-size: 0.9rem; }
+  .cliente-stats { display: flex; gap: 20px; margin: 12px 0; flex-wrap: wrap; }
+  .stat { background: #f8fafc; padding: 6px 12px; border-radius: 40px; font-size: 0.85rem; }
+  .pedidos-lista { margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+  .pedido-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.85rem;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pedido-fecha { color: #475569; font-weight: 500; }
+  .pedido-total { font-weight: bold; color: #D85A30; }
+  .ver-detalle { cursor: pointer; color: #3b82f6; text-decoration: underline; font-size: 0.75rem; }
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  .modal-content {
+    background: white;
+    border-radius: 24px;
+    padding: 24px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 80%;
+    overflow-y: auto;
+  }
+  .close-modal { float: right; cursor: pointer; font-size: 1.5rem; }
+  .historial-item { border-bottom: 1px solid #e2e8f0; padding: 12px 0; }
+  .form-venta-directa {
+    background: white;
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+  }
+  .form-group {
+    flex: 1;
+    min-width: 150px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 4px;
+  }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 40px;
+    border: 1px solid #cbd5e1;
+  }
+  .producto-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .producto-item select, .producto-item input { flex: 1; min-width: 100px; }
+  .btn-agregar { background: #D85A30; color: white; margin-top: 8px; }
+  @media (max-width: 700px) {
+    .graficas { grid-template-columns: 1fr; }
+    .filtros { flex-direction: column; align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🥘 Panel de Administración</h1>
+  <div class="subtitulo">La Paella Mérida</div>
+
+  <!-- Filtros -->
+  <div class="filtros">
+    <div class="filtro-group"><label>🔍 Cliente / Teléfono</label><input type="text" id="filtroTexto" placeholder="Nombre o teléfono..."></div>
+    <div class="filtro-group"><label>📅 Desde</label><input type="date" id="filtroFechaDesde"></div>
+    <div class="filtro-group"><label>📅 Hasta</label><input type="date" id="filtroFechaHasta"></div>
+    <div class="filtro-group"><label>🍽 Tipo</label><select id="filtroTipo"><option value="">Todos</option><option value="kilo">Kilo</option><option value="evento">Evento</option><option value="venta_directa">Venta directa</option></select></div>
+    <div class="filtro-group"><label>📌 Estado</label><select id="filtroEstado"><option value="">Todos</option><option value="Pendiente">Pendiente</option><option value="En proceso">En proceso</option><option value="Entregado">Entregado</option></select></div>
+    <div class="filtro-group"><button class="btn-filtro" id="btnAplicarFiltros">Aplicar filtros</button><button class="btn-filtro btn-limpiar" id="btnLimpiarFiltros">Limpiar</button><button class="btn-filtro btn-excel" id="btnExportarCSV">📎 Exportar CSV</button></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="ventasdirectas">🏪 Ventas directas</button>
+    <button class="tab-btn" data-tab="activos">📋 Pedidos activos</button>
+    <button class="tab-btn" data-tab="historial">📦 Historial entregados</button>
+    <button class="tab-btn" data-tab="estadisticas">📊 Estadísticas</button>
+    <button class="tab-btn" data-tab="clientes">👥 Clientes</button>
+  </div>
+
+  <div id="tab-ventasdirectas" class="tab-content">
+    <div class="form-venta-directa">
+      <h3>Registrar venta en local</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Cliente (opcional)</label><input type="text" id="vd-cliente" placeholder="Nombre"></div>
+        <div class="form-group"><label>Teléfono (opcional)</label><input type="text" id="vd-telefono" placeholder="Teléfono"></div>
+        <div class="form-group"><label>Fecha de venta</label><input type="date" id="vd-fecha" value=""></div>
+      </div>
+      <div id="vd-productos-container"></div>
+      <button class="btn-agregar" id="vd-agregar-producto">+ Agregar producto</button>
+      <div class="form-row" style="margin-top:16px;">
+        <div class="form-group"><label>Total de la venta ($)</label><input type="number" id="vd-total" step="0.01" placeholder="Total"></div>
+        <div class="form-group"><label>Notas (opcional)</label><input type="text" id="vd-notas" placeholder="Notas"></div>
+        <div class="form-group"><button class="btn-filtro btn-success" id="vd-guardar">💾 Guardar venta directa</button></div>
+      </div>
+    </div>
+    <div><h3>Historial de ventas directas</h3><div id="listaVentasDirectas"></div></div>
+  </div>
+
+  <div id="tab-activos" class="tab-content" style="display:none;">
+    <div class="dashboard">
+      <div class="card"><h3>💰 Ventas totales (entregados)</h3><div class="value" id="totalVentas">$0</div></div>
+      <div class="card"><h3>📦 Pedidos activos</h3><div class="value" id="totalActivos">0</div></div>
+      <div class="card"><h3>📈 Ticket promedio (entregados)</h3><div class="value" id="promedio">$0</div></div>
+      <div class="card"><h3>✅ Entregados totales</h3><div class="value" id="totalEntregados">0</div></div>
+    </div>
+    <div id="listaActivos"></div>
+  </div>
+
+  <div id="tab-historial" class="tab-content" style="display:none;"><div id="listaHistorial"></div></div>
+
+  <div id="tab-estadisticas" class="tab-content" style="display:none;">
+    <div class="stats-container">
+      <div class="resumen-diario">
+        <h3>📅 Resumen del día (comparativa: pedidos vs ventas directas)</h3>
+        <div class="resumen-fecha"><label>Selecciona fecha: </label><input type="date" id="resumenFecha" value=""></div>
+        <div id="resumenStats"></div>
+      </div>
+      <div class="graficas">
+        <div class="grafica-card"><h3>💰 Ventas por día (entregados)</h3><canvas id="chartVentas"></canvas></div>
+        <div class="grafica-card"><h3>📦 Pedidos entregados por día</h3><canvas id="chartPedidos"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-clientes" class="tab-content" style="display:none;"><div id="listaClientes"></div></div>
+</div>
+
+<!-- Modales -->
+<div id="modalDetalle" class="modal"><div class="modal-content"><span class="close-modal" onclick="cerrarModal()">&times;</span><div id="modal-body"></div></div></div>
+<div id="modalHistorialCliente" class="modal"><div class="modal-content"><span class="close-modal" onclick="cerrarModalHistorial()">&times;</span><div id="modal-historial-body"></div></div></div>
+
+<script>
+  // ===================== AUTENTICACIÓN =====================
+  const AUTH_TOKEN_KEY = 'auth_token';
+  let authToken = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!authToken) {
+    const pwd = prompt('🔐 Panel protegido. Ingresa la contraseña:');
+    if (pwd) {
+      fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+          location.reload();
+        } else {
+          alert('Contraseña incorrecta');
+          location.href = '/';
+        }
+      })
+      .catch(() => {
+        alert('Error de conexión con el servidor');
+        location.href = '/';
+      });
+    } else {
+      location.href = '/';
+    }
+    throw new Error('No autenticado');
+  }
+
+  // Función para hacer fetch con el token automáticamente
+  function authFetch(url, options = {}) {
+    options.headers = options.headers || {};
+    options.headers['Authorization'] = `Bearer ${authToken}`;
+    return fetch(url, options);
+  }
+
+  // ===================== RESTO DEL CÓDIGO =====================
+  let todosPedidos = [];
+  let chartVentas = null, chartPedidos = null;
+  let filtros = { texto: '', desde: '', hasta: '', tipo: '', estado: '' };
+  let productosVentaDirecta = [];
+
+  function getEntregados() { return todosPedidos.filter(p => p.status === 'Entregado'); }
+
+  function aplicarFiltrosAPedidos(pedidos) {
+    return pedidos.filter(p => {
+      if (filtros.texto && !`${p.nombre} ${p.telefono}`.toLowerCase().includes(filtros.texto.toLowerCase())) return false;
+      if (filtros.desde && p.fechaEntrega && p.fechaEntrega < filtros.desde) return false;
+      if (filtros.hasta && p.fechaEntrega && p.fechaEntrega > filtros.hasta) return false;
+      if (filtros.tipo && p.tipo !== filtros.tipo) return false;
+      if (filtros.estado && p.status !== filtros.estado) return false;
+      return true;
+    });
+  }
+
+  function actualizarFiltrosDesdeUI() {
+    filtros.texto = document.getElementById('filtroTexto').value;
+    filtros.desde = document.getElementById('filtroFechaDesde').value;
+    filtros.hasta = document.getElementById('filtroFechaHasta').value;
+    filtros.tipo = document.getElementById('filtroTipo').value;
+    filtros.estado = document.getElementById('filtroEstado').value;
+  }
+  function limpiarFiltrosUI() {
+    document.getElementById('filtroTexto').value = '';
+    document.getElementById('filtroFechaDesde').value = '';
+    document.getElementById('filtroFechaHasta').value = '';
+    document.getElementById('filtroTipo').value = '';
+    document.getElementById('filtroEstado').value = '';
+    actualizarFiltrosDesdeUI();
+  }
+
+  function calcularKilosPedido(pedido) {
+    if (!pedido.itemsDetalle) return 0;
+    let totalKilos = 0;
+    if (pedido.tipo === 'kilo') {
+      pedido.itemsDetalle.forEach(item => {
+        totalKilos += (item.kilos || 0) * (item.cantidad || 0);
+      });
+    } else if (pedido.tipo === 'venta_directa') {
+      pedido.itemsDetalle.forEach(item => {
+        let nombre = item.nombre.toLowerCase();
+        if (nombre.includes('kilo') && !nombre.includes('medio')) totalKilos += 1 * (item.cantidad || 0);
+        else if (nombre.includes('medio kilo')) totalKilos += 0.5 * (item.cantidad || 0);
+      });
+    }
+    return totalKilos;
+  }
+
+  function actualizarResumenDiario() {
+    let fecha = document.getElementById('resumenFecha').value;
+    if (!fecha) {
+      let hoy = new Date();
+      let año = hoy.getFullYear();
+      let mes = String(hoy.getMonth() + 1).padStart(2, '0');
+      let dia = String(hoy.getDate()).padStart(2, '0');
+      fecha = `${año}-${mes}-${dia}`;
+      document.getElementById('resumenFecha').value = fecha;
+    }
+    let pedidosDia = todosPedidos.filter(p => p.fechaEntrega === fecha && p.status === 'Entregado');
+    let pedidosNormales = pedidosDia.filter(p => p.tipo !== 'venta_directa');
+    let ventasDirectas = pedidosDia.filter(p => p.tipo === 'venta_directa');
+    
+    let totalDinero = pedidosDia.reduce((s,p) => s + (p.total||0), 0);
+    let totalKilos = pedidosDia.reduce((s,p) => s + calcularKilosPedido(p), 0);
+    let dineroNormales = pedidosNormales.reduce((s,p) => s + (p.total||0), 0);
+    let kilosNormales = pedidosNormales.reduce((s,p) => s + calcularKilosPedido(p), 0);
+    let dineroDirectas = ventasDirectas.reduce((s,p) => s + (p.total||0), 0);
+    let kilosDirectas = ventasDirectas.reduce((s,p) => s + calcularKilosPedido(p), 0);
+    
+    let html = `
+      <div class="resumen-stats">
+        <div class="stat-card"><h4>💰 Total día</h4><div class="big-number">$${Math.round(totalDinero).toLocaleString()}</div></div>
+        <div class="stat-card"><h4>🍽 Kilos totales</h4><div class="big-number">${totalKilos.toFixed(1)} kg</div></div>
+      </div>
+      <div class="comparacion">
+        <div class="comparacion-item"><h4>📦 Pedidos (entregados)</h4><div>💰 $${Math.round(dineroNormales).toLocaleString()}</div><div>🍽 ${kilosNormales.toFixed(1)} kg</div><div>📦 ${pedidosNormales.length} pedidos</div></div>
+        <div class="comparacion-item"><h4>🏪 Ventas directas</h4><div>💰 $${Math.round(dineroDirectas).toLocaleString()}</div><div>🍽 ${kilosDirectas.toFixed(1)} kg</div><div>🏪 ${ventasDirectas.length} ventas</div></div>
+      </div>
+    `;
+    document.getElementById('resumenStats').innerHTML = html;
+  }
+
+  function generarFechasUltimos7Dias() {
+    let fechas = [];
+    for (let i = 6; i >= 0; i--) {
+      let d = new Date();
+      d.setDate(d.getDate() - i);
+      let yyyy = d.getFullYear();
+      let mm = String(d.getMonth() + 1).padStart(2, '0');
+      let dd = String(d.getDate()).padStart(2, '0');
+      fechas.push(`${yyyy}-${mm}-${dd}`);
+    }
+    return fechas;
+  }
+
+  function actualizarGraficas() {
+    if (!document.getElementById('chartVentas')) return;
+    let pedidosFiltrados = aplicarFiltrosAPedidos(todosPedidos);
+    let entregadosFiltrados = pedidosFiltrados.filter(p => p.status === 'Entregado');
+    let fechas = generarFechasUltimos7Dias();
+    let ventasPorDia = {}, pedidosPorDia = {};
+    fechas.forEach(f => { ventasPorDia[f] = 0; pedidosPorDia[f] = 0; });
+    entregadosFiltrados.forEach(p => {
+      let fecha = p.fechaEntrega;
+      if (fecha && fechas.includes(fecha)) {
+        ventasPorDia[fecha] += (p.total || 0);
+        pedidosPorDia[fecha] += 1;
+      }
+    });
+    let etiquetas = fechas.map(f => { let [y,m,d] = f.split('-'); return `${d}/${m}`; });
+    let datosVentas = fechas.map(f => ventasPorDia[f]);
+    let datosPedidos = fechas.map(f => pedidosPorDia[f]);
+    if (chartVentas) chartVentas.destroy();
+    if (chartPedidos) chartPedidos.destroy();
+    let ctxVentas = document.getElementById('chartVentas').getContext('2d');
+    let ctxPedidos = document.getElementById('chartPedidos').getContext('2d');
+    chartVentas = new Chart(ctxVentas, {
+      type: 'bar', data: { labels: etiquetas, datasets: [{ label: 'Ventas ($)', data: datosVentas, backgroundColor: '#D85A30', borderRadius: 8 }] },
+      options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `$${ctx.raw.toLocaleString()}` } } } }
+    });
+    chartPedidos = new Chart(ctxPedidos, {
+      type: 'line', data: { labels: etiquetas, datasets: [{ label: 'Pedidos entregados', data: datosPedidos, borderColor: '#D85A30', backgroundColor: 'rgba(216,90,48,0.1)', fill: true, tension: 0.2, pointBackgroundColor: '#D85A30', pointRadius: 4 }] },
+      options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw} pedido(s)` } } } }
+    });
+  }
+
+  function actualizarDashboard() {
+    let pedidosFiltrados = aplicarFiltrosAPedidos(todosPedidos);
+    let entregadosFiltrados = pedidosFiltrados.filter(p => p.status === 'Entregado');
+    let totalVentas = entregadosFiltrados.reduce((s,p) => s + (p.total||0), 0);
+    let activos = pedidosFiltrados.filter(p => p.status !== 'Entregado').length;
+    let entregadosCount = entregadosFiltrados.length;
+    let promedio = entregadosCount ? totalVentas / entregadosCount : 0;
+    document.getElementById('totalVentas').innerText = '$' + Math.round(totalVentas).toLocaleString();
+    document.getElementById('totalActivos').innerText = activos;
+    document.getElementById('totalEntregados').innerText = entregadosCount;
+    document.getElementById('promedio').innerText = '$' + Math.round(promedio).toLocaleString();
+  }
+
+  function formatearFechaLocal(fechaStr) {
+    if (!fechaStr) return '📅 Sin fecha';
+    const diasMap = { lun:'Lunes', mar:'Martes', mie:'Miércoles', jue:'Jueves', vie:'Viernes', sab:'Sábado', dom:'Domingo' };
+    if (diasMap[fechaStr]) return `📅 ${diasMap[fechaStr]}`;
+    let partes = fechaStr.split('-');
+    if (partes.length === 3) {
+      let fecha = new Date(partes[0], partes[1]-1, partes[2]);
+      if (!isNaN(fecha)) return fecha.toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long' });
+    }
+    return `📅 ${fechaStr}`;
+  }
+
+  function estadoClase(estado) {
+    if (estado === 'Pendiente') return 'pendiente';
+    if (estado === 'En proceso') return 'en-proceso';
+    if (estado === 'Entregado') return 'entregado';
+    return '';
+  }
+
+  function renderizarPedidos(lista, contenedorId, mostrarBotones = true) {
+    let contenedor = document.getElementById(contenedorId);
+    if (!contenedor) return;
+    if (lista.length === 0) { contenedor.innerHTML = `<div class="empty-message">No hay pedidos con los filtros actuales.</div>`; return; }
+    let grupos = {};
+    lista.forEach(p => { let key = p.fechaEntrega || 'Sin fecha'; if (!grupos[key]) grupos[key] = []; grupos[key].push(p); });
+    let fechasOrdenadas = Object.keys(grupos).sort((a,b) => { if(a==='Sin fecha') return 1; if(b==='Sin fecha') return -1; return new Date(b) - new Date(a); });
+    contenedor.innerHTML = '';
+    for (let fecha of fechasOrdenadas) {
+      let divFecha = document.createElement('div'); divFecha.className = 'fecha'; divFecha.innerHTML = `<h2>${formatearFechaLocal(fecha)}</h2>`;
+      grupos[fecha].forEach(p => {
+        let totalKilos = null, totalPersonas = null, itemsHtml = '';
+        if (p.itemsDetalle && p.itemsDetalle.length) {
+          if (p.tipo === 'kilo') {
+            totalKilos = 0;
+            itemsHtml = '<div class="detalle-lista"><strong>📋 Detalle por kilo:</strong><ul>';
+            p.itemsDetalle.forEach(item => { if(item.cantidad>0){ let k = (item.kilos||0)*item.cantidad; totalKilos += k; itemsHtml += `<li>${item.nombre} × ${item.cantidad} (${k} kg)</li>`; } });
+            itemsHtml += '</ul></div>';
+          } else if (p.tipo === 'evento') {
+            totalPersonas = 0;
+            itemsHtml = '<div class="detalle-lista"><strong>📋 Detalle por platillo:</strong><ul>';
+            p.itemsDetalle.forEach(item => { if(item.personas>0){ totalPersonas += item.personas; itemsHtml += `<li>${item.nombre}: ${item.personas} personas</li>`; } });
+            itemsHtml += '</ul></div>';
+          } else if (p.tipo === 'venta_directa') {
+            itemsHtml = '<div class="detalle-lista"><strong>🏪 Productos:</strong><ul>';
+            p.itemsDetalle.forEach(item => { itemsHtml += `<li>${item.nombre} × ${item.cantidad} = $${(item.precio_unitario * item.cantidad).toLocaleString()}</li>`; });
+            itemsHtml += '</ul></div>';
+          }
+        } else if (p.tipo === 'venta_directa') {
+          itemsHtml = '<div class="detalle-lista"><strong>🏪 Venta directa</strong></div>';
+        } else {
+          itemsHtml = `<div class="detalle-lista">📋 ${p.paella||'N/A'}</div>`;
+        }
+        let estado = p.status || 'Pendiente';
+        let badgeClass = estadoClase(estado);
+        let estadoHtml = `<span class="badge ${badgeClass}">${estado}</span>`;
+        let botonesHtml = '';
+        if (mostrarBotones && p.status !== 'Entregado') {
+          botonesHtml = `<div><button class="btn-proceso" onclick="cambiarStatus(${p.id},'En proceso')">🟡 En proceso</button><button class="btn-entregado" onclick="cambiarStatus(${p.id},'Entregado')">✅ Entregado</button><button class="btn-eliminar" onclick="eliminarPedido(${p.id})">🗑 Eliminar</button></div>`;
+        } else if (mostrarBotones && p.status === 'Entregado') {
+          botonesHtml = `<div><button class="btn-eliminar" onclick="eliminarPedido(${p.id})">🗑 Eliminar</button></div>`;
+        }
+        let div = document.createElement('div'); div.className = 'pedido';
+        div.innerHTML = `<div><strong>${p.nombre||'Sin nombre'}</strong> ${estadoHtml}</div>
+          <div>📞 ${p.telefono||'Sin teléfono'}</div>
+          <div>💰 $${Math.round(p.total||0).toLocaleString()}</div>
+          <div>🍽 Tipo: ${p.tipo==='kilo'?'Kilo':p.tipo==='evento'?'Evento':'Venta directa'}</div>
+          ${p.tipo==='kilo'?`<div>⚖️ Kilos: ${totalKilos!==null?totalKilos.toFixed(1):(p.kilos||'N/A')}</div>`:p.tipo==='evento'?`<div>👥 Personas: ${totalPersonas!==null?totalPersonas:(p.personas||'N/A')}</div>`:''}
+          <div>🚚 ${p.tipoEntrega==='domicilio'?'A domicilio':'Pick up'} ${p.direccion?`- ${p.direccion}`:''}</div>
+          <div>⏰ ${p.horaEntrega||'N/A'}</div>
+          ${itemsHtml}
+          ${botonesHtml}`;
+        divFecha.appendChild(div);
+      });
+      contenedor.appendChild(divFecha);
+    }
+  }
+
+  function refrescarListas() {
+    let pedidosFiltrados = aplicarFiltrosAPedidos(todosPedidos);
+    let activos = pedidosFiltrados.filter(p => p.status !== 'Entregado');
+    let historial = pedidosFiltrados.filter(p => p.status === 'Entregado');
+    renderizarPedidos(activos, 'listaActivos', true);
+    renderizarPedidos(historial, 'listaHistorial', true);
+    actualizarDashboard();
+    let activeTab = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
+    if (activeTab === 'clientes') renderizarClientes();
+    if (activeTab === 'estadisticas') { actualizarGraficas(); actualizarResumenDiario(); }
+    if (activeTab === 'ventasdirectas') renderizarVentasDirectas();
+  }
+
+  function renderizarClientes() {
+    let pedidosFiltrados = aplicarFiltrosAPedidos(todosPedidos);
+    let entregadosFiltrados = pedidosFiltrados.filter(p => p.status === 'Entregado');
+    let contenedor = document.getElementById('listaClientes');
+    if (!contenedor) return;
+    if (entregadosFiltrados.length === 0) { contenedor.innerHTML = '<div class="empty-message">No hay clientes con los filtros actuales.</div>'; return; }
+    let clientesMap = new Map();
+    entregadosFiltrados.forEach(p => {
+      let nombre = p.nombre || 'Anónimo';
+      let telefono = p.telefono || '';
+      let key = `${nombre}|${telefono}`;
+      if (!clientesMap.has(key)) clientesMap.set(key, { nombre, telefono, pedidos: [], totalGastado: 0, totalPedidos: 0 });
+      let cliente = clientesMap.get(key);
+      cliente.pedidos.push(p);
+      cliente.totalGastado += (p.total || 0);
+      cliente.totalPedidos += 1;
+    });
+    let clientesArray = Array.from(clientesMap.values()).sort((a,b) => b.totalGastado - a.totalGastado);
+    contenedor.innerHTML = '';
+    clientesArray.forEach(cliente => {
+      let pedidosRecientes = [...cliente.pedidos].sort((a,b)=>new Date(b.fechaEntrega)-new Date(a.fechaEntrega)).slice(0,3);
+      let pedidosHtml = pedidosRecientes.map(p => `<div class="pedido-item"><span class="pedido-fecha">${formatearFechaLocal(p.fechaEntrega)}</span><span>${p.tipo==='kilo'?'Kilo':p.tipo==='evento'?'Evento':'Directa'}</span><span class="pedido-total">$${Math.round(p.total||0).toLocaleString()}</span><span class="ver-detalle" onclick="event.stopPropagation(); verDetallePedido(${p.id})">Ver detalle</span></div>`).join('');
+      let card = document.createElement('div'); card.className = 'cliente-card';
+      card.onclick = (e) => { if(e.target.classList && e.target.classList.contains('ver-detalle')) return; verHistorialCompleto(cliente.nombre, cliente.telefono); };
+      card.innerHTML = `<div class="cliente-header"><div class="cliente-nombre">${escapeHtml(cliente.nombre)}</div><div class="cliente-telefono">📞 ${cliente.telefono||'Sin teléfono'}</div></div>
+        <div class="cliente-stats"><span class="stat">📦 Pedidos entregados: ${cliente.totalPedidos}</span><span class="stat">💰 Total gastado: $${Math.round(cliente.totalGastado).toLocaleString()}</span><span class="stat">📈 Promedio: $${Math.round(cliente.totalGastado/cliente.totalPedidos).toLocaleString()}</span></div>
+        <div class="pedidos-lista"><strong>Últimos pedidos:</strong> ${pedidosHtml||'<div>Sin pedidos recientes</div>'}<div><button class="btn-proceso" style="background:#D85A30;color:white;padding:4px 12px;" onclick="event.stopPropagation(); verHistorialCompleto('${escapeHtml(cliente.nombre)}', '${cliente.telefono}')">📋 Ver historial completo</button></div></div>`;
+      contenedor.appendChild(card);
+    });
+  }
+
+  function verHistorialCompleto(nombre, telefono) {
+    let pedidosCliente = todosPedidos.filter(p => p.nombre === nombre && p.telefono === telefono);
+    pedidosCliente = aplicarFiltrosAPedidos(pedidosCliente);
+    if (pedidosCliente.length === 0) { alert('No hay pedidos con los filtros actuales para este cliente.'); return; }
+    pedidosCliente.sort((a,b) => new Date(b.fechaEntrega) - new Date(a.fechaEntrega));
+    let totalGeneral = pedidosCliente.reduce((s,p)=>s+(p.total||0),0);
+    let entregadosCount = pedidosCliente.filter(p=>p.status==='Entregado').length;
+    let html = `<h3>Historial de ${escapeHtml(nombre)}</h3><p>📞 ${telefono||'No registrado'}</p><p>💰 Total gastado: $${Math.round(totalGeneral).toLocaleString()} (${entregadosCount} entregados, ${pedidosCliente.length-entregadosCount} pendientes/proceso)</p><div class="historial-completo">`;
+    pedidosCliente.forEach(p => { let badgeClass = estadoClase(p.status);
+      html += `<div class="historial-item"><div><strong>📅 ${formatearFechaLocal(p.fechaEntrega)}</strong> - ${p.tipo==='kilo'?'Kilo':p.tipo==='evento'?'Evento':'Directa'} <span class="badge ${badgeClass}">${p.status}</span></div>
+        <div>💰 $${Math.round(p.total||0).toLocaleString()} | 🚚 ${p.tipoEntrega==='domicilio'?'Domicilio':'Pick up'} ${p.direccion?`- ${p.direccion}`:''}</div>
+        <div>🕒 ${p.horaEntrega||'Sin hora'}</div>
+        <div><button class="btn-proceso" style="background:#3b82f6;color:white;padding:2px 10px;" onclick="verDetallePedido(${p.id}); cerrarModalHistorial();">Ver detalle</button></div></div>`;
+    });
+    html += `</div>`;
+    document.getElementById('modal-historial-body').innerHTML = html;
+    document.getElementById('modalHistorialCliente').style.display = 'flex';
+  }
+
+  function verDetallePedido(id) {
+    let p = todosPedidos.find(p => p.id === id);
+    if (!p) return;
+    let html = `<h3>Detalle del pedido</h3><p><strong>Cliente:</strong> ${p.nombre||'N/A'}</p><p><strong>Teléfono:</strong> ${p.telefono||'N/A'}</p><p><strong>Tipo:</strong> ${p.tipo==='kilo'?'Kilo':p.tipo==='evento'?'Evento':'Venta directa'}</p><p><strong>Fecha entrega:</strong> ${formatearFechaLocal(p.fechaEntrega)}</p><p><strong>Hora:</strong> ${p.horaEntrega||'N/A'}</p><p><strong>Entrega:</strong> ${p.tipoEntrega==='domicilio'?'Domicilio':'Pick up'} ${p.direccion?`- ${p.direccion}`:''}</p><p><strong>Total:</strong> $${Math.round(p.total||0).toLocaleString()}</p><p><strong>Estado:</strong> ${p.status||'Pendiente'}</p>`;
+    if (p.itemsDetalle && p.itemsDetalle.length) {
+      html += '<p><strong>Productos/Platillos:</strong></p><ul>';
+      p.itemsDetalle.forEach(item => { if(p.tipo==='kilo') html += `<li>${item.nombre} × ${item.cantidad} (${(item.kilos||0)*item.cantidad} kg)</li>`; else if(p.tipo==='evento') html += `<li>${item.nombre}: ${item.personas} personas</li>`; else html += `<li>${item.nombre} × ${item.cantidad} ($${item.precio_unitario} c/u)</li>`; });
+      html += '</ul>';
+    }
+    if (p.notas) html += `<p><strong>Notas:</strong> ${p.notas}</p>`;
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('modalDetalle').style.display = 'flex';
+  }
+
+  function cerrarModal() { document.getElementById('modalDetalle').style.display = 'none'; }
+  function cerrarModalHistorial() { document.getElementById('modalHistorialCliente').style.display = 'none'; }
+  function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+
+  function renderizarVentasDirectas() {
+    let ventas = todosPedidos.filter(p => p.tipo === 'venta_directa');
+    ventas = aplicarFiltrosAPedidos(ventas);
+    let contenedor = document.getElementById('listaVentasDirectas');
+    if (!contenedor) return;
+    if (ventas.length === 0) { contenedor.innerHTML = '<div class="empty-message">No hay ventas directas registradas.</div>'; return; }
+    ventas.sort((a,b) => new Date(b.fechaEntrega) - new Date(a.fechaEntrega));
+    let html = `<div class="fecha"><h2>📅 Todas las ventas directas</h2></div>`;
+    ventas.forEach(v => {
+      let items = v.itemsDetalle ? v.itemsDetalle.map(i => `${i.nombre} × ${i.cantidad}`).join(', ') : '';
+      html += `<div class="pedido">
+        <div><strong>${v.nombre || 'Cliente anónimo'}</strong> <span class="badge entregado">Entregado</span></div>
+        <div>📞 ${v.telefono || 'Sin teléfono'}</div>
+        <div>💰 $${Math.round(v.total || 0).toLocaleString()}</div>
+        <div>📅 ${formatearFechaLocal(v.fechaEntrega)}</div>
+        <div>📝 ${v.notas || 'Sin notas'}</div>
+        <div>🛒 ${items || 'Sin productos'}</div>
+        <div><button class="btn-eliminar" onclick="eliminarPedido(${v.id})">🗑 Eliminar</button></div>
+      </div>`;
+    });
+    contenedor.innerHTML = html;
+  }
+
+  function agregarProductoVentaDirecta() {
+    let container = document.getElementById('vd-productos-container');
+    let idx = productosVentaDirecta.length;
+    let div = document.createElement('div'); div.className = 'producto-item'; div.id = `prod-${idx}`;
+    div.innerHTML = `
+      <select id="prod-nombre-${idx}" style="flex:2">
+      <option value="Paella mar y tierra - kilo">Paella mar y tierra - kilo ($350)</option>
+      <option value="Paella mar y tierra - medio kilo">Paella mar y tierra - medio kilo ($180)</option>
+      <option value="Paella negra - kilo">Paella negra - kilo ($350)</option>
+      <option value="Paella negra - medio kilo">Paella negra - medio kilo ($180)</option>
+      <option value="Paella de carnes - kilo">Paella de carnes - kilo ($310)</option>
+      <option value="Paella de carnes - medio kilo">Paella de carnes - medio kilo ($160)</option>
+      </select>
+      <input type="number" id="prod-cant-${idx}" placeholder="Cantidad" value="1" min="1" style="width:80px">
+      <button class="btn-eliminar" onclick="eliminarProductoVentaDirecta(${idx})">✕</button>
+    `;
+    container.appendChild(div);
+    productosVentaDirecta.push({ idx, nombre: '', cantidad: 1, precio: 0 });
+    actualizarPreciosProductos();
+  }
+
+  function eliminarProductoVentaDirecta(idx) {
+    let div = document.getElementById(`prod-${idx}`);
+    if (div) div.remove();
+    productosVentaDirecta = productosVentaDirecta.filter(p => p.idx !== idx);
+    actualizarPreciosProductos();
+  }
+
+  function actualizarPreciosProductos() {
+    let nuevos = [];
+    for (let i = 0; i < productosVentaDirecta.length; i++) {
+      let select = document.getElementById(`prod-nombre-${productosVentaDirecta[i].idx}`);
+      let cantidad = document.getElementById(`prod-cant-${productosVentaDirecta[i].idx}`);
+      if (select && cantidad) {
+        let nombre = select.value;
+        let precio = 0;
+        if (nombre.includes('kilo') && !nombre.includes('medio')) precio = 350;
+        else if (nombre.includes('medio kilo')) precio = 180;
+        nuevos.push({ idx: productosVentaDirecta[i].idx, nombre, cantidad: parseInt(cantidad.value) || 1, precio });
+      }
+    }
+    productosVentaDirecta = nuevos;
+    let total = productosVentaDirecta.reduce((sum, p) => sum + (p.precio * p.cantidad), 0);
+    document.getElementById('vd-total').value = total;
+  }
+
+  async function guardarVentaDirecta() {
+    let cliente = document.getElementById('vd-cliente').value.trim() || 'Venta en local';
+    let telefono = document.getElementById('vd-telefono').value.trim() || '';
+    let fechaInput = document.getElementById('vd-fecha').value;
+    let fecha;
+    if (fechaInput) {
+      fecha = fechaInput;
+    } else {
+      let hoy = new Date();
+      let año = hoy.getFullYear();
+      let mes = String(hoy.getMonth() + 1).padStart(2, '0');
+      let dia = String(hoy.getDate()).padStart(2, '0');
+      fecha = `${año}-${mes}-${dia}`;
+    }
+    let total = parseFloat(document.getElementById('vd-total').value);
+    if (isNaN(total)) total = 0;
+    let notas = document.getElementById('vd-notas').value;
+    let itemsDetalle = productosVentaDirecta.map(p => ({ nombre: p.nombre, cantidad: p.cantidad, precio_unitario: p.precio, subtotal: p.precio * p.cantidad }));
+    if (itemsDetalle.length === 0) { alert('Agrega al menos un producto.'); return; }
+    let nuevoPedido = {
+      nombre: cliente,
+      telefono: telefono,
+      tipo: 'venta_directa',
+      status: 'Entregado',
+      fechaEntrega: fecha,
+      total: total,
+      itemsDetalle: itemsDetalle,
+      notas: notas,
+      tipoEntrega: 'pickup',
+      horaEntrega: '',
+      direccion: ''
+    };
+    try {
+      let res = await authFetch('/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevoPedido)
+      });
+      if (!res.ok) throw new Error();
+      await cargarPedidos();
+      if (document.getElementById('chartVentas')) {
+        actualizarGraficas();
+        actualizarResumenDiario();
+      }
+      document.getElementById('vd-cliente').value = '';
+      document.getElementById('vd-telefono').value = '';
+      document.getElementById('vd-fecha').value = '';
+      document.getElementById('vd-total').value = '';
+      document.getElementById('vd-notas').value = '';
+      document.getElementById('vd-productos-container').innerHTML = '';
+      productosVentaDirecta = [];
+      alert('Venta directa registrada correctamente.');
+    } catch(e) { alert('Error al guardar venta directa.'); }
+  }
+
+  async function cambiarStatus(id, nuevoStatus) {
+    try {
+      await authFetch(`/pedidos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nuevoStatus })
+      });
+      await cargarPedidos();
+    } catch(e) { alert('Error al cambiar estado'); }
+  }
+  async function eliminarPedido(id) {
+    if(!confirm('¿Eliminar permanentemente?')) return;
+    try {
+      await authFetch(`/pedidos/${id}`, { method: 'DELETE' });
+      await cargarPedidos();
+    } catch(e) { alert('Error al eliminar'); }
+  }
+
+  async function cargarPedidos() {
+    try {
+      let res = await authFetch('/pedidos');
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+          location.reload();
+        }
+        throw new Error('Error de red');
+      }
+      todosPedidos = await res.json();
+      refrescarListas();
+    } catch(e) {
+      console.error(e);
+      document.getElementById('listaActivos').innerHTML = '<div class="empty-message">❌ Error de conexión con el backend.</div>';
+    }
+  }
+
+  function cambiarPestana(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.getElementById(`tab-${tabId}`).style.display = 'block';
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+    if (tabId === 'estadisticas') { actualizarGraficas(); actualizarResumenDiario(); }
+    if (tabId === 'clientes') renderizarClientes();
+    if (tabId === 'ventasdirectas') renderizarVentasDirectas();
+    if (tabId === 'activos' || tabId === 'historial') refrescarListas();
+  }
+
+  function exportarCSV() {
+    let pedidosExportar = aplicarFiltrosAPedidos(todosPedidos);
+    if (pedidosExportar.length === 0) { alert('No hay pedidos para exportar'); return; }
+    const headers = ['ID', 'Cliente', 'Teléfono', 'Tipo', 'Fecha Entrega', 'Hora', 'Entrega', 'Dirección', 'Total', 'Estado', 'Productos/Detalle'];
+    const filas = pedidosExportar.map(p => {
+      let detalle = '';
+      if (p.itemsDetalle) {
+        detalle = p.itemsDetalle.map(i => {
+          if (p.tipo === 'kilo') return `${i.nombre} x${i.cantidad}`;
+          if (p.tipo === 'evento') return `${i.nombre}: ${i.personas} pers`;
+          return `${i.nombre} x${i.cantidad}`;
+        }).join('; ');
+      }
+      return [
+        p.id,
+        p.nombre || '',
+        p.telefono || '',
+        p.tipo === 'kilo' ? 'Kilo' : (p.tipo === 'evento' ? 'Evento' : 'Venta directa'),
+        p.fechaEntrega || '',
+        p.horaEntrega || '',
+        p.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Pick up',
+        p.direccion || '',
+        p.total || 0,
+        p.status || '',
+        detalle
+      ];
+    });
+    const csvContent = [headers, ...filas].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `pedidos_${new Date().toISOString().slice(0,19)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => cambiarPestana(btn.getAttribute('data-tab'))));
+  document.getElementById('btnAplicarFiltros').addEventListener('click', () => { actualizarFiltrosDesdeUI(); refrescarListas(); if(document.querySelector('.tab-btn.active').getAttribute('data-tab') === 'estadisticas') { actualizarGraficas(); actualizarResumenDiario(); } });
+  document.getElementById('btnLimpiarFiltros').addEventListener('click', () => { limpiarFiltrosUI(); refrescarListas(); if(document.querySelector('.tab-btn.active').getAttribute('data-tab') === 'estadisticas') { actualizarGraficas(); actualizarResumenDiario(); } });
+  document.getElementById('btnExportarCSV').addEventListener('click', () => exportarCSV());
+  document.getElementById('vd-agregar-producto').addEventListener('click', () => agregarProductoVentaDirecta());
+  document.getElementById('vd-guardar').addEventListener('click', () => guardarVentaDirecta());
+  document.getElementById('vd-productos-container').addEventListener('change', (e) => { if(e.target.matches('select, input')) actualizarPreciosProductos(); });
+  document.getElementById('resumenFecha').addEventListener('change', () => actualizarResumenDiario());
+
+  window.cambiarStatus = cambiarStatus; window.eliminarPedido = eliminarPedido; window.verDetallePedido = verDetallePedido; window.cerrarModal = cerrarModal;
+  window.verHistorialCompleto = verHistorialCompleto; window.cerrarModalHistorial = cerrarModalHistorial; window.eliminarProductoVentaDirecta = eliminarProductoVentaDirecta;
+
+  cargarPedidos();
+  cambiarPestana('ventasdirectas');
+</script>
+</body>
+</html>

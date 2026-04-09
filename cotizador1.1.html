@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotizador Paella - Guardar, Confirmar y PDF</title>
+<!-- Librerías para PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f4f0; --bg3: #eeece6;
+    --text: #1a1a18; --text2: #6b6b67; --text3: #a0a09c;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+    --info-bg: #e6f1fb; --info-text: #0c447c; --info-border: #85b7eb;
+    --ok-bg: #eaf3de; --ok-text: #27500a; --ok-border: #97c459;
+    --warn-bg: #faeeda; --warn-text: #633806; --warn-border: #ef9f27;
+    --danger-bg: #fcebeb; --danger-text: #791f1f; --danger-border: #f09595;
+    --radius: 8px; --radius-lg: 12px;
+    --coral: #D85A30;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #252523; --bg3: #2e2e2b;
+      --text: #f0ede6; --text2: #a0a09c; --text3: #6b6b67;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --info-bg: #0c447c; --info-text: #b5d4f4;
+      --ok-bg: #27500a; --ok-text: #c0dd97;
+      --warn-bg: #633806; --warn-text: #fac775;
+      --danger-bg: #791f1f; --danger-text: #f7c1c1;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); font-size: 16px; line-height: 1.5; min-height: 100vh; }
+  h1 { font-size: 20px; font-weight: 500; }
+  h2 { font-size: 16px; font-weight: 500; margin-bottom: 12px; }
+  .app { max-width: 680px; margin: 0 auto; padding: 16px; }
+  .header { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; }
+  .logo { width: 40px; height: 40px; background: var(--coral); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; flex-shrink: 0; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { flex: 1; padding: 10px; font-size: 14px; cursor: pointer; border-radius: var(--radius); background: var(--bg); border: 0.5px solid var(--border); color: var(--text2); font-weight: 500; transition: all 0.15s; }
+  .tab.active { background: var(--info-bg); color: var(--info-text); border-color: var(--info-border); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 14px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row, .row3 { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: 12px; color: var(--text2); }
+  input[type=text], input[type=number], input[type=date], input[type=time], input[type=tel], select, textarea {
+    width: 100%; padding: 8px 10px; font-size: 14px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); color: var(--text); outline: none; font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--info-border); }
+  textarea { resize: vertical; min-height: 70px; }
+  .badge { font-size: 11px; padding: 3px 9px; border-radius: var(--radius); font-weight: 500; display: inline-block; }
+  .badge-info { background: var(--info-bg); color: var(--info-text); }
+  .badge-ok { background: var(--ok-bg); color: var(--ok-text); }
+  .badge-warn { background: var(--warn-bg); color: var(--warn-text); }
+  .badge-danger { background: var(--danger-bg); color: var(--danger-text); }
+  .badge-gray { background: var(--bg3); color: var(--text2); border: 0.5px solid var(--border); }
+  .toggle-row { display: flex; gap: 8px; }
+  .toggle-btn { flex: 1; padding: 8px 12px; font-size: 13px; cursor: pointer; border-radius: var(--radius); background: var(--bg2); border: 0.5px solid var(--border); color: var(--text2); font-weight: 500; }
+  .toggle-btn.active { background: var(--info-bg); color: var(--info-text); border-color: var(--info-border); }
+  .item-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
+  .item-row:last-child { border-bottom: none; }
+  .qty-ctrl { display: flex; align-items: center; gap: 8px; }
+  .qty-btn { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); width: 30px; height: 30px; cursor: pointer; font-size: 18px; color: var(--text); display: flex; align-items: center; justify-content: center; line-height: 1; }
+  .qty-btn:active { opacity: 0.7; }
+  .qty-num { font-size: 14px; font-weight: 500; min-width: 20px; text-align: center; }
+  .sub-price { font-size: 13px; color: var(--text2); min-width: 64px; text-align: right; }
+  .platillo-row { display: grid; grid-template-columns: 1fr 72px 72px 30px; gap: 8px; align-items: end; margin-bottom: 8px; }
+  @media (max-width: 480px) { .platillo-row { grid-template-columns: 1fr 64px 64px 28px; gap: 6px; } }
+  .remove-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 4px; line-height: 1; }
+  .add-btn { font-size: 13px; padding: 7px 14px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); color: var(--text); cursor: pointer; }
+  .add-btn:hover { border-color: var(--border2); }
+  .extras-row { display: grid; grid-template-columns: 1fr auto auto 30px; gap: 8px; align-items: end; margin-bottom: 8px; }
+  @media (max-width: 480px) { .extras-row { grid-template-columns: 1fr 70px 70px 28px; gap: 6px; } }
+  .metrics { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+  .metric { background: var(--bg2); border-radius: var(--radius); padding: 12px 14px; }
+  .metric .ml { font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+  .metric .mv { font-size: 19px; font-weight: 500; }
+  .qbox { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; }
+  .qline { display: flex; justify-content: space-between; font-size: 14px; padding: 5px 0; color: var(--text2); border-bottom: 0.5px solid var(--border); }
+  .qline:last-of-type { border-bottom: none; }
+  .qline.total { font-size: 16px; font-weight: 500; color: var(--text); border-top: 0.5px solid var(--border2); border-bottom: none; margin-top: 8px; padding-top: 12px; }
+  .copy-btn, .pdf-btn, .save-btn, .confirm-btn { display: inline-block; width: auto; margin-top: 8px; padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius); color: var(--text); }
+  .copy-btn:hover, .pdf-btn:hover, .save-btn:hover, .confirm-btn:hover { background: var(--bg2); }
+  .button-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .warn-msg { font-size: 12px; color: var(--warn-text); background: var(--warn-bg); padding: 7px 11px; border-radius: var(--radius); margin-top: 8px; display: none; }
+  .closed-msg { font-size: 13px; color: var(--warn-text); background: var(--warn-bg); padding: 8px 12px; border-radius: var(--radius); margin-top: 6px; display: none; }
+  .note { font-size: 11px; color: var(--text3); margin-top: 4px; line-height: 1.4; }
+  .section-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .col-hdr { font-size: 11px; color: var(--text3); }
+  details { margin-bottom: 14px; }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  .summary-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; }
+  .summary-card:hover { border-color: var(--border2); }
+  details[open] .summary-card { border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-bottom: none; }
+  .details-body { background: var(--bg); border: 0.5px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-lg) var(--radius-lg); padding: 14px 18px; margin-bottom: 14px; }
+  .chevron { font-size: 12px; color: var(--text3); transition: transform 0.2s; }
+  details[open] .chevron { transform: rotate(180deg); }
+  .saved-list { background: var(--bg2); border-radius: var(--radius); padding: 12px; margin-top: 12px; max-height: 200px; overflow-y: auto; }
+  .saved-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">&#127859;</div>
+    <div>
+      <h1>Cotizador Paella</h1>
+      <div style="font-size:13px; color:var(--text2);">Lun–Vie, Sáb, Dom &nbsp;·&nbsp; 11:30am – 4:00pm &nbsp;·&nbsp; Cerrado martes</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('kilo')">Venta por kilo</button>
+    <button class="tab" onclick="setTab('evento')">Eventos y reuniones</button>
+  </div>
+
+  <!-- ===== PANEL KILO ===== -->
+  <div id="panel-kilo" class="panel active">
+    <div class="card">
+      <h2>Datos del pedido</h2>
+      <div class="row3" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Cliente</label>
+          <input type="text" id="k-cliente" placeholder="Nombre" oninput="kCalc()">
+        </div>
+        <div class="field">
+          <label>Teléfono (para WhatsApp)</label>
+          <input type="tel" id="k-telefono" placeholder="521234567890" oninput="kCalc()">
+        </div>
+        <div class="field">
+          <label>Día</label>
+          <select id="k-dia" onchange="kCambiarDia()">
+            <option value="lun">Lunes</option>
+            <option value="mie">Miércoles</option>
+            <option value="jue">Jueves</option>
+            <option value="vie">Viernes</option>
+            <option value="sab">Sábado</option>
+            <option value="dom">Domingo</option>
+            <option value="mar">Martes</option>
+          </select>
+          <div class="closed-msg" id="k-closed">No laboramos los martes.</div>
+        </div>
+      </div>
+      <div class="row3" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Hora de entrega</label>
+          <input type="time" id="k-hora" value="13:00" oninput="kCalc()">
+          <div class="warn-msg" id="k-hora-warn">Horario: 11:30am – 4:00pm</div>
+        </div>
+        <div class="field">
+          <label>Tipo de entrega</label>
+          <div class="toggle-row" style="margin-top:4px;">
+            <button class="toggle-btn active" id="k-btn-pickup" onclick="kSetEntrega('pickup')">Pick up</button>
+            <button class="toggle-btn" id="k-btn-domicilio" onclick="kSetEntrega('domicilio')">A domicilio</button>
+          </div>
+        </div>
+      </div>
+      <div id="k-domicilio-box" style="display:none; margin-top:12px;">
+        <div class="row" style="margin-bottom:10px;">
+          <div class="field">
+            <label>Dirección</label>
+            <input type="text" id="k-direccion" placeholder="Calle, colonia, referencia" oninput="kCalc()">
+          </div>
+          <div class="field">
+            <label>Distancia (km)</label>
+            <input type="number" id="k-dist" value="0" min="0" step="0.5" oninput="kCalc()">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Costo por km ($)</label>
+            <input type="number" id="k-km" value="10" min="0" oninput="kCalc()">
+          </div>
+          <div class="field">
+            <label>Costo fijo ($)</label>
+            <input type="number" id="k-fijo" value="30" min="0" oninput="kCalc()">
+          </div>
+        </div>
+        <div style="margin-top:8px;"><span id="k-zona"></span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0;">Productos</h2>
+        <span id="k-finde-badge" style="display:none;"><span class="badge badge-ok">Fin de semana — incluye bolillos</span></span>
+      </div>
+      <div id="k-items"></div>
+    </div>
+
+    <details>
+      <summary><div class="summary-card"><span style="font-size:14px; font-weight:500;">Extras opcionales</span><span class="chevron">&#9660;</span></div></summary>
+      <div class="details-body">
+        <div style="display:grid; grid-template-columns:1fr 80px 80px 30px; gap:8px; margin-bottom:6px;">
+          <span class="col-hdr">Concepto</span><span class="col-hdr">Precio</span><span class="col-hdr">Cant.</span><span></span>
+        </div>
+        <div id="k-extras"></div>
+        <button class="add-btn" onclick="kAddExtra()" style="margin-top:4px;">+ Agregar extra</button>
+        <div class="field" style="margin-top:12px;">
+          <label>Notas adicionales (opcional)</label>
+          <textarea id="k-notas" placeholder="Indicaciones especiales, alergias, preferencias..." oninput="kCalc()"></textarea>
+        </div>
+      </div>
+    </details>
+
+    <div class="metrics">
+      <div class="metric"><div class="ml">Kilos totales</div><div class="mv" id="k-m-kilos">0</div></div>
+      <div class="metric"><div class="ml">Bolillos incluidos</div><div class="mv" id="k-m-bolillos">—</div></div>
+      <div class="metric"><div class="ml">Total</div><div class="mv" id="k-m-total">$0</div></div>
+    </div>
+
+    <div class="qbox" id="k-qbox">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-size:14px; font-weight:500;">Resumen</span>
+        <span id="k-resumen-header" style="font-size:12px; color:var(--text2);"></span>
+      </div>
+      <div id="k-qlineas"></div>
+      <div id="k-qtraslado" style="display:none;" class="qline">
+        <span>Traslado (<span id="k-qdist">0</span> km × $<span id="k-qkm">10</span> + fijo $<span id="k-qfijo">30</span>)</span>
+        <span id="k-qtraslado-val">$0</span>
+      </div>
+      <div class="qline total"><span>Total</span><span id="k-qtotal">$0</span></div>
+      <div class="button-group">
+        <button class="copy-btn" onclick="kCopiar()">Copiar texto</button>
+        <button class="pdf-btn" onclick="exportarPDF('k')">📄 Exportar PDF</button>
+        <button class="save-btn" onclick="guardarPedido('k')">💾 Guardar Pedido</button>
+        <button class="confirm-btn" onclick="confirmarPedido('k')">✅ Confirmar y enviar WhatsApp</button>
+      </div>
+    </div>
+
+    <details>
+      <summary><div class="summary-card"><span>📋 Pedidos Guardados </span><span class="chevron">&#9660;</span></div></summary>
+      <div class="details-body" id="k-saved-container"></div>
+    </details>
+  </div>
+
+  <!-- ===== PANEL EVENTO ===== -->
+  <div id="panel-evento" class="panel">
+    <div class="card">
+      <h2>Datos del evento</h2>
+      <div class="row3" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Cliente</label>
+          <input type="text" id="e-cliente" placeholder="Nombre" oninput="eCalc()">
+        </div>
+        <div class="field">
+          <label>Teléfono (para WhatsApp)</label>
+          <input type="tel" id="e-telefono" placeholder="521234567890" oninput="eCalc()">
+        </div>
+        <div class="field">
+          <label>Fecha</label>
+          <input type="date" id="e-fecha" oninput="eCalc()">
+        </div>
+      </div>
+      <div class="row3" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Hora del evento</label>
+          <input type="time" id="e-hora" value="14:00" oninput="eCalc()">
+        </div>
+        <div class="field">
+          <label>Tipo de entrega</label>
+          <div class="toggle-row" style="margin-top:4px;">
+            <button class="toggle-btn active" id="e-btn-pickup" onclick="eSetEntrega('pickup')">Pick up</button>
+            <button class="toggle-btn" id="e-btn-domicilio" onclick="eSetEntrega('domicilio')">A domicilio</button>
+          </div>
+        </div>
+      </div>
+      <div id="e-domicilio-box" style="display:none;">
+        <div class="row" style="margin-bottom:10px;">
+          <div class="field"><label>Dirección</label><input type="text" id="e-direccion" placeholder="Calle, colonia" oninput="eCalc()"></div>
+          <div class="field"><label>Distancia (km)</label><input type="number" id="e-dist" value="0" min="0" step="0.5" oninput="eCalc()"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Costo por km ($)</label><input type="number" id="e-km" value="10" min="0" oninput="eCalc()"></div>
+          <div class="field"><label>Costo fijo ($)</label><input type="number" id="e-fijo" value="30" min="0" oninput="eCalc()"></div>
+        </div>
+        <div style="margin-top:8px;"><span id="e-zona"></span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Platillos del evento</h2>
+      <div style="display:grid; grid-template-columns:1fr 72px 72px 30px; gap:8px; margin-bottom:6px;">
+        <span class="col-hdr">Platillo</span><span class="col-hdr">$/persona</span><span class="col-hdr">Personas</span><span></span>
+      </div>
+      <div id="e-platillos"></div>
+      <button class="add-btn" onclick="eAddPlatillo()" style="margin-top:4px;">+ Agregar platillo</button>
+      <div class="warn-msg" id="e-min-warn" style="display:none; margin-top:10px;">Se requieren mínimo 7 personas para servicio a eventos.</div>
+    </div>
+
+    <details>
+      <summary><div class="summary-card"><span style="font-size:14px; font-weight:500;">Extras opcionales</span><span class="chevron">&#9660;</span></div></summary>
+      <div class="details-body">
+        <div style="display:grid; grid-template-columns:1fr 80px 80px 30px; gap:8px; margin-bottom:6px;">
+          <span class="col-hdr">Concepto</span><span class="col-hdr">Precio</span><span class="col-hdr">Cant.</span><span></span>
+        </div>
+        <div id="e-extras"></div>
+        <button class="add-btn" onclick="eAddExtra()" style="margin-top:4px;">+ Agregar extra</button>
+        <div class="field" style="margin-top:12px;">
+          <label>Notas adicionales (opcional)</label>
+          <textarea id="e-notas" placeholder="Alergias, preferencias..." oninput="eCalc()"></textarea>
+        </div>
+      </div>
+    </details>
+
+    <div class="metrics">
+      <div class="metric"><div class="ml">Personas totales</div><div class="mv" id="e-m-personas">0</div></div>
+      <div class="metric"><div class="ml">Platillos</div><div class="mv" id="e-m-platos">$0</div></div>
+      <div class="metric"><div class="ml">Total</div><div class="mv" id="e-m-total">$0</div></div>
+    </div>
+
+    <div class="qbox" id="e-qbox">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-size:14px; font-weight:500;">Pedido</span>
+        <span id="e-resumen-header" style="font-size:12px; color:var(--text2);"></span>
+      </div>
+      <div id="e-qlineas"></div>
+      <div id="e-qtraslado" style="display:none;" class="qline">
+        <span>Traslado (<span id="e-qdist">0</span> km × $<span id="e-qkm">10</span> + fijo $<span id="e-qfijo">30</span>)</span>
+        <span id="e-qtraslado-val">$0</span>
+      </div>
+      <div class="qline total"><span>Total</span><span id="e-qtotal">$0</span></div>
+      <div class="button-group">
+        <button class="copy-btn" onclick="eCopiar()">Copiar texto</button>
+        <button class="pdf-btn" onclick="exportarPDF('e')">📄 Exportar PDF</button>
+        <button class="save-btn" onclick="guardarPedido('e')">💾 Guardar Pedido</button>
+        <button class="confirm-btn" onclick="confirmarPedido('e')">✅ Confirmar y enviar WhatsApp</button>
+      </div>
+    </div>
+
+    <details>
+      <summary><div class="summary-card"><span>📋 Pedidos Gaurdados</span><span class="chevron">&#9660;</span></div></summary>
+      <div class="details-body" id="e-saved-container"></div>
+    </details>
+  </div>
+</div>
+
+<script>
+const DIAS_FINDE = ["sab","dom"];
+const K_ITEMS_SEMANA = [
+  { nombre:"Paella mar y tierra — kilo", precio:350, kilos:1, cantidad:0 },
+  { nombre:"Paella mar y tierra — medio kilo", precio:180, kilos:0.5, cantidad:0 },
+];
+const K_ITEMS_FINDE = [
+  { nombre:"Paella mar y tierra — kilo", precio:350, kilos:1, cantidad:0 },
+  { nombre:"Paella mar y tierra — medio kilo", precio:180, kilos:0.5, cantidad:0 },
+  { nombre:"Paella negra — kilo", precio:350, kilos:1, cantidad:0 },
+  { nombre:"Paella negra — medio kilo", precio:180, kilos:0.5, cantidad:0 },
+  { nombre:"Paella de carnes — kilo", precio:310, kilos:1, cantidad:0 },
+  { nombre:"Paella de carnes — medio kilo", precio:160, kilos:0.5, cantidad:0 }
+];
+const E_MENU = [
+  { nombre:"Paella mar y tierra", precio:200, personas:0 },
+  { nombre:"Paella negra", precio:200, personas:0 },
+  { nombre:"Paella de carnes", precio:180, personas:0 },
+  { nombre:"Fideuá", precio:200, personas:0 },
+  { nombre:"Vegetariana", precio:170, personas:0 },
+];
+
+let kItems = K_ITEMS_SEMANA.map(i=>({...i}));
+let kEsFinde = false;
+let kEntrega = "pickup";
+let kExtras = [];
+let eItems = E_MENU.map(i=>({...i}));
+let eEntrega = "pickup";
+let eExtras = [];
+
+// ---------- Funciones comunes ----------
+function setTab(t) {
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.getElementById("panel-"+t).classList.add("active");
+  event.target.classList.add("active");
+}
+
+function zonaInfo(km) {
+  if(!km) return {label:"Sin distancia",cls:"badge-gray"};
+  if(km<=5) return {label:"Zona 1 — Local",cls:"badge-info"};
+  if(km<=15) return {label:"Zona 2 — Cercana",cls:"badge-warn"};
+  if(km<=30) return {label:"Zona 3 — Media",cls:"badge-warn"};
+  return {label:"Zona 4 — Lejana",cls:"badge-danger"};
+}
+
+function fmtHora(val) {
+  if(!val) return "";
+  const [h,m] = val.split(":").map(Number);
+  const hh = h>12?h-12:h===0?12:h;
+  return hh+":"+(m<10?"0"+m:m)+" "+(h>=12?"pm":"am");
+}
+
+function fmtFecha(val) {
+  if(!val) return "";
+  return new Date(val+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric"});
+}
+
+function validarHora(val, warnId) {
+  const w = document.getElementById(warnId);
+  if(!val){w.style.display="none";return;}
+  const [h,m]=val.split(":").map(Number), mins=h*60+m;
+  w.style.display=(mins<11*60+30||mins>16*60)?"block":"none";
+}
+
+// ---------- KILO ----------
+function kCambiarDia() {
+  const dia = document.getElementById("k-dia").value;
+  const cerrado = dia==="mar";
+  kEsFinde = DIAS_FINDE.includes(dia);
+  document.getElementById("k-closed").style.display = cerrado?"block":"none";
+  document.getElementById("k-finde-badge").style.display = kEsFinde?"inline":"none";
+  kItems = (kEsFinde?K_ITEMS_FINDE:K_ITEMS_SEMANA).map(i=>({...i}));
+  kRenderItems();
+  kCalc();
+}
+
+function kSetEntrega(t) {
+  kEntrega = t;
+  document.getElementById("k-btn-pickup").classList.toggle("active",t==="pickup");
+  document.getElementById("k-btn-domicilio").classList.toggle("active",t==="domicilio");
+  document.getElementById("k-domicilio-box").style.display = t==="domicilio"?"block":"none";
+  kCalc();
+}
+
+function kRenderItems() {
+  const c = document.getElementById("k-items");
+  c.innerHTML = kItems.map((it,i)=>`
+    <div class="item-row">
+      <div><div style="font-size:14px;">${it.nombre}</div><div style="font-size:12px;color:var(--text2);">$${it.precio}</div></div>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="kQty(${i},-1)">−</button>
+        <span class="qty-num" id="kq-${i}">${it.cantidad}</span>
+        <button class="qty-btn" onclick="kQty(${i},1)">+</button>
+      </div>
+      <div class="sub-price" id="ks-${i}">$0</div>
+    </div>`).join("");
+}
+
+function kQty(i,d) {
+  kItems[i].cantidad=Math.max(0,kItems[i].cantidad+d);
+  document.getElementById("kq-"+i).textContent=kItems[i].cantidad;
+  document.getElementById("ks-"+i).textContent="$"+(kItems[i].cantidad*kItems[i].precio).toLocaleString("es-MX");
+  kCalc();
+}
+
+function kAddExtra() { kExtras.push({nombre:"",precio:0,cantidad:1}); kRenderExtras(); }
+function kRenderExtras() {
+  const c=document.getElementById("k-extras");
+  c.innerHTML=kExtras.map((ex,i)=>`
+    <div class="extras-row">
+      <input type="text" value="${ex.nombre}" placeholder="Ej. Salsa extra" oninput="kExtras[${i}].nombre=this.value;kCalc()">
+      <input type="number" value="${ex.precio}" min="0" oninput="kExtras[${i}].precio=+this.value;kCalc()">
+      <input type="number" value="${ex.cantidad}" min="1" oninput="kExtras[${i}].cantidad=+this.value;kCalc()">
+      <button class="remove-btn" onclick="kExtras.splice(${i},1);kRenderExtras();kCalc()">✕</button>
+    </div>`).join("");
+}
+
+function kCalc() {
+  validarHora(document.getElementById("k-hora").value,"k-hora-warn");
+  const dia=document.getElementById("k-dia").value;
+  const hora=document.getElementById("k-hora").value;
+  const dias={lun:"Lunes",mar:"Martes",mie:"Miércoles",jue:"Jueves",vie:"Viernes",sab:"Sábado",dom:"Domingo"};
+  document.getElementById("k-resumen-header").textContent=[dias[dia],fmtHora(hora)].filter(Boolean).join(" · ");
+  let totalKilos=0, totalPaella=0, lineas="";
+  kItems.forEach(it=>{ const sub=it.cantidad*it.precio; totalKilos+=it.cantidad*it.kilos; totalPaella+=sub; if(it.cantidad>0) lineas+=`<div class="qline"><span>${it.nombre} × ${it.cantidad}</span><span>$${sub.toLocaleString("es-MX")}</span></div>`; });
+  let totalExtras=0;
+  kExtras.forEach(ex=>{ const sub=ex.precio*ex.cantidad; totalExtras+=sub; if(ex.nombre&&ex.cantidad>0) lineas+=`<div class="qline"><span>${ex.nombre} × ${ex.cantidad}</span><span>$${sub.toLocaleString("es-MX")}</span></div>`; });
+  let traslado=0;
+  if(kEntrega==="domicilio"){
+    const dist=parseFloat(document.getElementById("k-dist").value)||0;
+    const km=parseFloat(document.getElementById("k-km").value)||10;
+    const fijo=parseFloat(document.getElementById("k-fijo").value)||30;
+    traslado=dist>0?dist*km+fijo:0;
+    document.getElementById("k-qdist").textContent=dist;
+    document.getElementById("k-qkm").textContent=km;
+    document.getElementById("k-qfijo").textContent=fijo;
+    document.getElementById("k-qtraslado-val").textContent="$"+Math.round(traslado).toLocaleString("es-MX");
+    document.getElementById("k-qtraslado").style.display="flex";
+    const z=zonaInfo(dist);
+    document.getElementById("k-zona").innerHTML=`<span class="badge ${z.cls}">${z.label}</span>`;
+  } else { document.getElementById("k-qtraslado").style.display="none"; }
+  const total=totalPaella+totalExtras+traslado;
+  const kilosEnteros=Math.floor(totalKilos);
+  const bolillos=kEsFinde?kilosEnteros*2:0;
+  document.getElementById("k-m-kilos").textContent=totalKilos%1===0?totalKilos:totalKilos.toFixed(1);
+  document.getElementById("k-m-bolillos").textContent=kEsFinde?(bolillos||"0"):"—";
+  document.getElementById("k-m-total").textContent="$"+Math.round(total).toLocaleString("es-MX");
+  document.getElementById("k-qlineas").innerHTML=lineas||'<div class="qline"><span style="color:var(--text2)">Sin productos</span></div>';
+  document.getElementById("k-qtotal").textContent="$"+Math.round(total).toLocaleString("es-MX");
+}
+
+function kCopiar() {
+  const dia=document.getElementById("k-dia").value;
+  if(dia==="mar"){alert("No laboramos los martes.");return;}
+  const cliente=document.getElementById("k-cliente").value||"Cliente";
+  const hora=document.getElementById("k-hora").value;
+  const dias={lun:"Lunes",mar:"Martes",mie:"Miércoles",jue:"Jueves",vie:"Viernes",sab:"Sábado",dom:"Domingo"};
+  let totalPaella=0,totalKilos=0,totalExtras=0,lineas="";
+  kItems.forEach(it=>{ if(it.cantidad>0){const sub=it.cantidad*it.precio;totalPaella+=sub;totalKilos+=it.cantidad*it.kilos;lineas+=`  • ${it.nombre} × ${it.cantidad} = $${sub.toLocaleString("es-MX")}\n`;}});
+  kExtras.forEach(ex=>{ if(ex.nombre&&ex.cantidad>0){const sub=ex.precio*ex.cantidad;totalExtras+=sub;lineas+=`  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`;}});
+  const kilosEnteros=Math.floor(totalKilos);
+  const bolillos=kEsFinde?kilosEnteros*2:0;
+  const bolillosStr=kEsFinde&&bolillos>0?`  + ${bolillos} bolillos incluidos\n`:"";
+  let traslado=0,trasladoStr="";
+  if(kEntrega==="domicilio"){
+    const dist=parseFloat(document.getElementById("k-dist").value)||0;
+    const km=parseFloat(document.getElementById("k-km").value)||10;
+    const fijo=parseFloat(document.getElementById("k-fijo").value)||30;
+    const dir=document.getElementById("k-direccion").value;
+    traslado=dist>0?dist*km+fijo:0;
+    trasladoStr=`\n*Entrega a domicilio*${dir?": "+dir:""}\nTraslado (${dist} km): $${Math.round(traslado).toLocaleString("es-MX")}\n`;
+  } else {trasladoStr="\n*Pick up en local*\n";}
+  const notas=document.getElementById("k-notas").value;
+  const total=totalPaella+totalExtras+traslado;
+  const txt=`*Pedido Paella — Para llevar*\n👤 ${cliente}\n📅 ${dias[dia]}${hora?" a las "+fmtHora(hora):""}\n\n*Productos:*\n${lineas}${bolillosStr}${trasladoStr}${notas?"\n*Notas:* "+notas+"\n":""}\n*Total: $${Math.round(total).toLocaleString("es-MX")}*`;
+  navigator.clipboard.writeText(txt).then(()=>{ const btn=document.querySelectorAll("#panel-kilo .copy-btn")[0]; btn.textContent="Copiado!"; setTimeout(()=>btn.textContent="Copiar texto",2000); });
+}
+
+// ---------- EVENTO ----------
+function eSetEntrega(t) {
+  eEntrega=t;
+  document.getElementById("e-btn-pickup").classList.toggle("active",t==="pickup");
+  document.getElementById("e-btn-domicilio").classList.toggle("active",t==="domicilio");
+  document.getElementById("e-domicilio-box").style.display=t==="domicilio"?"block":"none";
+  eCalc();
+}
+
+function eRenderPlatillos() {
+  const c=document.getElementById("e-platillos");
+  c.innerHTML=eItems.map((p,i)=>`
+    <div class="platillo-row">
+      <input type="text" value="${p.nombre}" oninput="eItems[${i}].nombre=this.value;eCalc()">
+      <input type="number" value="${p.precio}" min="0" oninput="eItems[${i}].precio=+this.value;eCalc()">
+      <input type="number" value="${p.personas}" min="0" oninput="eItems[${i}].personas=+this.value;eCalc()">
+      <button class="remove-btn" onclick="eItems.splice(${i},1);eRenderPlatillos();eCalc()">✕</button>
+    </div>`).join("");
+}
+function eAddPlatillo() { eItems.push({nombre:"Nuevo platillo",precio:180,personas:0}); eRenderPlatillos(); eCalc(); }
+function eAddExtra() { eExtras.push({nombre:"",precio:0,cantidad:1}); eRenderExtras(); }
+function eRenderExtras() {
+  const c=document.getElementById("e-extras");
+  c.innerHTML=eExtras.map((ex,i)=>`
+    <div class="extras-row">
+      <input type="text" value="${ex.nombre}" placeholder="Ej. Bebidas, mesero..." oninput="eExtras[${i}].nombre=this.value;eCalc()">
+      <input type="number" value="${ex.precio}" min="0" oninput="eExtras[${i}].precio=+this.value;eCalc()">
+      <input type="number" value="${ex.cantidad}" min="1" oninput="eExtras[${i}].cantidad=+this.value;eCalc()">
+      <button class="remove-btn" onclick="eExtras.splice(${i},1);eRenderExtras();eCalc()">✕</button>
+    </div>`).join("");
+}
+function eCalc() {
+  const fecha=document.getElementById("e-fecha").value;
+  const hora=document.getElementById("e-hora").value;
+  document.getElementById("e-resumen-header").textContent=[fmtFecha(fecha),fmtHora(hora)].filter(Boolean).join(" · ");
+  let totalPersonas=0,totalPlatillos=0,lineas="";
+  eItems.forEach(p=>{ const sub=p.personas*p.precio; totalPersonas+=p.personas; totalPlatillos+=sub; if(p.personas>0) lineas+=`<div class="qline"><span>${p.nombre} (${p.personas} pers × $${p.precio})</span><span>$${sub.toLocaleString("es-MX")}</span></div>`; });
+  let totalExtras=0;
+  eExtras.forEach(ex=>{ const sub=ex.precio*ex.cantidad; totalExtras+=sub; if(ex.nombre&&ex.cantidad>0) lineas+=`<div class="qline"><span>${ex.nombre} × ${ex.cantidad}</span><span>$${sub.toLocaleString("es-MX")}</span></div>`; });
+  let traslado=0;
+  if(eEntrega==="domicilio"){
+    const dist=parseFloat(document.getElementById("e-dist").value)||0;
+    const km=parseFloat(document.getElementById("e-km").value)||10;
+    const fijo=parseFloat(document.getElementById("e-fijo").value)||30;
+    traslado=dist>0?dist*km+fijo:0;
+    document.getElementById("e-qdist").textContent=dist;
+    document.getElementById("e-qkm").textContent=km;
+    document.getElementById("e-qfijo").textContent=fijo;
+    document.getElementById("e-qtraslado-val").textContent="$"+Math.round(traslado).toLocaleString("es-MX");
+    document.getElementById("e-qtraslado").style.display="flex";
+    const z=zonaInfo(dist);
+    document.getElementById("e-zona").innerHTML=`<span class="badge ${z.cls}">${z.label}</span>`;
+  } else { document.getElementById("e-qtraslado").style.display="none"; }
+  const total=totalPlatillos+totalExtras+traslado;
+  document.getElementById("e-min-warn").style.display=totalPersonas>0&&totalPersonas<7?"block":"none";
+  document.getElementById("e-m-personas").textContent=totalPersonas;
+  document.getElementById("e-m-platos").textContent="$"+totalPlatillos.toLocaleString("es-MX");
+  document.getElementById("e-m-total").textContent="$"+Math.round(total).toLocaleString("es-MX");
+  document.getElementById("e-qlineas").innerHTML=lineas||'<div class="qline"><span style="color:var(--text2)">Sin platillos</span></div>';
+  document.getElementById("e-qtotal").textContent="$"+Math.round(total).toLocaleString("es-MX");
+}
+function eCopiar() {
+  const cliente=document.getElementById("e-cliente").value||"Cliente";
+  const fecha=document.getElementById("e-fecha").value;
+  const hora=document.getElementById("e-hora").value;
+  let totalPlatillos=0,totalExtras=0,totalPersonas=0,lineas="";
+  eItems.forEach(p=>{ if(p.personas>0){const sub=p.personas*p.precio;totalPlatillos+=sub;totalPersonas+=p.personas;lineas+=`  • ${p.nombre}: ${p.personas} pers × $${p.precio} = $${sub.toLocaleString("es-MX")}\n`;}});
+  eExtras.forEach(ex=>{ if(ex.nombre&&ex.cantidad>0){const sub=ex.precio*ex.cantidad;totalExtras+=sub;lineas+=`  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`;}});
+  let traslado=0,trasladoStr="";
+  if(eEntrega==="domicilio"){
+    const dist=parseFloat(document.getElementById("e-dist").value)||0;
+    const km=parseFloat(document.getElementById("e-km").value)||10;
+    const fijo=parseFloat(document.getElementById("e-fijo").value)||30;
+    const dir=document.getElementById("e-direccion").value;
+    traslado=dist>0?dist*km+fijo:0;
+    trasladoStr=`\n*Entrega a domicilio*${dir?": "+dir:""}\nTraslado (${dist} km): $${Math.round(traslado).toLocaleString("es-MX")}\n`;
+  } else {trasladoStr="\n*Pick up en local*\n";}
+  const notas=document.getElementById("e-notas").value;
+  const total=totalPlatillos+totalExtras+traslado;
+  const txt=`*Pedido— Servicio a Eventos*\n👤 ${cliente}${fecha?"\n📅 "+fmtFecha(fecha):""}${hora?" · "+fmtHora(hora):""}\n\n*Platillos:*\n${lineas}${trasladoStr}${notas?"\n*Notas:* "+notas+"\n":""}\n*Total: $${Math.round(total).toLocaleString("es-MX")}*\n\n_Servicio en paellera · Mínimo 7 personas_`;
+  navigator.clipboard.writeText(txt).then(()=>{ const btn=document.querySelectorAll("#panel-evento .copy-btn")[0]; btn.textContent="Copiado!"; setTimeout(()=>btn.textContent="Copiar texto",2000); });
+}
+
+// ---------- GUARDAR PEDIDO (localStorage + backend) ----------
+function guardarPedido(tipo) {
+  let data = { tipo, fecha: new Date().toISOString() };
+  if (tipo === 'k') {
+    data.cliente = document.getElementById("k-cliente").value;
+    data.telefono = document.getElementById("k-telefono").value;
+    data.dia = document.getElementById("k-dia").value;
+    data.hora = document.getElementById("k-hora").value;
+    data.entrega = kEntrega;
+    data.items = kItems.map(i=>({...i}));
+    data.extras = kExtras.map(e=>({...e}));
+    data.notas = document.getElementById("k-notas").value;
+
+    if(kEntrega === 'domicilio') {
+      data.direccion = document.getElementById("k-direccion").value;
+      data.distancia = parseFloat(document.getElementById("k-dist").value)||0;
+      data.costoKm = parseFloat(document.getElementById("k-km").value)||10;
+      data.costoFijo = parseFloat(document.getElementById("k-fijo").value)||30;
+    }
+    data.total = parseFloat(document.getElementById("k-qtotal").textContent.replace('$','').replace(/\./g,'').replace(',',''));
+
+  } else {
+    data.cliente = document.getElementById("e-cliente").value;
+    data.telefono = document.getElementById("e-telefono").value;
+    data.fecha = document.getElementById("e-fecha").value;
+    data.hora = document.getElementById("e-hora").value;
+    data.entrega = eEntrega;
+    data.items = eItems.map(i=>({...i}));
+    data.extras = eExtras.map(e=>({...e}));
+    data.notas = document.getElementById("e-notas").value;
+
+    if(eEntrega === 'domicilio') {
+      data.direccion = document.getElementById("e-direccion").value;
+      data.distancia = parseFloat(document.getElementById("e-dist").value)||0;
+      data.costoKm = parseFloat(document.getElementById("e-km").value)||10;
+      data.costoFijo = parseFloat(document.getElementById("e-fijo").value)||30;
+    }
+    data.total = parseFloat(document.getElementById("e-qtotal").textContent.replace('$','').replace(/\./g,'').replace(',',''));
+  }
+
+  // Guardar en localStorage
+  let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
+  saved.push(data);
+  localStorage.setItem("Pedidos", JSON.stringify(saved));
+  
+  // Enviar al backend
+  enviarAlBackend(data);
+  
+  // Actualizar lista de pedidos guardados en la interfaz
+  guardarPedidosGuardados(tipo);
+  
+  alert("Pedido guardado correctamente.");
+}
+
+// ---------- FUNCIÓN PARA CONVERTIR DÍA A FECHA REAL (próximo día de la semana) ----------
+function convertirDiaAFecha(dia) {
+  const diasMap = {
+    'lun': 1, 'mar': 2, 'mie': 3, 'jue': 4, 'vie': 5, 'sab': 6, 'dom': 0
+  };
+  const hoy = new Date();
+  const diaActual = hoy.getDay(); // 0=domingo, 1=lunes...
+  let diasHasta = diasMap[dia] - diaActual;
+  if (diasHasta < 0) diasHasta += 7;
+  if (diasHasta === 0 && hoy.getHours() >= 16) diasHasta = 7; // si ya pasó el horario, siguiente semana
+  const fecha = new Date(hoy);
+  fecha.setDate(hoy.getDate() + diasHasta);
+  // Formato YYYY-MM-DD
+  return fecha.toISOString().split('T')[0];
+}
+
+// ---------- ENVIAR AL BACKEND (NUEVO) ----------
+async function enviarAlBackend(data) {
+  // Construir array de items con detalle
+  let itemsDetalle = [];
+  if (data.tipo === 'k') {
+    // Para kilos: cada item del pedido (producto con cantidad)
+    itemsDetalle = data.items.map(item => ({
+      nombre: item.nombre,
+      cantidad: item.cantidad,
+      kilos: item.kilos || 0,
+      precio_unitario: item.precio,
+      subtotal: item.cantidad * item.precio
+    }));
+  } else {
+    // Para eventos: cada platillo con número de personas
+    itemsDetalle = data.items.map(item => ({
+      nombre: item.nombre,
+      personas: item.personas,
+      precio_por_persona: item.precio,
+      subtotal: item.personas * item.precio
+    }));
+  }
+
+  // Determinar fecha de entrega real
+  let fechaEntregaReal;
+  if (data.tipo === 'k') {
+    fechaEntregaReal = convertirDiaAFecha(data.dia);
+  } else {
+    fechaEntregaReal = data.fecha; // evento ya tiene fecha en formato YYYY-MM-DD
+  }
+
+  const pedido = {
+    nombre: data.cliente,
+    telefono: data.telefono,
+    tipo: data.tipo === 'k' ? 'kilo' : 'evento',
+    itemsDetalle: itemsDetalle,
+    tipoEntrega: data.entrega,
+    direccion: data.direccion || '',
+    horaEntrega: data.hora,
+    fechaEntrega: fechaEntregaReal,
+    total: data.total
+  };
+
+  try {
+    const res = await fetch('/pedidos', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+      'Authorization': 'Bearer Jorgito06'   // <-- usa la misma contraseña
+  },
+  body: JSON.stringify(pedido)
+});
+    const result = await res.json();
+    console.log("Backend response:", result);
+  } catch (error) {
+    console.error("Error al enviar al backend:", error);
+  }
+}
+
+function guardarPedidosGuardados(tipo) {
+  const container = document.getElementById(`${tipo}-saved-container`);
+  if(!container) return;
+  let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
+  saved = saved.filter(c => c.tipo === tipo);
+  if(saved.length === 0) {
+    container.innerHTML = "<div class='saved-list'>No hay Pedidos guardadas.</div>";
+    return;
+  }
+  let html = `<div class='saved-list'>`;
+  saved.forEach((c, idx) => {
+    const fechaCorta = new Date(c.fecha).toLocaleString();
+    html += `<div class='saved-item'>
+      <span><strong>${c.cliente || "Sin nombre"}</strong> - $${Math.round(c.total).toLocaleString()} (${fechaCorta})</span>
+      <div>
+        <button class="add-btn" style="padding:2px 6px; font-size:11px;" onclick="cargarPedido(${idx})">Cargar</button>
+        <button class="remove-btn" onclick="eliminarPedido(${idx}, '${tipo}')">✕</button>
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function cargarPedido(idx) {
+  let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
+  const data = saved[idx];
+  if(!data) return;
+  if(data.tipo === 'k') {
+    document.getElementById("k-cliente").value = data.cliente || "";
+    document.getElementById("k-telefono").value = data.telefono || "";
+    document.getElementById("k-dia").value = data.dia || "lun";
+    document.getElementById("k-hora").value = data.hora || "13:00";
+    kCambiarDia(); // actualiza items según día
+    kSetEntrega(data.entrega);
+    if(data.entrega === 'domicilio') {
+      document.getElementById("k-direccion").value = data.direccion || "";
+      document.getElementById("k-dist").value = data.distancia || 0;
+      document.getElementById("k-km").value = data.costoKm || 10;
+      document.getElementById("k-fijo").value = data.costoFijo || 30;
+    }
+    // cargar items
+    for(let i=0; i<kItems.length && i<data.items.length; i++) {
+      kItems[i].cantidad = data.items[i].cantidad || 0;
+    }
+    kRenderItems();
+    kExtras = data.extras.map(e=>({...e}));
+    kRenderExtras();
+    document.getElementById("k-notas").value = data.notas || "";
+    kCalc();
+  } else {
+    document.getElementById("e-cliente").value = data.cliente || "";
+    document.getElementById("e-telefono").value = data.telefono || "";
+    document.getElementById("e-fecha").value = data.fecha || "";
+    document.getElementById("e-hora").value = data.hora || "14:00";
+    eSetEntrega(data.entrega);
+    if(data.entrega === 'domicilio') {
+      document.getElementById("e-direccion").value = data.direccion || "";
+      document.getElementById("e-dist").value = data.distancia || 0;
+      document.getElementById("e-km").value = data.costoKm || 10;
+      document.getElementById("e-fijo").value = data.costoFijo || 30;
+    }
+    eItems = data.items.map(i=>({...i}));
+    eRenderPlatillos();
+    eExtras = data.extras.map(e=>({...e}));
+    eRenderExtras();
+    document.getElementById("e-notas").value = data.notas || "";
+    eCalc();
+  }
+  alert("Pedido cargado.");
+}
+
+function eliminarPedido(idx, tipo) {
+  let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
+  saved.splice(idx,1);
+  localStorage.setItem("Pedidos", JSON.stringify(saved));
+  guardarPedidosGuardados(tipo);
+}
+
+// ---------- PDF ----------
+async function exportarPDF(tipo) {
+  const element = document.getElementById(`${tipo}-qbox`);
+  if(!element) return;
+  const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
+  const imgData = canvas.toDataURL('image/png');
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const imgWidth = 190;
+  const pageHeight = 277;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  let position = 10;
+  pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+  pdf.save(`Pedido_${tipo}_${Date.now()}.pdf`);
+}
+
+// ---------- CONFIRMAR PEDIDO Y WHATSAPP ----------
+function confirmarPedido(tipo) {
+  let telefono, mensaje, cliente;
+  if(tipo === 'k') {
+    telefono = document.getElementById("k-telefono").value;
+    if(!telefono) { alert("Ingresa el número de teléfono del cliente (con código de país)."); return; }
+    const dia = document.getElementById("k-dia").value;
+    if(dia==="mar"){ alert("No laboramos los martes."); return; }
+    cliente = document.getElementById("k-cliente").value || "Cliente";
+    const hora = document.getElementById("k-hora").value;
+    const dias={lun:"Lunes",mar:"Martes",mie:"Miércoles",jue:"Jueves",vie:"Viernes",sab:"Sábado",dom:"Domingo"};
+    let totalPaella=0,totalKilos=0,totalExtras=0,lineas="";
+    kItems.forEach(it=>{ if(it.cantidad>0){const sub=it.cantidad*it.precio;totalPaella+=sub;totalKilos+=it.cantidad*it.kilos;lineas+=`  • ${it.nombre} × ${it.cantidad} = $${sub.toLocaleString("es-MX")}\n`;}});
+    kExtras.forEach(ex=>{ if(ex.nombre&&ex.cantidad>0){const sub=ex.precio*ex.cantidad;totalExtras+=sub;lineas+=`  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`;}});
+    const kilosEnteros=Math.floor(totalKilos);
+    const bolillos=kEsFinde?kilosEnteros*2:0;
+    const bolillosStr=kEsFinde&&bolillos>0?`  + ${bolillos} bolillos incluidos\n`:"";
+    let traslado=0,trasladoStr="";
+    if(kEntrega==="domicilio"){
+      const dist=parseFloat(document.getElementById("k-dist").value)||0;
+      const km=parseFloat(document.getElementById("k-km").value)||10;
+      const fijo=parseFloat(document.getElementById("k-fijo").value)||30;
+      const dir=document.getElementById("k-direccion").value;
+      traslado=dist>0?dist*km+fijo:0;
+      trasladoStr=`\n*Entrega a domicilio*${dir?": "+dir:""}\nTraslado (${dist} km): $${Math.round(traslado).toLocaleString("es-MX")}\n`;
+    } else {trasladoStr="\n*Pick up en local*\n";}
+    const notas=document.getElementById("k-notas").value;
+    const total=totalPaella+totalExtras+traslado;
+    mensaje = `*PEDIDO CONFIRMADO - PAELLA*\n👤 ${cliente}\n📅 ${dias[dia]}${hora?" a las "+fmtHora(hora):""}\n\n*Productos:*\n${lineas}${bolillosStr}${trasladoStr}${notas?"\n*Notas:* "+notas+"\n":""}\n*Total a pagar: $${Math.round(total).toLocaleString("es-MX")}*\n\nGracias por tu preferencia.`;
+  } else {
+    telefono = document.getElementById("e-telefono").value;
+    if(!telefono) { alert("Ingresa el número de teléfono del cliente."); return; }
+    cliente = document.getElementById("e-cliente").value || "Cliente";
+    const fecha = document.getElementById("e-fecha").value;
+    const hora = document.getElementById("e-hora").value;
+    let totalPlatillos=0,totalExtras=0,totalPersonas=0,lineas="";
+    eItems.forEach(p=>{ if(p.personas>0){const sub=p.personas*p.precio;totalPlatillos+=sub;totalPersonas+=p.personas;lineas+=`  • ${p.nombre}: ${p.personas} pers × $${p.precio} = $${sub.toLocaleString("es-MX")}\n`;}});
+    eExtras.forEach(ex=>{ if(ex.nombre&&ex.cantidad>0){const sub=ex.precio*ex.cantidad;totalExtras+=sub;lineas+=`  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`;}});
+    let traslado=0,trasladoStr="";
+    if(eEntrega==="domicilio"){
+      const dist=parseFloat(document.getElementById("e-dist").value)||0;
+      const km=parseFloat(document.getElementById("e-km").value)||10;
+      const fijo=parseFloat(document.getElementById("e-fijo").value)||30;
+      const dir=document.getElementById("e-direccion").value;
+      traslado=dist>0?dist*km+fijo:0;
+      trasladoStr=`\n*Entrega a domicilio*${dir?": "+dir:""}\nTraslado (${dist} km): $${Math.round(traslado).toLocaleString("es-MX")}\n`;
+    } else {trasladoStr="\n*Pick up en local*\n";}
+    const notas=document.getElementById("e-notas").value;
+    const total=totalPlatillos+totalExtras+traslado;
+    mensaje = `*PedidoCONFIRMADA - EVENTO*\n👤 ${cliente}${fecha?"\n📅 "+fmtFecha(fecha):""}${hora?" · "+fmtHora(hora):""}\n\n*Platillos:*\n${lineas}${trasladoStr}${notas?"\n*Notas:* "+notas+"\n":""}\n*Total: $${Math.round(total).toLocaleString("es-MX")}*\n\n_Servicio en paellera - Mínimo 7 personas_\n\n¡Confirmado! En breve nos comunicamos.`;
+  }
+  // Guardar como pedido confirmado (se puede almacenar en localStorage separado)
+  let confirmados = JSON.parse(localStorage.getItem("pedidos_confirmados") || "[]");
+  confirmados.push({ tipo, cliente, telefono, mensaje, fecha: new Date().toISOString(), total: 0 });
+  localStorage.setItem("pedidos_confirmados", JSON.stringify(confirmados));
+  // Abrir WhatsApp
+  const numero = telefono.replace(/\D/g, '');
+  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, '_blank');
+  alert("Pedido confirmado. Se abrirá WhatsApp para enviar el mensaje al cliente.");
+}
+
+// Inicialización
+kRenderItems();
+eRenderPlatillos();
+kCalc();
+eCalc();
+guardarPedidosGuardados('k');
+guardarPedidosGuardados('e');
+</script>
+</body>
+</html>
