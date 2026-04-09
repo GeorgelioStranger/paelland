@@ -63,6 +63,17 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Rutas a las otras pantallas para URLs más limpias
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'Admin.html'));
+});
+app.get('/estadisticas', (req, res) => {
+  res.sendFile(path.join(__dirname, 'estadisticas.html'));
+});
+app.get('/cotizador', (req, res) => {
+  res.sendFile(path.join(__dirname, 'cotizador1.1.html'));
+});
+
 // ------------------- RUTAS PROTEGIDAS (requieren autenticación) -------------------
 app.get('/pedidos', authMiddleware, async (req, res) => {
   try {
