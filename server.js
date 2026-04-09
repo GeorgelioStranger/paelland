@@ -84,7 +84,7 @@ app.get('/pedidos', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/pedidos', authMiddleware, async (req, res) => {
+app.post('/pedidos', async (req, res) => {
   try {
     const nuevoPedidoData = {
       id: Date.now(),

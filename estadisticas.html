@@ -1,325 +1,371 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Estadísticas - Paella</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f4f7fc;
-    margin: 0;
-    padding: 20px;
-  }
-  .container {
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-  h1 {
-    font-size: 1.8rem;
-    color: #D85A30;
-    margin-bottom: 0.25rem;
-  }
-  .subtitulo {
-    color: #5a6874;
-    margin-bottom: 1.5rem;
-    border-left: 3px solid #D85A30;
-    padding-left: 12px;
-  }
-  .graficas {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 24px;
-    margin-bottom: 32px;
-  }
-  .grafica-card {
-    background: white;
-    border-radius: 24px;
-    padding: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  }
-  .grafica-card h3 {
-    margin: 0 0 16px 0;
-    font-size: 1.2rem;
-    color: #1e293b;
-    text-align: center;
-  }
-  canvas {
-    max-height: 300px;
-    width: 100%;
-  }
-  .dashboard {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 32px;
-  }
-  .card {
-    background: white;
-    border-radius: 20px;
-    padding: 16px 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    text-align: center;
-  }
-  .card h3 {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #5e6f8d;
-    margin: 0 0 8px 0;
-  }
-  .card .value {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #1e293b;
-  }
-  .filtro-fechas {
-    background: white;
-    border-radius: 20px;
-    padding: 16px 20px;
-    margin-bottom: 24px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    align-items: flex-end;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  }
-  .filtro-fechas .field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  .filtro-fechas label {
-    font-size: 12px;
-    color: #5e6f8d;
-  }
-  .filtro-fechas input {
-    padding: 8px 12px;
-    border-radius: 12px;
-    border: 1px solid #cbd5e1;
-    font-family: inherit;
-  }
-  .btn-actualizar {
-    background: #D85A30;
-    color: white;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 40px;
-    cursor: pointer;
-    font-weight: 500;
-  }
-  .btn-actualizar:hover {
-    background: #b34724;
-  }
-  .btn-volver {
-    display: inline-block;
-    background: #64748b;
-    color: white;
-    text-decoration: none;
-    padding: 8px 20px;
-    border-radius: 40px;
-    margin-bottom: 20px;
-    font-weight: 500;
-  }
-  .btn-volver:hover {
-    background: #475569;
-  }
-  @media (max-width: 700px) {
-    .graficas { grid-template-columns: 1fr; }
-  }
-</style>
-</head>
-<body>
-<div class="container">
-  <a href="/admin" class="btn-volver">← Volver al Panel de Administración</a>
-  <h1>📊 Estadísticas y Reportes</h1>
-  <div class="subtitulo">Métricas avanzadas de ventas y pedidos</div>
-
-  <div class="dashboard">
-    <div class="card"><h3>💰 Ventas totales</h3><div class="value" id="totalVentas">$0</div></div>
-    <div class="card"><h3>📦 Total pedidos</h3><div class="value" id="totalPedidos">0</div></div>
-    <div class="card"><h3>📈 Ticket promedio</h3><div class="value" id="promedio">$0</div></div>
-    <div class="card"><h3>🍽️ Pedidos kilo</h3><div class="value" id="pedidosKilo">0</div></div>
-    <div class="card"><h3>🎉 Pedidos evento</h3><div class="value" id="pedidosEvento">0</div></div>
-  </div>
-
-  <div class="filtro-fechas">
-    <div class="field">
-      <label>Fecha inicio</label>
-      <input type="date" id="fechaInicio">
-    </div>
-    <div class="field">
-      <label>Fecha fin</label>
-      <input type="date" id="fechaFin">
-    </div>
-    <button class="btn-actualizar" onclick="actualizarEstadisticas()">Actualizar gráficas</button>
-  </div>
-
-  <div class="graficas">
-    <div class="grafica-card">
-      <h3>💰 Ventas por día</h3>
-      <canvas id="chartVentas" width="400" height="250"></canvas>
-    </div>
-    <div class="grafica-card">
-      <h3>📦 Pedidos por día</h3>
-      <canvas id="chartPedidos" width="400" height="250"></canvas>
-    </div>
-  </div>
-
-  <div class="graficas">
-    <div class="grafica-card">
-      <h3>🍽️ Comparativa: Kilo vs Evento</h3>
-      <canvas id="chartTipo" width="400" height="250"></canvas>
-    </div>
-    <div class="grafica-card">
-      <h3>🚚 Pickup vs Domicilio</h3>
-      <canvas id="chartEntrega" width="400" height="250"></canvas>
-    </div>
-  </div>
-</div>
-
-<script>
-  let todosPedidos = [];
-  let chartVentas = null;
-  let chartPedidos = null;
-  let chartTipo = null;
-  let chartEntrega = null;
-
-  // Generar array de fechas entre dos fechas
-  function generarRangoFechas(inicioStr, finStr) {
-    const fechas = [];
-    let inicio = new Date(inicioStr);
-    let fin = new Date(finStr);
-    if (isNaN(inicio)) inicio = new Date();
-    if (isNaN(fin)) fin = new Date();
-    inicio.setHours(0,0,0,0);
-    fin.setHours(0,0,0,0);
-    let current = new Date(inicio);
-    while (current <= fin) {
-      const yyyy = current.getFullYear();
-      const mm = String(current.getMonth() + 1).padStart(2, '0');
-      const dd = String(current.getDate()).padStart(2, '0');
-      fechas.push(`${yyyy}-${mm}-${dd}`);
-      current.setDate(current.getDate() + 1);
-    }
-    return fechas;
-  }
-
-  // Actualizar todas las gráficas y métricas según rango de fechas
-  function actualizarEstadisticas() {
-    let inicio = document.getElementById('fechaInicio').value;
-    let fin = document.getElementById('fechaFin').value;
-
-    // Si no hay fechas seleccionadas, mostrar últimos 30 días
-    if (!inicio || !fin) {
-      const hoy = new Date();
-      const hace30 = new Date();
-      hace30.setDate(hoy.getDate() - 29);
-      inicio = hace30.toISOString().split('T')[0];
-      fin = hoy.toISOString().split('T')[0];
-      document.getElementById('fechaInicio').value = inicio;
-      document.getElementById('fechaFin').value = fin;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estadísticas - Paella</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
     }
 
-    const fechasRango = generarRangoFechas(inicio, fin);
-    const pedidosEnRango = todosPedidos.filter(p => {
-      if (!p.fechaEntrega) return false;
-      return p.fechaEntrega >= inicio && p.fechaEntrega <= fin;
-    });
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f4f7fc;
+      margin: 0;
+      padding: 20px;
+    }
 
-    // Métricas generales (de todos los pedidos, no solo el rango)
-    const totalVentas = todosPedidos.reduce((sum, p) => sum + (p.total || 0), 0);
-    const totalPedidos = todosPedidos.length;
-    const promedio = totalPedidos > 0 ? totalVentas / totalPedidos : 0;
-    const pedidosKilo = todosPedidos.filter(p => p.tipo === 'kilo').length;
-    const pedidosEvento = todosPedidos.filter(p => p.tipo === 'evento').length;
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
 
-    document.getElementById('totalVentas').innerText = '$' + Math.round(totalVentas).toLocaleString();
-    document.getElementById('totalPedidos').innerText = totalPedidos;
-    document.getElementById('promedio').innerText = '$' + Math.round(promedio).toLocaleString();
-    document.getElementById('pedidosKilo').innerText = pedidosKilo;
-    document.getElementById('pedidosEvento').innerText = pedidosEvento;
+    h1 {
+      font-size: 1.8rem;
+      color: #D85A30;
+      margin-bottom: 0.25rem;
+    }
 
-    // Ventas por día (en el rango)
-    const ventasPorDia = {};
-    const pedidosPorDia = {};
-    fechasRango.forEach(f => { ventasPorDia[f] = 0; pedidosPorDia[f] = 0; });
-    pedidosEnRango.forEach(p => {
-      if (ventasPorDia[p.fechaEntrega] !== undefined) {
-        ventasPorDia[p.fechaEntrega] += (p.total || 0);
-        pedidosPorDia[p.fechaEntrega] += 1;
+    .subtitulo {
+      color: #5a6874;
+      margin-bottom: 1.5rem;
+      border-left: 3px solid #D85A30;
+      padding-left: 12px;
+    }
+
+    .graficas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .grafica-card {
+      background: white;
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .grafica-card h3 {
+      margin: 0 0 16px 0;
+      font-size: 1.2rem;
+      color: #1e293b;
+      text-align: center;
+    }
+
+    canvas {
+      max-height: 300px;
+      width: 100%;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 16px 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+
+    .card h3 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #5e6f8d;
+      margin: 0 0 8px 0;
+    }
+
+    .card .value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .filtro-fechas {
+      background: white;
+      border-radius: 20px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .filtro-fechas .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .filtro-fechas label {
+      font-size: 12px;
+      color: #5e6f8d;
+    }
+
+    .filtro-fechas input {
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      font-family: inherit;
+    }
+
+    .btn-actualizar {
+      background: #D85A30;
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 40px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn-actualizar:hover {
+      background: #b34724;
+    }
+
+    .btn-volver {
+      display: inline-block;
+      background: #64748b;
+      color: white;
+      text-decoration: none;
+      padding: 8px 20px;
+      border-radius: 40px;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .btn-volver:hover {
+      background: #475569;
+    }
+
+    @media (max-width: 700px) {
+      .graficas {
+        grid-template-columns: 1fr;
       }
-    });
-
-    const etiquetas = fechasRango.map(f => {
-      const [y, m, d] = f.split('-');
-      return `${d}/${m}`;
-    });
-    const datosVentas = fechasRango.map(f => ventasPorDia[f]);
-    const datosPedidos = fechasRango.map(f => pedidosPorDia[f]);
-
-    // Gráfica ventas
-    if (chartVentas) chartVentas.destroy();
-    const ctxVentas = document.getElementById('chartVentas').getContext('2d');
-    chartVentas = new Chart(ctxVentas, {
-      type: 'bar',
-      data: { labels: etiquetas, datasets: [{ label: 'Ventas ($)', data: datosVentas, backgroundColor: '#D85A30', borderRadius: 8 }] },
-      options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `$${ctx.raw.toLocaleString()}` } } } }
-    });
-
-    // Gráfica pedidos
-    if (chartPedidos) chartPedidos.destroy();
-    const ctxPedidos = document.getElementById('chartPedidos').getContext('2d');
-    chartPedidos = new Chart(ctxPedidos, {
-      type: 'line',
-      data: { labels: etiquetas, datasets: [{ label: 'Número de pedidos', data: datosPedidos, borderColor: '#D85A30', backgroundColor: 'rgba(216,90,48,0.1)', fill: true, tension: 0.2, pointBackgroundColor: '#D85A30', pointRadius: 4 }] },
-      options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw} pedido(s)` } } } }
-    });
-
-    // Comparativa Kilo vs Evento (en el rango)
-    const kiloCount = pedidosEnRango.filter(p => p.tipo === 'kilo').length;
-    const eventoCount = pedidosEnRango.filter(p => p.tipo === 'evento').length;
-    if (chartTipo) chartTipo.destroy();
-    const ctxTipo = document.getElementById('chartTipo').getContext('2d');
-    chartTipo = new Chart(ctxTipo, {
-      type: 'doughnut',
-      data: { labels: ['Venta por kilo', 'Eventos'], datasets: [{ data: [kiloCount, eventoCount], backgroundColor: ['#D85A30', '#3b82f6'], borderWidth: 0 }] },
-      options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-    });
-
-    // Pickup vs Domicilio (en el rango)
-    const pickupCount = pedidosEnRango.filter(p => p.tipoEntrega === 'pickup' || !p.tipoEntrega).length;
-    const domicilioCount = pedidosEnRango.filter(p => p.tipoEntrega === 'domicilio').length;
-    if (chartEntrega) chartEntrega.destroy();
-    const ctxEntrega = document.getElementById('chartEntrega').getContext('2d');
-    chartEntrega = new Chart(ctxEntrega, {
-      type: 'doughnut',
-      data: { labels: ['Pick up', 'Domicilio'], datasets: [{ data: [pickupCount, domicilioCount], backgroundColor: ['#10b981', '#f59e0b'], borderWidth: 0 }] },
-      options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-    });
-  }
-
-  async function cargarPedidos() {
-    try {
-      const res = await fetch('/pedidos');
-      if (!res.ok) throw new Error('Error de red');
-      todosPedidos = await res.json();
-      // Establecer fechas por defecto (últimos 30 días)
-      const hoy = new Date();
-      const hace30 = new Date();
-      hace30.setDate(hoy.getDate() - 29);
-      document.getElementById('fechaInicio').value = hace30.toISOString().split('T')[0];
-      document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
-      actualizarEstadisticas();
-    } catch (err) {
-      console.error(err);
-      alert('Error al cargar los pedidos. Asegúrate de que el backend esté corriendo.');
     }
-  }
+  </style>
+</head>
 
-  cargarPedidos();
-</script>
+<body>
+  <div class="container">
+    <a href="/admin" class="btn-volver">← Volver al Panel de Administración</a>
+    <h1>📊 Estadísticas y Reportes</h1>
+    <div class="subtitulo">Métricas avanzadas de ventas y pedidos</div>
+
+    <div class="dashboard">
+      <div class="card">
+        <h3>💰 Ventas totales</h3>
+        <div class="value" id="totalVentas">$0</div>
+      </div>
+      <div class="card">
+        <h3>📦 Total pedidos</h3>
+        <div class="value" id="totalPedidos">0</div>
+      </div>
+      <div class="card">
+        <h3>📈 Ticket promedio</h3>
+        <div class="value" id="promedio">$0</div>
+      </div>
+      <div class="card">
+        <h3>🍽️ Pedidos kilo</h3>
+        <div class="value" id="pedidosKilo">0</div>
+      </div>
+      <div class="card">
+        <h3>🎉 Pedidos evento</h3>
+        <div class="value" id="pedidosEvento">0</div>
+      </div>
+    </div>
+
+    <div class="filtro-fechas">
+      <div class="field">
+        <label>Fecha inicio</label>
+        <input type="date" id="fechaInicio">
+      </div>
+      <div class="field">
+        <label>Fecha fin</label>
+        <input type="date" id="fechaFin">
+      </div>
+      <button class="btn-actualizar" onclick="actualizarEstadisticas()">Actualizar gráficas</button>
+    </div>
+
+    <div class="graficas">
+      <div class="grafica-card">
+        <h3>💰 Ventas por día</h3>
+        <canvas id="chartVentas" width="400" height="250"></canvas>
+      </div>
+      <div class="grafica-card">
+        <h3>📦 Pedidos por día</h3>
+        <canvas id="chartPedidos" width="400" height="250"></canvas>
+      </div>
+    </div>
+
+    <div class="graficas">
+      <div class="grafica-card">
+        <h3>🍽️ Comparativa: Kilo vs Evento</h3>
+        <canvas id="chartTipo" width="400" height="250"></canvas>
+      </div>
+      <div class="grafica-card">
+        <h3>🚚 Pickup vs Domicilio</h3>
+        <canvas id="chartEntrega" width="400" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let todosPedidos = [];
+    let chartVentas = null;
+    let chartPedidos = null;
+    let chartTipo = null;
+    let chartEntrega = null;
+
+    // Generar array de fechas entre dos fechas
+    function generarRangoFechas(inicioStr, finStr) {
+      const fechas = [];
+      let inicio = new Date(inicioStr);
+      let fin = new Date(finStr);
+      if (isNaN(inicio)) inicio = new Date();
+      if (isNaN(fin)) fin = new Date();
+      inicio.setHours(0, 0, 0, 0);
+      fin.setHours(0, 0, 0, 0);
+      let current = new Date(inicio);
+      while (current <= fin) {
+        const yyyy = current.getFullYear();
+        const mm = String(current.getMonth() + 1).padStart(2, '0');
+        const dd = String(current.getDate()).padStart(2, '0');
+        fechas.push(`${yyyy}-${mm}-${dd}`);
+        current.setDate(current.getDate() + 1);
+      }
+      return fechas;
+    }
+
+    // Actualizar todas las gráficas y métricas según rango de fechas
+    function actualizarEstadisticas() {
+      let inicio = document.getElementById('fechaInicio').value;
+      let fin = document.getElementById('fechaFin').value;
+
+      // Si no hay fechas seleccionadas, mostrar últimos 30 días
+      if (!inicio || !fin) {
+        const hoy = new Date();
+        const hace30 = new Date();
+        hace30.setDate(hoy.getDate() - 29);
+        inicio = hace30.toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+        document.getElementById('fechaInicio').value = inicio;
+        document.getElementById('fechaFin').value = fin;
+      }
+
+      const fechasRango = generarRangoFechas(inicio, fin);
+      const pedidosEnRango = todosPedidos.filter(p => {
+        if (!p.fechaEntrega) return false;
+        return p.fechaEntrega >= inicio && p.fechaEntrega <= fin;
+      });
+
+      // Métricas generales (de todos los pedidos, no solo el rango)
+      const totalVentas = todosPedidos.reduce((sum, p) => sum + (p.total || 0), 0);
+      const totalPedidos = todosPedidos.length;
+      const promedio = totalPedidos > 0 ? totalVentas / totalPedidos : 0;
+      const pedidosKilo = todosPedidos.filter(p => p.tipo === 'kilo').length;
+      const pedidosEvento = todosPedidos.filter(p => p.tipo === 'evento').length;
+
+      document.getElementById('totalVentas').innerText = '$' + Math.round(totalVentas).toLocaleString();
+      document.getElementById('totalPedidos').innerText = totalPedidos;
+      document.getElementById('promedio').innerText = '$' + Math.round(promedio).toLocaleString();
+      document.getElementById('pedidosKilo').innerText = pedidosKilo;
+      document.getElementById('pedidosEvento').innerText = pedidosEvento;
+
+      // Ventas por día (en el rango)
+      const ventasPorDia = {};
+      const pedidosPorDia = {};
+      fechasRango.forEach(f => { ventasPorDia[f] = 0; pedidosPorDia[f] = 0; });
+      pedidosEnRango.forEach(p => {
+        if (ventasPorDia[p.fechaEntrega] !== undefined) {
+          ventasPorDia[p.fechaEntrega] += (p.total || 0);
+          pedidosPorDia[p.fechaEntrega] += 1;
+        }
+      });
+
+      const etiquetas = fechasRango.map(f => {
+        const [y, m, d] = f.split('-');
+        return `${d}/${m}`;
+      });
+      const datosVentas = fechasRango.map(f => ventasPorDia[f]);
+      const datosPedidos = fechasRango.map(f => pedidosPorDia[f]);
+
+      // Gráfica ventas
+      if (chartVentas) chartVentas.destroy();
+      const ctxVentas = document.getElementById('chartVentas').getContext('2d');
+      chartVentas = new Chart(ctxVentas, {
+        type: 'bar',
+        data: { labels: etiquetas, datasets: [{ label: 'Ventas ($)', data: datosVentas, backgroundColor: '#D85A30', borderRadius: 8 }] },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `$${ctx.raw.toLocaleString()}` } } } }
+      });
+
+      // Gráfica pedidos
+      if (chartPedidos) chartPedidos.destroy();
+      const ctxPedidos = document.getElementById('chartPedidos').getContext('2d');
+      chartPedidos = new Chart(ctxPedidos, {
+        type: 'line',
+        data: { labels: etiquetas, datasets: [{ label: 'Número de pedidos', data: datosPedidos, borderColor: '#D85A30', backgroundColor: 'rgba(216,90,48,0.1)', fill: true, tension: 0.2, pointBackgroundColor: '#D85A30', pointRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw} pedido(s)` } } } }
+      });
+
+      // Comparativa Kilo vs Evento (en el rango)
+      const kiloCount = pedidosEnRango.filter(p => p.tipo === 'kilo').length;
+      const eventoCount = pedidosEnRango.filter(p => p.tipo === 'evento').length;
+      if (chartTipo) chartTipo.destroy();
+      const ctxTipo = document.getElementById('chartTipo').getContext('2d');
+      chartTipo = new Chart(ctxTipo, {
+        type: 'doughnut',
+        data: { labels: ['Venta por kilo', 'Eventos'], datasets: [{ data: [kiloCount, eventoCount], backgroundColor: ['#D85A30', '#3b82f6'], borderWidth: 0 }] },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+
+      // Pickup vs Domicilio (en el rango)
+      const pickupCount = pedidosEnRango.filter(p => p.tipoEntrega === 'pickup' || !p.tipoEntrega).length;
+      const domicilioCount = pedidosEnRango.filter(p => p.tipoEntrega === 'domicilio').length;
+      if (chartEntrega) chartEntrega.destroy();
+      const ctxEntrega = document.getElementById('chartEntrega').getContext('2d');
+      chartEntrega = new Chart(ctxEntrega, {
+        type: 'doughnut',
+        data: { labels: ['Pick up', 'Domicilio'], datasets: [{ data: [pickupCount, domicilioCount], backgroundColor: ['#10b981', '#f59e0b'], borderWidth: 0 }] },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+
+    async function cargarPedidos() {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const res = await fetch('/pedidos', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (!res.ok) throw new Error('Error de red');
+        todosPedidos = await res.json();
+        // Establecer fechas por defecto (últimos 30 días)
+        const hoy = new Date();
+        const hace30 = new Date();
+        hace30.setDate(hoy.getDate() - 29);
+        document.getElementById('fechaInicio').value = hace30.toISOString().split('T')[0];
+        document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
+        actualizarEstadisticas();
+      } catch (err) {
+        console.error(err);
+        alert('Error al cargar los pedidos. Asegúrate de que el backend esté corriendo.');
+      }
+    }
+
+    cargarPedidos();
+  </script>
 </body>
+
 </html>
