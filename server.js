@@ -8,7 +8,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-const ADMIN_PASSWORD = 'lapaella2026'; // 🔐 Cambia esta contraseña por la que quieras
+const ADMIN_PASSWORD = 'lapaella2026';
+const EMPLEADO_PASSWORD = 'lapaellamid';
+
+const generateToken = (role) => Buffer.from(`${role}-${Date.now()}`).toString('base64');
+const activeSessions = new Map();
 
 // =========================================================================
 // ⚠️ ATENCIÓN JORGE: CAMBIA LA PALABRA "TU_CONTRASEÑA_AQUI" por tu verdadera contraseña de la Base de Datos
@@ -32,6 +36,8 @@ const pedidoSchema = new mongoose.Schema({
   fechaEntrega: String,
   total: Number,
   status: { type: String, default: 'Pendiente' },
+  notas: String,
+  extras: Array,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -39,24 +45,46 @@ const Pedido = mongoose.model('Pedido', pedidoSchema);
 
 // ------------------- MIDDLEWARE DE AUTENTICACIÓN -------------------
 function authMiddleware(req, res, next) {
-  const token = req.headers['authorization'];
-  if (token === `Bearer ${ADMIN_PASSWORD}`) {
-    next();
-  } else {
-    res.status(401).json({ error: 'No autorizado' });
+  const tokenHeader = req.headers['authorization'];
+  if (!tokenHeader) {
+    return res.status(401).json({ error: 'No autorizado' });
   }
+
+  // Si envían la contraseña directa vieja, también le damos paso admin como puente provisional
+  if (tokenHeader === `Bearer ${ADMIN_PASSWORD}`) {
+    req.userRole = 'admin';
+    return next();
+  }
+
+  const token = tokenHeader.replace('Bearer ', '');
+  const session = activeSessions.get(token);
+  
+  if (!session) {
+    return res.status(401).json({ error: 'Sesión expirada o inválida' });
+  }
+
+  req.userRole = session.role; // Puede ser 'admin' o 'empleado'
+  next();
 }
 
-// ------------------- RUTAS PÚBLICAS -------------------
-// Login (para obtener token)
-app.post('/login', (req, res) => {
-  const { password } = req.body;
-  if (password === ADMIN_PASSWORD) {
-    res.json({ success: true, token: ADMIN_PASSWORD });
+// ================= RUTAS DE LOGIN =================
+app.post('/api/login', (req, res) => {
+  const { code } = req.body;
+  if (code === ADMIN_PASSWORD) {
+    const token = generateToken('admin');
+    activeSessions.set(token, { role: 'admin' });
+    return res.json({ success: true, token, role: 'admin' });
+  } else if (code === EMPLEADO_PASSWORD) {
+    const token = generateToken('empleado');
+    activeSessions.set(token, { role: 'empleado' });
+    return res.json({ success: true, token, role: 'empleado' });
   } else {
-    res.status(401).json({ success: false, error: 'Contraseña incorrecta' });
+    return res.status(401).json({ success: false, error: 'Contraseña incorrecta' });
   }
 });
+
+// ------------------- RUTAS PÚBLICAS -------------------
+// Limpieza de ruta login antigua
 
 // Página principal (pública)
 app.get('/', (req, res) => {
@@ -105,21 +133,53 @@ app.post('/pedidos', async (req, res) => {
   }
 });
 
+// Cambiar status
 app.put('/pedidos/:id', authMiddleware, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const pedido = await Pedido.findOneAndUpdate({ id: id }, { status: req.body.status });
-    if (pedido) {
-      res.json({ ok: true });
-    } else {
-      res.status(404).json({ error: 'Pedido no encontrado' });
-    }
+    const pedido = await Pedido.findOneAndUpdate({ id: id }, { status: req.body.status }, { new: true });
+    if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+    res.json(pedido);
   } catch (error) {
+    console.error("Error al actualizar pedido:", error);
     res.status(500).json({ error: 'Error al actualizar pedido' });
   }
 });
 
+// Editar pedido completo (SOLO ADMIN)
+app.put('/pedidos/edit/:id', authMiddleware, async (req, res) => {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  
+  try {
+    const id = parseInt(req.params.id);
+    const pedido = await Pedido.findOneAndUpdate(
+      { id: id }, 
+      {
+        nombre: req.body.nombre,
+        telefono: req.body.telefono,
+        itemsDetalle: req.body.itemsDetalle,
+        extras: req.body.extras,
+        notas: req.body.notas,
+        total: req.body.total,
+        fechaEntrega: req.body.fechaEntrega,
+        horaEntrega: req.body.horaEntrega,
+        tipoEntrega: req.body.tipoEntrega,
+        direccion: req.body.direccion
+      }, 
+      { new: true }
+    );
+    if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+    res.json(pedido);
+  } catch (error) {
+    console.error("Error al editar pedido completo:", error);
+    res.status(500).json({ error: 'Error al editar pedido completo' });
+  }
+});
+
+// Eliminar pedido (SOLO ADMIN)
 app.delete('/pedidos/:id', authMiddleware, async (req, res) => {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+
   try {
     const id = parseInt(req.params.id);
     const pedido = await Pedido.findOneAndDelete({ id: id });

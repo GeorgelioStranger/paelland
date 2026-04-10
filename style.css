@@ -1,0 +1,197 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Paleta de colores extraída del logotipo */
+  --brand-red: #E32D34;
+  --brand-red-hover: #C52228;
+  --brand-red-light: #FDE8E9;
+
+  --brand-yellow: #F2C511;
+  --brand-yellow-hover: #D8AD0A;
+  --brand-yellow-light: #FEF8E3;
+
+  --brand-black: #111827;
+  /* Negro para textos oscuros inspirado en la paellera del logo */
+
+  /* Sistema base */
+  --bg-main: #fcfbfa;
+  /* Off-white cálido */
+  --bg-card: #ffffff;
+
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
+
+  --border-light: rgba(0, 0, 0, 0.08);
+  --border-focus: rgba(227, 45, 52, 0.4);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.08);
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', sans-serif;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--brand-black);
+  font-weight: 700;
+}
+
+/* ================= COMPONENTES GLOBALES ================= */
+
+/* Botones */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 50px;
+  /* Pill shape para algo moderno */
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 8px;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background-color: var(--brand-red);
+  color: white;
+  box-shadow: 0 4px 14px rgba(227, 45, 52, 0.3);
+}
+
+.btn-primary:hover {
+  background-color: var(--brand-red-hover);
+  box-shadow: 0 6px 20px rgba(227, 45, 52, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: var(--brand-yellow);
+  color: var(--brand-black);
+  box-shadow: 0 4px 14px rgba(242, 197, 17, 0.3);
+}
+
+.btn-secondary:hover {
+  background-color: var(--brand-yellow-hover);
+  box-shadow: 0 6px 20px rgba(242, 197, 17, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
+}
+
+.btn-ghost:hover {
+  background-color: var(--bg-card);
+  color: var(--brand-black);
+  border-color: var(--text-light);
+}
+
+/* Glassmorphism Cards */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Inputs & Forms */
+.form-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="tel"],
+input[type="date"],
+input[type="time"],
+input[type="password"],
+select,
+textarea {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  background-color: #f9fafb;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  outline: none;
+  transition: all 0.2s;
+  font-family: 'Outfit', sans-serif;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  background-color: var(--bg-card);
+  border-color: var(--brand-red);
+  box-shadow: 0 0 0 3px var(--brand-red-light);
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 20px;
+  background: var(--bg-main);
+  color: var(--text-muted);
+}
+
+.badge-red {
+  background: var(--brand-red-light);
+  color: var(--brand-red);
+}
+
+.badge-yellow {
+  background: var(--brand-yellow-light);
+  color: #B28800;
+}

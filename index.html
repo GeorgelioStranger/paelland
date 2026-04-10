@@ -3,92 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paella - Sistema de Pedidos</title>
+    <title>Portal - La Paella Mérida</title>
+    <link rel="stylesheet" href="style.css">
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f0eb;
+            /* Fondo sutil claro idéntico a la imagen original */
+            background: #f8fafc;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
             padding: 20px;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
-        .container {
+
+        .portal-wrapper {
+            width: 100%;
+            max-width: 900px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        @media(min-width: 768px) {
+            .portal-wrapper {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .brand-section {
             text-align: center;
-            background: white;
-            padding: 40px;
-            border-radius: 30px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 20px;
         }
-        h1 {
-            color: #D85A30;
+
+        .brand-section h1 {
+            font-size: 3.5rem;
+            color: var(--brand-red);
+            line-height: 1.1;
+            margin-bottom: 15px;
+            letter-spacing: -1px;
+            font-weight: 800;
+        }
+
+        .brand-section h1 span {
+            color: var(--brand-yellow);
+        }
+
+        .brand-section p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            text-align: center;
+        }
+
+        .icon-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 20px auto;
+            background-color: var(--brand-red-light);
+            color: var(--brand-red);
+        }
+
+        .login-card h2 {
+            font-size: 1.5rem;
+            color: var(--text-dark);
+            margin-top: 0;
             margin-bottom: 10px;
         }
-        p {
-            color: #555;
-            margin-bottom: 30px;
+        
+        .login-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 25px;
         }
-        .btn {
-            display: inline-block;
-            margin: 10px;
-            padding: 12px 30px;
-            font-size: 1.1rem;
-            font-weight: bold;
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            color: var(--text-dark);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: var(--text-dark);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: var(--brand-red);
+            box-shadow: 0 0 0 3px var(--brand-red-light);
+            background: #ffffff;
+        }
+
+        .btn-login {
+            background: var(--brand-red);
+            color: white;
             border: none;
-            border-radius: 50px;
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            font-weight: 600;
             cursor: pointer;
-            text-decoration: none;
-            transition: 0.2s;
+            transition: all 0.2s ease;
         }
-        .btn-primary {
-            background: #D85A30;
-            color: white;
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(216, 90, 48, 0.3);
+            background: #c24d27;
         }
-        .btn-primary:hover {
-            background: #b94722;
-            transform: scale(1.02);
+
+        #login-error {
+            color: #ef4444;
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: none;
         }
-        .btn-secondary {
-            background: #2c3e50;
-            color: white;
+        
+        /* Footer network status */
+        .footer-status {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
         }
-        .btn-secondary:hover {
-            background: #1e2b38;
+        .footer-status span {
+            color: var(--brand-red);
+            font-weight: 600;
         }
-        .ip-info {
-            margin-top: 30px;
-            font-size: 0.8rem;
-            color: #888;
-        }
-        .ip-info strong {
-            color: #D85A30;
-        }
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🥘 Bienvenid@ a La Paella Mérida</h1>
-        <p>Sistema de pedidos y administración</p>
-        <a href="/cotizador" class="btn btn-primary">📝 Nuevo Pedido</a>
-        <a href="/admin" class="btn btn-secondary">📊 Panel Administración</a>
-        <div class="ip-info">
-            💡 Desde otro dispositivo (celular, otra compu) usa:<br>
-            <strong id="ipLocal">cargando...</strong><br>
-            <small>ej: http://192.168.x.x:3001</small>
+
+    <div class="portal-wrapper">
+        <!-- Columna Izquierda: Marca -->
+        <div class="brand-section">
+            <h1>La <span>Paella</span><br>Mérida</h1>
+            <p>Sistema Operativo y Toma de Pedidos Centralizada.</p>
+        </div>
+
+        <!-- Columna Derecha: Tarjeta de Acceso Blanca -->
+        <div class="login-card">
+            <div class="icon-circle">🔐</div>
+            <h2>Acceso al Sistema</h2>
+            <p>Ingresa tu clave de Administrador o Empleado para continuar.</p>
+
+            <div id="login-error">🚫 Contraseña incorrecta. Intenta de nuevo.</div>
+
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="password">Contraseña segura</label>
+                    <input type="password" id="password" placeholder="••••••••••••" autofocus required>
+                </div>
+                
+                <button type="submit" class="btn-login" id="btn-submit">Entrar</button>
+            </form>
         </div>
     </div>
+
+    <!-- Si extrañas el texto rojo de abajo -->
+    <div class="footer-status">
+        💡 Acceso en red local habilitado en: <span>189.215.53.167</span>
+    </div>
+
     <script>
-        fetch('https://api.ipify.org?format=json')
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('ipLocal').innerText = data.ip;
-            })
-            .catch(() => {
-                document.getElementById('ipLocal').innerText = 'ver en la consola del servidor';
-            });
+        // Redirigir automáticamente si ya hay sesión guardada
+        window.onload = () => {
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            if (token && role) {
+                window.location.href = '/cotizador';
+            }
+        };
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pass = document.getElementById('password').value;
+            const btn = document.getElementById('btn-submit');
+            const errorDiv = document.getElementById('login-error');
+            
+            btn.innerHTML = 'Verificando...';
+            btn.style.opacity = '0.8';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: pass })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    localStorage.setItem('auth_token', data.token);
+                    localStorage.setItem('user_role', data.role);
+                    
+                    btn.innerHTML = '✅ Conectando...';
+                    btn.style.background = '#10b981';
+                    
+                    setTimeout(() => {
+                        window.location.href = '/cotizador';
+                    }, 500);
+                } else {
+                    throw new Error('Invalido');
+                }
+            } catch (error) {
+                btn.innerHTML = 'Entrar';
+                btn.style.opacity = '1';
+                errorDiv.style.display = 'block';
+                document.getElementById('password').value = '';
+                document.getElementById('password').focus();
+            }
+        });
     </script>
 </body>
 </html>
