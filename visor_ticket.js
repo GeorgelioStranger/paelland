@@ -17,10 +17,16 @@ function generarTicketPDF(pedido) {
     if (pedido.itemsDetalle && Array.isArray(pedido.itemsDetalle)) {
         pedido.itemsDetalle.forEach(item => {
             if (pedido.tipo === 'evento' && item.personas) {
-                lineasHtml += '<tr><td class="left">' + item.personas + ' personas ' + escapeHtml(item.nombre) + '</td><td class="right"></td></tr>';
+                const precio = item.precio_por_persona || item.precio || 0;
+                const sub = item.personas * precio;
+                const subStr = sub > 0 ? '$' + sub.toLocaleString("es-MX") : '';
+                lineasHtml += '<tr><td class="left">' + item.personas + ' pax ' + escapeHtml(item.nombre) + '</td><td class="right">' + subStr + '</td></tr>';
             } else if (pedido.tipo === 'kilo' && item.cantidad > 0) {
+                const precio = item.precio_unitario || item.precio || 0;
+                const sub = item.cantidad * precio;
+                const subStr = sub > 0 ? '$' + sub.toLocaleString("es-MX") : '';
                 const k = (item.kilos || 0) * item.cantidad;
-                lineasHtml += '<tr><td class="left">' + item.cantidad + 'x ' + escapeHtml(item.nombre) + ' (' + k + ' kg)</td><td class="right"></td></tr>';
+                lineasHtml += '<tr><td class="left">' + item.cantidad + 'x ' + escapeHtml(item.nombre) + (k > 0 ? ' (' + k + ' kg)' : '') + '</td><td class="right">' + subStr + '</td></tr>';
             } else if ((pedido.tipo === 'venta_directa' || !pedido.tipo) && item.cantidad > 0) {
                 const precio = item.precio_unitario || item.precio || 0;
                 const sub = item.cantidad * precio;
@@ -46,7 +52,7 @@ function generarTicketPDF(pedido) {
     let trasladoHtml = '';
     let costoEnvio = 0;
     if (pedido.tipoEntrega === 'domicilio') {
-        costoEnvio = (pedido.costoFijo || 30) + ((pedido.distancia && pedido.costoKm) ? (pedido.distancia * pedido.costoKm) : 0);
+        costoEnvio = (pedido.costoFijo != null ? pedido.costoFijo : 30) + ((pedido.distancia && pedido.costoKm) ? (pedido.distancia * pedido.costoKm) : 0);
         if (costoEnvio > 0) {
             trasladoHtml = '<tr><td class="left">Envío Domicilio</td><td class="right">$' + costoEnvio.toLocaleString("es-MX") + '</td></tr>';
         }
