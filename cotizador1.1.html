@@ -524,6 +524,8 @@
       document.addEventListener("DOMContentLoaded", () => {
          const linkEstadisticas = document.querySelector('a[href="/estadisticas"]');
          if (linkEstadisticas) linkEstadisticas.style.display = 'none';
+         const linkFinanzas = document.querySelector('a[href="/finanzas"]');
+         if (linkFinanzas) linkFinanzas.style.display = 'none';
       });
     }
 
@@ -541,6 +543,7 @@
     <a href="/cotizador" class="active" title="Registrar Pedido">📝<span class="nav-label">Cotizador</span></a>
     <a href="/admin" title="Administración">📊<span class="nav-label">Historial</span></a>
     <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
+    <a href="/finanzas" title="Finanzas">💸<span class="nav-label">Finanzas</span></a>
   </nav>
 
   <script>
@@ -1220,7 +1223,8 @@
 
     // ---------- GUARDAR PEDIDO (localStorage + backend) ----------
     function guardarPedido(tipo) {
-      let data = { tipo, fecha: new Date().toISOString() };
+      const folioUnico = new Date().getTime().toString().slice(-6);
+      let data = { tipo, fecha: new Date().toISOString(), folio: folioUnico };
       if (tipo === 'k') {
         const checkC = document.getElementById("k-cliente").value.trim();
         const checkT = document.getElementById("k-telefono").value.trim();
@@ -1249,6 +1253,7 @@
           data.costoKm = isNaN(kmK) ? 10 : kmK;
           let fijoK = parseFloat(document.getElementById("k-fijo").value);
           data.costoFijo = isNaN(fijoK) ? 30 : fijoK;
+          data.costoEnvio = data.costoFijo + (data.distancia * data.costoKm);
         }
         data.total = parseFloat(document.getElementById("k-qtotal").textContent.replace('$', '').replace(/\./g, '').replace(',', ''));
 
@@ -1280,6 +1285,7 @@
           data.costoKm = isNaN(kmE) ? 10 : kmE;
           let fijoE = parseFloat(document.getElementById("e-fijo").value);
           data.costoFijo = isNaN(fijoE) ? 30 : fijoE;
+          data.costoEnvio = data.costoFijo + (data.distancia * data.costoKm);
         }
         data.total = parseFloat(document.getElementById("e-qtotal").textContent.replace('$', '').replace(/\./g, '').replace(',', ''));
       }
@@ -1295,6 +1301,19 @@
       // Actualizar lista de pedidos guardados en la interfaz
       guardarPedidosGuardados(tipo);
 
+      // Notificación visual (Ticket/PDF) debe ir ANTES de limpiar
+      if (confirm("Pedido guardado correctamente. \n\n¿Deseas imprimir o generar PDF del ticket ahora?")) {
+         let pedidoAImprimir = {
+            id: data.folio,
+            ...data,
+            nombre: data.cliente,
+            itemsDetalle: data.items,
+            total: data.total,
+            tipo: tipo === 'k' ? 'kilo' : 'evento'
+         };
+         generarTicketPDF(pedidoAImprimir);
+      }
+      
       // Limpiar formulario y reiniciar estado visual
       if (tipo === 'k') {
          document.getElementById("k-cliente").value = '';
@@ -1311,18 +1330,6 @@
          eExtras = [];
          eItems = [{ nombre: "Paella mar y tierra", precio: 180, personas: 10 }];
          eInit();
-      }
-
-      // Notificación visual
-      if (confirm("Pedido guardado correctamente. \n\n¿Deseas imprimir o generar PDF del ticket ahora?")) {
-         let pedidoAImprimir = {
-            id: new Date().getTime().toString().slice(-6),
-            ...data,
-            itemsDetalle: tipo === 'k' ? kItems : eItems,
-            total: data.total,
-            tipo: tipo === 'k' ? 'kilo' : 'evento'
-         };
-         generarTicketPDF(pedidoAImprimir);
       }
     }
 
@@ -1374,6 +1381,7 @@
       }
 
       const pedido = {
+        folio: data.folio,
         nombre: data.cliente,
         telefono: data.telefono,
         tipo: data.tipo === 'k' ? 'kilo' : 'evento',
@@ -1382,6 +1390,10 @@
         notas: data.notas || '',
         tipoEntrega: data.entrega,
         direccion: data.direccion || '',
+        distancia: data.distancia || 0,
+        costoKm: data.costoKm || 0,
+        costoFijo: data.costoFijo || 0,
+        costoEnvio: data.costoEnvio || 0,
         horaEntrega: data.hora,
         fechaEntrega: fechaEntregaReal,
         total: data.total

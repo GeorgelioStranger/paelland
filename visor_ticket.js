@@ -51,8 +51,17 @@ function generarTicketPDF(pedido) {
     // 3. Envío / Traslado si aplica
     let trasladoHtml = '';
     let costoEnvio = 0;
-    if (pedido.tipoEntrega === 'domicilio') {
-        costoEnvio = (pedido.costoFijo != null ? pedido.costoFijo : 30) + ((pedido.distancia && pedido.costoKm) ? (pedido.distancia * pedido.costoKm) : 0);
+    const tipoEnvioFinal = pedido.tipoEntrega || pedido.entrega;
+    if (tipoEnvioFinal === 'domicilio') {
+        // Usar el costoEnvio ya calculado y guardado en DB (campo nuevo)
+        if (pedido.costoEnvio != null && pedido.costoEnvio > 0) {
+            costoEnvio = pedido.costoEnvio;
+        } else {
+            // Fallback para pedidos viejos: recalcular con los campos individuales
+            const fijoFallback = (pedido.costoFijo != null && pedido.costoFijo >= 0) ? pedido.costoFijo : 30;
+            const kmCost = (pedido.distancia && pedido.costoKm) ? (pedido.distancia * pedido.costoKm) : 0;
+            costoEnvio = fijoFallback + kmCost;
+        }
         if (costoEnvio > 0) {
             trasladoHtml = '<tr><td class="left">Envío Domicilio</td><td class="right">$' + costoEnvio.toLocaleString("es-MX") + '</td></tr>';
         }
@@ -73,11 +82,14 @@ function generarTicketPDF(pedido) {
 
     // Calcular un total
     const totalVenta = pedido.total || 0;
-    const folioStr = pedido.id ? "#" + pedido.id : "#" + new Date().getTime().toString().slice(-6);
+    const valId = pedido.folio || pedido.id || pedido._id;
+    let fallbackId = valId ? valId.toString().slice(-6).toUpperCase() : new Date().getTime().toString().slice(-6);
+    const folioStr = "#" + fallbackId;
     
     let clienteHtml = '';
-    if (pedido.nombre) {
-        clienteHtml = '<div><span>Cliente:</span> <span>' + escapeHtml(pedido.nombre) + '</span></div>';
+    const nombreCliente = pedido.nombre || pedido.cliente;
+    if (nombreCliente) {
+        clienteHtml = '<div><span>Cliente:</span> <span>' + escapeHtml(nombreCliente) + '</span></div>';
     }
 
     // Generar el bloque HTML

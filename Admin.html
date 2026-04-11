@@ -37,7 +37,7 @@
       width: 220px;
       align-items: flex-start;
       padding: 30px 20px;
-      box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+      box-shadow: 4px 0 15px rgba(0, 0, 0, 0.05);
     }
 
     .sidebar-nav a {
@@ -66,14 +66,14 @@
       background: var(--brand-red-light);
       transform: translateX(5px);
     }
-    
+
     .nav-label {
       font-size: 16px;
       font-weight: 600;
       opacity: 0;
       transition: opacity 0.2s;
     }
-    
+
     .sidebar-nav:hover .nav-label {
       opacity: 1;
       transition-delay: 0.1s;
@@ -600,42 +600,53 @@
         top: auto;
         border-right: none;
         border-top: 1px solid var(--border-light);
-        box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+        box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
       }
+
       .sidebar-nav:hover {
         width: 100%;
         padding: 0;
         align-items: center;
       }
+
       .sidebar-nav a {
         margin-bottom: 0;
         padding: 10px;
         justify-content: center;
       }
+
       .sidebar-nav:hover a {
         justify-content: center;
       }
-      .sidebar-nav a:hover, .sidebar-nav a.active {
+
+      .sidebar-nav a:hover,
+      .sidebar-nav a.active {
         transform: translateY(-5px);
       }
+
       .nav-label {
         display: none !important;
       }
+
       .main-wrapper {
         margin-left: 0;
         width: 100%;
         padding: 20px 20px 90px 20px;
       }
+
       .graficas {
         grid-template-columns: 1fr;
       }
+
       .filtros {
         flex-direction: column;
         align-items: stretch;
       }
+
       .botones-filtro {
         flex-direction: column !important;
       }
+
       .btn-excel {
         margin-left: 0 !important;
       }
@@ -646,15 +657,17 @@
 <body>
   <!-- Sidebar de Navegación Fija -->
   <nav class="sidebar-nav">
-    <a href="/" style="text-decoration:none; font-size:32px;" title="Inicio">🥘<span class="nav-label" style="color:var(--brand-black); font-size:20px;">La Paella</span></a>
+    <a href="/" style="text-decoration:none; font-size:32px;" title="Inicio">🥘<span class="nav-label"
+        style="color:var(--brand-black); font-size:20px;">La Paella</span></a>
     <a href="/cotizador" title="Registrar Pedido">📝<span class="nav-label">Cotizador</span></a>
     <a href="/admin" class="active" title="Administración">📊<span class="nav-label">Historial</span></a>
     <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
+    <a href="/finanzas" title="Finanzas">💸<span class="nav-label">Finanzas</span></a>
   </nav>
 
   <script>
     function cerrarSesion() {
-      if(confirm('¿Deseas cerrar tu sesión actual?')) {
+      if (confirm('¿Deseas cerrar tu sesión actual?')) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_role');
         window.location.href = '/';
@@ -668,9 +681,12 @@
         <h1>Panel de Administración</h1>
         <p>Control de pedidos, ventas en sitio y gestión operativa</p>
       </div>
-      <div id="user-profile" style="text-align:right; font-size:14px; color:var(--text-muted); background: white; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
-         <span id="user-name-display" style="font-weight:600; color:var(--brand-red); font-size:16px;"></span><br>
-         <a href="#" onclick="cerrarSesion()" style="color:#94a3b8; text-decoration:none; font-size:12px; transition: color 0.2s;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'">Cerrar sesión</a>
+      <div id="user-profile"
+        style="text-align:right; font-size:14px; color:var(--text-muted); background: white; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
+        <span id="user-name-display" style="font-weight:600; color:var(--brand-red); font-size:16px;"></span><br>
+        <a href="#" onclick="cerrarSesion()"
+          style="color:#94a3b8; text-decoration:none; font-size:12px; transition: color 0.2s;"
+          onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'">Cerrar sesión</a>
       </div>
     </div>
 
@@ -691,6 +707,12 @@
           <option value="Pendiente">Pendiente</option>
           <option value="En proceso">En proceso</option>
           <option value="Entregado">Entregado</option>
+        </select></div>
+      <div class="filtro-group"><label>💳 Pago</label><select id="filtroMetodoPago">
+          <option value="">Todos</option>
+          <option value="Efectivo">💵 Efectivo</option>
+          <option value="Tarjeta">💳 Tarjeta</option>
+          <option value="Transferencia">🏦 Transferencia</option>
         </select></div>
       <div class="filtro-group botones-filtro">
         <button class="btn-filtro" id="btnAplicarFiltros">Aplicar filtros</button>
@@ -762,6 +784,99 @@
     <div id="tab-clientes" class="tab-content" style="display:none;">
       <div id="listaClientes"></div>
     </div>
+
+    <!-- TAB GASTOS -->
+    <div id="tab-gastos" class="tab-content" style="display:none;">
+      <!-- KPIs solo para admin -->
+      <div id="gastos-kpi-admin" style="display:none; margin-bottom:20px;">
+        <div class="dashboard">
+          <div class="card">
+            <h3>💰 Ingresos (período)</h3>
+            <div class="value" id="gasto-kpi-ingresos">$0</div>
+          </div>
+          <div class="card">
+            <h3>📉 Gastos (período)</h3>
+            <div class="value" style="color:#ef4444;" id="gasto-kpi-gastos">$0</div>
+          </div>
+          <div class="card">
+            <h3>✅ Utilidad Neta</h3>
+            <div class="value" style="color:#10b981;" id="gasto-kpi-utilidad">$0</div>
+          </div>
+          <div class="card">
+            <h3>📈 Margen %</h3>
+            <div class="value" style="color:#3b82f6;" id="gasto-kpi-margen">0%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtros período -->
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px;">
+        <strong style="color:#4b5563; font-size:0.9rem;">Período:</strong>
+        <button class="btn-filtro gasto-periodo-btn" style="padding:6px 14px; font-size:0.85rem;"
+          onclick="filtrarGastosPeriodo('hoy')">📅 Hoy</button>
+        <button class="btn-filtro gasto-periodo-btn" style="padding:6px 14px; font-size:0.85rem;"
+          onclick="filtrarGastosPeriodo('semana')">🗓 Semana</button>
+        <button class="btn-filtro gasto-periodo-btn" style="padding:6px 14px; font-size:0.85rem;"
+          onclick="filtrarGastosPeriodo('mes')">📆 Mes</button>
+        <span style="color:#9ca3af; font-size:0.85rem;">o rango:</span>
+        <input type="date" id="gastos-desde"
+          style="border-radius:20px; border:1px solid #cbd5e1; padding:5px 10px; font-size:0.85rem;">
+        <span style="color:#9ca3af;">a</span>
+        <input type="date" id="gastos-hasta"
+          style="border-radius:20px; border:1px solid #cbd5e1; padding:5px 10px; font-size:0.85rem;">
+        <button class="btn-filtro" style="padding:6px 14px; font-size:0.85rem;"
+          onclick="filtrarGastosPeriodo('rango')">Buscar</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; align-items:start;">
+        <!-- Formulario -->
+        <div class="card">
+          <h3 style="margin-top:0;">➕ Registrar Gasto</h3>
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div>
+              <label style="font-size:0.8rem; font-weight:600; color:#4b5563;">DESCRIPCIÓN</label>
+              <input type="text" id="gasto-desc" placeholder="Ej. Pago Marce"
+                style="width:100%; border-radius:20px; border:1px solid #cbd5e1; padding:8px 14px; box-sizing:border-box; margin-top:4px;">
+            </div>
+            <div style="display:flex; gap:10px;">
+              <div style="flex:1;">
+                <label style="font-size:0.8rem; font-weight:600; color:#4b5563;">MONTO ($)</label>
+                <input type="number" id="gasto-monto" placeholder="0" min="0" step="0.01"
+                  style="width:100%; border-radius:20px; border:1px solid #cbd5e1; padding:8px 14px; box-sizing:border-box; margin-top:4px;">
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:0.8rem; font-weight:600; color:#4b5563;">CATEGORÍA</label>
+                <select id="gasto-cat"
+                  style="width:100%; border-radius:20px; border:1px solid #cbd5e1; padding:8px 14px; background:#f9fafb; margin-top:4px;">
+                  <option>Insumos</option>
+                  <option>Transporte</option>
+                  <option>Personal</option>
+                  <option>Otro</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:0.8rem; font-weight:600; color:#4b5563;">FECHA</label>
+              <input type="date" id="gasto-fecha"
+                style="width:100%; border-radius:20px; border:1px solid #cbd5e1; padding:8px 14px; box-sizing:border-box; margin-top:4px;">
+            </div>
+            <button class="btn-filtro" style="padding:12px; font-size:1rem; border-radius:14px; background:#D85A30;"
+              onclick="registrarGasto()">➕ Registrar Gasto</button>
+          </div>
+        </div>
+
+        <!-- Lista -->
+        <div class="card">
+          <h3 style="margin-top:0; display:flex; justify-content:space-between; align-items:center;">
+            🗑 Gastos del período
+            <span id="gastos-total-badge" style="font-size:0.85rem; color:#ef4444; font-weight:600;"></span>
+          </h3>
+          <div id="gastos-lista" style="max-height:360px; overflow-y:auto;">
+            <div style="color:#9ca3af; text-align:center; padding:20px;">Selecciona un período arriba.</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Modales -->
@@ -776,8 +891,31 @@
     </div>
   </div>
   <div id="modalEditarPedido" class="modal">
-    <div class="modal-content" style="max-width:600px;"><span class="close-modal" onclick="cerrarModalEditar()">&times;</span>
+    <div class="modal-content" style="max-width:600px;"><span class="close-modal"
+        onclick="cerrarModalEditar()">&times;</span>
       <div id="modal-editar-body"></div>
+    </div>
+  </div>
+
+  <!-- Modal: Método de Pago -->
+  <div id="modalMetodoPago" class="modal" style="z-index:2100;">
+    <div class="modal-content" style="max-width:400px; text-align:center;">
+      <h3 style="margin-top:0; margin-bottom:5px;">💳 Método de Pago</h3>
+      <p style="color:#6b7280; margin-bottom:20px; font-size:0.9rem;">¿Cómo pagó el cliente?</p>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button onclick="confirmarEntregado('Efectivo')"
+          style="background:#10b981; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer;">💵
+          Efectivo</button>
+        <button onclick="confirmarEntregado('Tarjeta')"
+          style="background:#3b82f6; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer;">💳
+          Tarjeta</button>
+        <button onclick="confirmarEntregado('Transferencia')"
+          style="background:#8b5cf6; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer;">🏦
+          Transferencia</button>
+        <button onclick="confirmarEntregado(null)"
+          style="background:#f3f4f6; color:#4b5563; border:none; padding:10px; border-radius:14px; font-size:0.9rem; cursor:pointer;">Entregar
+          sin registrar pago</button>
+      </div>
     </div>
   </div>
 
@@ -799,15 +937,17 @@
     window.onload = () => {
       const uName = document.getElementById('user-name-display');
       if (uName) {
-         uName.innerText = userRole === 'admin' ? '👋 Bienvenido, Jorge' : '👋 Bienvenida, Marce';
+        uName.innerText = userRole === 'admin' ? '👋 Bienvenido, Jorge' : '👋 Bienvenida, Marce';
       }
     };
 
     // Configurar interfaz según el rol
     if (userRole === 'empleado') {
-      // Ocultar botones laterales de Estadísticas
+      // Ocultar botones laterales de Estadísticas y Finanzas
       const linkEstadisticas = document.querySelector('a[href="/estadisticas"]');
       if (linkEstadisticas) linkEstadisticas.style.display = 'none';
+      const linkFinanzas = document.querySelector('a[href="/finanzas"]');
+      if (linkFinanzas) linkFinanzas.style.display = 'none';
 
       // Ocultar las pestañas internas que el empleado no debería ver en Admin
       const style = document.createElement('style');
@@ -828,14 +968,15 @@
     // ===================== RESTO DEL CÓDIGO =====================
     let todosPedidos = [];
     let chartVentas = null, chartPedidos = null;
-    let filtros = { texto: '', desde: '', hasta: '', tipo: '', estado: '' };
+    let filtros = { texto: '', desde: '', hasta: '', tipo: '', estado: '', metodoPago: '' };
     let productosVentaDirecta = [];
+    let _pendingEntregadoId = null;  // guarda el ID mientras se elige método de pago
 
     function getEntregados() { return todosPedidos.filter(p => p.status === 'Entregado'); }
 
     function imprimirTicketPorId(id) {
-       const p = todosPedidos.find(x => x.id === id);
-       if(p) generarTicketPDF(p);
+      const p = todosPedidos.find(x => x._id === id || x.id == id);
+      if (p) generarTicketPDF(p);
     }
 
     function aplicarFiltrosAPedidos(pedidos) {
@@ -845,6 +986,7 @@
         if (filtros.hasta && p.fechaEntrega && p.fechaEntrega > filtros.hasta) return false;
         if (filtros.tipo && p.tipo !== filtros.tipo) return false;
         if (filtros.estado && p.status !== filtros.estado) return false;
+        if (filtros.metodoPago && p.metodoPago !== filtros.metodoPago) return false;
         return true;
       });
     }
@@ -855,6 +997,7 @@
       filtros.hasta = document.getElementById('filtroFechaHasta').value;
       filtros.tipo = document.getElementById('filtroTipo').value;
       filtros.estado = document.getElementById('filtroEstado').value;
+      filtros.metodoPago = document.getElementById('filtroMetodoPago').value;
     }
     function limpiarFiltrosUI() {
       document.getElementById('filtroTexto').value = '';
@@ -862,6 +1005,7 @@
       document.getElementById('filtroFechaHasta').value = '';
       document.getElementById('filtroTipo').value = '';
       document.getElementById('filtroEstado').value = '';
+      document.getElementById('filtroMetodoPago').value = '';
       actualizarFiltrosDesdeUI();
     }
 
@@ -1027,21 +1171,21 @@
           }
           let extrasHtml = '';
           if (p.extras && p.extras.length > 0) {
-             let exist = false;
-             let extrasList = '<ul>';
-             p.extras.forEach(ex => {
-                if(ex.nombre && ex.cantidad > 0) {
-                   exist = true;
-                   extrasList += `<li>${ex.nombre} × ${ex.cantidad} ($${ex.precio} c/u)</li>`;
-                }
-             });
-             extrasList += '</ul>';
-             if(exist) extrasHtml = `<div class="detalle-lista" style="background:#fffbeb; border:1px solid #fef08a; color:#854d0e;"><strong>➕ Extras añadidos:</strong>${extrasList}</div>`;
+            let exist = false;
+            let extrasList = '<ul>';
+            p.extras.forEach(ex => {
+              if (ex.nombre && ex.cantidad > 0) {
+                exist = true;
+                extrasList += `<li>${ex.nombre} × ${ex.cantidad} ($${ex.precio} c/u)</li>`;
+              }
+            });
+            extrasList += '</ul>';
+            if (exist) extrasHtml = `<div class="detalle-lista" style="background:#fffbeb; border:1px solid #fef08a; color:#854d0e;"><strong>➕ Extras añadidos:</strong>${extrasList}</div>`;
           }
 
           let notasHtml = '';
           if (p.notas && String(p.notas).trim() !== '') {
-             notasHtml = `<div style="background:#fef2f2; border:1px solid #fecaca; padding:8px; border-radius:8px; margin-bottom:10px; color:#7f1d1d;">📝 <strong>Observaciones:</strong> ${escapeHtml(String(p.notas))}</div>`;
+            notasHtml = `<div style="background:#fef2f2; border:1px solid #fecaca; padding:8px; border-radius:8px; margin-bottom:10px; color:#7f1d1d;">📝 <strong>Observaciones:</strong> ${escapeHtml(String(p.notas))}</div>`;
           }
 
           let estado = p.status || 'Pendiente';
@@ -1049,9 +1193,9 @@
           let estadoHtml = `<span class="badge ${badgeClass}">${estado}</span>`;
           let botonesHtml = '';
           if (mostrarBotones && p.status !== 'Entregado') {
-             botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId(${p.id})">🖨️ Ticket</button><button class="btn-proceso" onclick="cambiarStatus(${p.id},'En proceso')">🟡 En proceso</button><button class="btn-entregado" onclick="cambiarStatus(${p.id},'Entregado')">✅ Entregado</button><button class="btn-editar" style="background:#8b5cf6;" onclick="abrirEditorPedido(${p.id})">✏️ Editar</button><button class="btn-eliminar" onclick="eliminarPedido(${p.id})">🗑 Eliminar</button></div>`;
+            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button><button class="btn-proceso" onclick="cambiarStatus('${p._id || p.id}','En proceso')">🟡 En proceso</button><button class="btn-entregado" onclick="cambiarStatus('${p._id || p.id}','Entregado')">✅ Entregado</button><button class="btn-editar" style="background:#8b5cf6;" onclick="abrirEditorPedido('${p._id || p.id}')">✏️ Editar</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           } else if (mostrarBotones && p.status === 'Entregado') {
-             botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId(${p.id})">🖨️ Ticket</button><button class="btn-eliminar" onclick="eliminarPedido(${p.id})">🗑 Eliminar</button></div>`;
+            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           }
           let div = document.createElement('div'); div.className = 'pedido';
           div.innerHTML = `<div><strong>${p.nombre || 'Sin nombre'}</strong> ${estadoHtml}</div>
@@ -1094,10 +1238,10 @@
       entregadosFiltrados.forEach(p => {
         let nombre = p.nombre || 'Anónimo';
         let telefono = p.telefono || '';
-        
+
         // Excluir ventas genéricas de mostrador de la lista de clientes leales
         if (nombre.toLowerCase() === 'venta en mostrador' || nombre.toLowerCase() === 'venta en local' || (p.tipo === 'venta_directa' && nombre === 'Anónimo')) {
-           return;
+          return;
         }
 
         let key = `${nombre}|${telefono}`;
@@ -1111,7 +1255,7 @@
       contenedor.innerHTML = '';
       clientesArray.forEach(cliente => {
         let pedidosRecientes = [...cliente.pedidos].sort((a, b) => new Date(b.fechaEntrega) - new Date(a.fechaEntrega)).slice(0, 3);
-        let pedidosHtml = pedidosRecientes.map(p => `<div class="pedido-item"><span class="pedido-fecha">${formatearFechaLocal(p.fechaEntrega)}</span><span>${p.tipo === 'kilo' ? 'Kilo' : p.tipo === 'evento' ? 'Evento' : 'Directa'}</span><span class="pedido-total">$${Math.round(p.total || 0).toLocaleString()}</span><span class="ver-detalle" onclick="event.stopPropagation(); verDetallePedido(${p.id})">Ver detalle</span></div>`).join('');
+        let pedidosHtml = pedidosRecientes.map(p => `<div class="pedido-item"><span class="pedido-fecha">${formatearFechaLocal(p.fechaEntrega)}</span><span>${p.tipo === 'kilo' ? 'Kilo' : p.tipo === 'evento' ? 'Evento' : 'Directa'}</span><span class="pedido-total">$${Math.round(p.total || 0).toLocaleString()}</span><span class="ver-detalle" onclick="event.stopPropagation(); verDetallePedido('${p._id || p.id}')">Ver detalle</span></div>`).join('');
         let card = document.createElement('div'); card.className = 'cliente-card';
         card.onclick = (e) => { if (e.target.classList && e.target.classList.contains('ver-detalle')) return; verHistorialCompleto(cliente.nombre, cliente.telefono); };
         card.innerHTML = `<div class="cliente-header"><div class="cliente-nombre">${escapeHtml(cliente.nombre)}</div><div class="cliente-telefono">📞 ${cliente.telefono || 'Sin teléfono'}</div></div>
@@ -1134,7 +1278,7 @@
         html += `<div class="historial-item"><div><strong>📅 ${formatearFechaLocal(p.fechaEntrega)}</strong> - ${p.tipo === 'kilo' ? 'Kilo' : p.tipo === 'evento' ? 'Evento' : 'Directa'} <span class="badge ${badgeClass}">${p.status}</span></div>
         <div>💰 $${Math.round(p.total || 0).toLocaleString()} | 🚚 ${p.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Pick up'} ${p.direccion ? `- ${p.direccion}` : ''}</div>
         <div>🕒 ${p.horaEntrega || 'Sin hora'}</div>
-        <div><button class="btn-proceso" style="background:#3b82f6;color:white;padding:2px 10px;" onclick="verDetallePedido(${p.id}); cerrarModalHistorial();">Ver detalle</button></div></div>`;
+        <div><button class="btn-proceso" style="background:#3b82f6;color:white;padding:2px 10px;" onclick="verDetallePedido('${p._id || p.id}'); cerrarModalHistorial();">Ver detalle</button></div></div>`;
       });
       html += `</div>`;
       document.getElementById('modal-historial-body').innerHTML = html;
@@ -1186,12 +1330,32 @@
     }
     // Las ventas directas se crean ahora desde el cotizador. En Admin solo se visualiza su historial.
 
-    async function cambiarStatus(id, nuevoStatus) {
+    // Abrir modal de método de pago; solo cambiar a En proceso de inmediato
+    function cambiarStatus(id, nuevoStatus) {
+      if (nuevoStatus === 'Entregado') {
+        _pendingEntregadoId = id;
+        document.getElementById('modalMetodoPago').style.display = 'flex';
+      } else {
+        _ejecutarCambioStatus(id, nuevoStatus, null);
+      }
+    }
+
+    async function confirmarEntregado(metodoPago) {
+      document.getElementById('modalMetodoPago').style.display = 'none';
+      if (_pendingEntregadoId !== null) {
+        await _ejecutarCambioStatus(_pendingEntregadoId, 'Entregado', metodoPago);
+        _pendingEntregadoId = null;
+      }
+    }
+
+    async function _ejecutarCambioStatus(id, nuevoStatus, metodoPago) {
       try {
+        const body = { status: nuevoStatus };
+        if (metodoPago) body.metodoPago = metodoPago;
         await authFetch(`/pedidos/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: nuevoStatus })
+          body: JSON.stringify(body)
         });
         await cargarPedidos();
       } catch (e) { alert('Error al cambiar estado'); }
@@ -1224,19 +1388,19 @@
 
     async function cargarPedidosEnTiempoReal() {
       // Si hay un modal abierto o el usuario está editando, no actualizamos detrás para no espantarlo o romper su sesión
-      if(document.getElementById('modalDetalle').style.display === 'flex' || 
-         document.getElementById('modalHistorialCliente').style.display === 'flex' || 
-         document.getElementById('modalEditarPedido').style.display === 'flex') {
-         return;
+      if (document.getElementById('modalDetalle').style.display === 'flex' ||
+        document.getElementById('modalHistorialCliente').style.display === 'flex' ||
+        document.getElementById('modalEditarPedido').style.display === 'flex') {
+        return;
       }
       try {
         let res = await authFetch('/pedidos');
         if (res.ok) {
           let nuevosPedidos = await res.json();
           // Comparar si hubo verdaderos cambios
-          if(JSON.stringify(nuevosPedidos) !== JSON.stringify(todosPedidos)) {
-             todosPedidos = nuevosPedidos;
-             refrescarListas();
+          if (JSON.stringify(nuevosPedidos) !== JSON.stringify(todosPedidos)) {
+            todosPedidos = nuevosPedidos;
+            refrescarListas();
           }
         }
       } catch (e) {
@@ -1253,6 +1417,7 @@
       if (tabId === 'clientes') renderizarClientes();
       if (tabId === 'ventasdirectas') renderizarVentasDirectas();
       if (tabId === 'activos' || tabId === 'historial') refrescarListas();
+      if (tabId === 'gastos') activarPestanaGastos();
     }
 
     function exportarCSV() {
@@ -1300,65 +1465,194 @@
     document.getElementById('btnExportarCSV').addEventListener('click', () => exportarCSV());
     document.getElementById('resumenFecha').addEventListener('change', () => actualizarResumenDiario());
 
-    window.cambiarStatus = cambiarStatus; window.eliminarPedido = eliminarPedido; window.verDetallePedido = verDetallePedido; window.cerrarModal = cerrarModal;
+    // Fecha default del formulario de gastos
+    document.getElementById('gasto-fecha').value = new Date().toISOString().split('T')[0];
+
+    window.cambiarStatus = cambiarStatus; window.confirmarEntregado = confirmarEntregado;
+    window.eliminarPedido = eliminarPedido; window.verDetallePedido = verDetallePedido; window.cerrarModal = cerrarModal;
     window.verHistorialCompleto = verHistorialCompleto; window.cerrarModalHistorial = cerrarModalHistorial;
+
+    // ================== LÓGICA DE GASTOS ==================
+    let gastosActuales = [];
+
+    function activarPestanaGastos() {
+      // Mostrar KPIs solo al admin
+      const kpiDiv = document.getElementById('gastos-kpi-admin');
+      if (userRole === 'admin') kpiDiv.style.display = 'block';
+      // Cargar gastos de hoy por defecto
+      filtrarGastosPeriodo('hoy');
+    }
+
+    async function filtrarGastosPeriodo(periodo) {
+      const hoy = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const fmtDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      let desde, hasta;
+
+      if (periodo === 'hoy') {
+        desde = hasta = fmtDate(hoy);
+      } else if (periodo === 'semana') {
+        const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - hoy.getDay() + 1);
+        const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
+        desde = fmtDate(lunes); hasta = fmtDate(domingo);
+      } else if (periodo === 'mes') {
+        desde = `${hoy.getFullYear()}-${pad(hoy.getMonth() + 1)}-01`;
+        hasta = fmtDate(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0));
+      } else if (periodo === 'rango') {
+        desde = document.getElementById('gastos-desde').value;
+        hasta = document.getElementById('gastos-hasta').value;
+        if (!desde || !hasta) { alert('Selecciona un rango de fechas válido.'); return; }
+      }
+
+      // Actualizar inputs de rango
+      if (periodo !== 'rango') {
+        document.getElementById('gastos-desde').value = desde;
+        document.getElementById('gastos-hasta').value = hasta;
+      }
+
+      try {
+        const res = await authFetch(`/gastos?desde=${desde}&hasta=${hasta}`);
+        gastosActuales = await res.json();
+        renderizarGastos(gastosActuales, desde, hasta);
+      } catch (e) {
+        document.getElementById('gastos-lista').innerHTML = '<div style="color:#ef4444; text-align:center; padding:20px;">Error al cargar gastos.</div>';
+      }
+    }
+
+    function renderizarGastos(gastos, desde, hasta) {
+      const total = gastos.reduce((s, g) => s + (g.monto || 0), 0);
+      document.getElementById('gastos-total-badge').textContent = `Total: $${total.toLocaleString('es-MX')}`;
+
+      // Calcular KPIs para admin
+      if (userRole === 'admin') {
+        const pedidosPeriodo = todosPedidos.filter(p => {
+          const fe = p.fechaEntrega || '';
+          return p.status === 'Entregado' && fe >= desde && fe <= hasta;
+        });
+        const ingresos = pedidosPeriodo.reduce((s, p) => s + (p.total || 0), 0);
+        const utilidad = ingresos - total;
+        const margen = ingresos > 0 ? ((utilidad / ingresos) * 100).toFixed(1) : 0;
+        document.getElementById('gasto-kpi-ingresos').textContent = '$' + ingresos.toLocaleString('es-MX');
+        document.getElementById('gasto-kpi-gastos').textContent = '$' + total.toLocaleString('es-MX');
+        document.getElementById('gasto-kpi-utilidad').textContent = '$' + utilidad.toLocaleString('es-MX');
+        document.getElementById('gasto-kpi-utilidad').style.color = utilidad >= 0 ? '#10b981' : '#ef4444';
+        document.getElementById('gasto-kpi-margen').textContent = margen + '%';
+      }
+
+      if (gastos.length === 0) {
+        document.getElementById('gastos-lista').innerHTML = '<div style="color:#9ca3af; text-align:center; padding:20px;">Sin gastos en este período.</div>';
+        return;
+      }
+
+      const catColors = { Insumos: '#f59e0b', Transporte: '#3b82f6', Personal: '#8b5cf6', Otro: '#6b7280' };
+      const html = gastos.map(g => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f1f5f9;">
+          <div>
+            <span style="display:inline-block; background:${catColors[g.categoria] || '#6b7280'}22; color:${catColors[g.categoria] || '#6b7280'}; padding:2px 8px; border-radius:20px; font-size:0.75rem; font-weight:600; margin-right:8px;">${g.categoria}</span>
+            <strong style="font-size:0.95rem;">${escapeHtml(g.descripcion)}</strong>
+            <div style="font-size:0.8rem; color:#9ca3af; margin-top:2px;">${g.fecha || ''}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-weight:700; color:#ef4444;">-$${g.monto.toLocaleString('es-MX')}</span>
+            ${userRole === 'admin' ? `<button onclick="eliminarGasto('${g._id}')" style="background:none; border:none; cursor:pointer; color:#9ca3af; font-size:1rem;">🗑</button>` : ''}
+          </div>
+        </div>`).join('');
+      document.getElementById('gastos-lista').innerHTML = html;
+    }
+
+    async function registrarGasto() {
+      const desc = document.getElementById('gasto-desc').value.trim();
+      const monto = parseFloat(document.getElementById('gasto-monto').value);
+      const cat = document.getElementById('gasto-cat').value;
+      const fecha = document.getElementById('gasto-fecha').value;
+
+      if (!desc) { alert('Escribe una descripción del gasto.'); return; }
+      if (!monto || monto <= 0) { alert('El monto debe ser mayor a 0.'); return; }
+
+      try {
+        const res = await authFetch('/gastos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ descripcion: desc, monto, categoria: cat, fecha })
+        });
+        if (!res.ok) throw new Error();
+        document.getElementById('gasto-desc').value = '';
+        document.getElementById('gasto-monto').value = '';
+        // Refrescar lista
+        filtrarGastosPeriodo('rango');
+      } catch (e) {
+        alert('Error al registrar el gasto.');
+      }
+    }
+
+    async function eliminarGasto(id) {
+      if (!confirm('¿Eliminar este gasto?')) return;
+      try {
+        await authFetch(`/gastos/${id}`, { method: 'DELETE' });
+        filtrarGastosPeriodo('rango');
+      } catch (e) { alert('Error al eliminar gasto.'); }
+    }
+
+    window.registrarGasto = registrarGasto;
+    window.eliminarGasto = eliminarGasto;
+    window.filtrarGastosPeriodo = filtrarGastosPeriodo;
 
     // ===================== EDICIÓN DE PEDIDOS =====================
     let pedidoEditando = null;
 
-    window.abrirEditorPedido = function(id) {
-       const original = todosPedidos.find(p => p.id === id);
-       if(!original) return;
-       pedidoEditando = JSON.parse(JSON.stringify(original));
-       if(!pedidoEditando.extras) pedidoEditando.extras = [];
-       renderizarEditorPedido();
-       document.getElementById('modalEditarPedido').style.display = 'flex';
+    window.abrirEditorPedido = function (id) {
+      const original = todosPedidos.find(p => p.id === id);
+      if (!original) return;
+      pedidoEditando = JSON.parse(JSON.stringify(original));
+      if (!pedidoEditando.extras) pedidoEditando.extras = [];
+      renderizarEditorPedido();
+      document.getElementById('modalEditarPedido').style.display = 'flex';
     };
 
-    window.cerrarModalEditar = function() {
-       document.getElementById('modalEditarPedido').style.display = 'none';
-       pedidoEditando = null;
+    window.cerrarModalEditar = function () {
+      document.getElementById('modalEditarPedido').style.display = 'none';
+      pedidoEditando = null;
     };
 
     function renderizarEditorPedido() {
-       let p = pedidoEditando;
-       let itemsHtml = '';
-       
-       if(p.tipo === 'kilo') {
-          itemsHtml += `<h4>Platillos (Kilo)</h4>`;
-          p.itemsDetalle.forEach((it, i) => {
-             itemsHtml += `<div class="edit-row" style="display:flex; gap:10px; margin-bottom:8px;">
+      let p = pedidoEditando;
+      let itemsHtml = '';
+
+      if (p.tipo === 'kilo') {
+        itemsHtml += `<h4>Platillos (Kilo)</h4>`;
+        p.itemsDetalle.forEach((it, i) => {
+          itemsHtml += `<div class="edit-row" style="display:flex; gap:10px; margin-bottom:8px;">
                <input style="flex:2;" type="text" value="${escapeHtml(it.nombre)}" oninput="pedidoEditando.itemsDetalle[${i}].nombre=this.value">
                <input style="flex:1;" type="number" placeholder="Cant" min="0" value="${it.cantidad}" oninput="pedidoEditando.itemsDetalle[${i}].cantidad=parseFloat(this.value)||0; if(pedidoEditando.itemsDetalle[${i}].cantidad===0){pedidoEditando.itemsDetalle.splice(${i},1); renderizarEditorPedido();}">
              </div>`;
-          });
-       } else if (p.tipo === 'evento') {
-          itemsHtml += `<h4>Platillos (Personas)</h4>`;
-          p.itemsDetalle.forEach((it, i) => {
-             itemsHtml += `<div class="edit-row" style="display:flex; gap:10px; margin-bottom:8px;">
+        });
+      } else if (p.tipo === 'evento') {
+        itemsHtml += `<h4>Platillos (Personas)</h4>`;
+        p.itemsDetalle.forEach((it, i) => {
+          itemsHtml += `<div class="edit-row" style="display:flex; gap:10px; margin-bottom:8px;">
                <input style="flex:2;" type="text" value="${escapeHtml(it.nombre)}" oninput="pedidoEditando.itemsDetalle[${i}].nombre=this.value">
                <input style="flex:1;" type="number" placeholder="Personas" min="0" value="${it.personas}" oninput="pedidoEditando.itemsDetalle[${i}].personas=parseFloat(this.value)||0; if(pedidoEditando.itemsDetalle[${i}].personas===0){pedidoEditando.itemsDetalle.splice(${i},1); renderizarEditorPedido();}">
              </div>`;
-          });
-       } else { // Venta directa
-          itemsHtml += `<h4>Productos</h4>`;
-          p.itemsDetalle.forEach((it, i) => {
-             itemsHtml += `<div class="edit-row" style="display:flex; gap:10px; margin-bottom:8px;">
+        });
+      } else { // Venta directa
+        itemsHtml += `<h4>Productos</h4>`;
+        p.itemsDetalle.forEach((it, i) => {
+          itemsHtml += `<div class="edit-row" style="display:flex; gap:10px; margin-bottom:8px;">
                <input style="flex:2;" type="text" value="${escapeHtml(it.nombre)}" oninput="pedidoEditando.itemsDetalle[${i}].nombre=this.value">
                <input style="flex:1;" type="number" placeholder="Cant" min="0" value="${it.cantidad}" oninput="pedidoEditando.itemsDetalle[${i}].cantidad=parseFloat(this.value)||0; if(pedidoEditando.itemsDetalle[${i}].cantidad===0){pedidoEditando.itemsDetalle.splice(${i},1); renderizarEditorPedido();}">
              </div>`;
-          });
-       }
+        });
+      }
 
-       let extrasHtml = `<h4>Extras</h4>`;
-       p.extras.forEach((ex, i) => {
-          extrasHtml += `<div class="edit-row" style="display:flex; gap:10px; margin-bottom:8px;">
+      let extrasHtml = `<h4>Extras</h4>`;
+      p.extras.forEach((ex, i) => {
+        extrasHtml += `<div class="edit-row" style="display:flex; gap:10px; margin-bottom:8px;">
             <input style="flex:2;" type="text" value="${escapeHtml(ex.nombre)}" placeholder="Nombre" oninput="pedidoEditando.extras[${i}].nombre=this.value">
             <input style="flex:1;" type="number" placeholder="Cant" min="0" value="${ex.cantidad}" oninput="pedidoEditando.extras[${i}].cantidad=parseFloat(this.value)||0; if(pedidoEditando.extras[${i}].cantidad===0){pedidoEditando.extras.splice(${i},1); renderizarEditorPedido();}">
           </div>`;
-       });
+      });
 
-       let html = `
+      let html = `
        <h3 style="margin-top:0">✏️ Editar Pedido #${p.id}</h3>
        <div style="background:#f1f5f9; padding:15px; border-radius:10px; margin-bottom:15px;">
          <label style="display:block; margin-bottom:5px; font-size:12px; color:#64748b;">TOTAL DEL PEDIDO ($)</label>
@@ -1381,43 +1675,43 @@
        <button class="btn-primary" style="width:100%; padding:14px;" onclick="window.guardarEdicionPedido(${p.id})">💾 Guardar Cambios</button>
        `;
 
-       document.getElementById('modal-editar-body').innerHTML = html;
+      document.getElementById('modal-editar-body').innerHTML = html;
     }
 
-    window.addPlatilloEdit = function() {
-       if(pedidoEditando.tipo === 'kilo') pedidoEditando.itemsDetalle.push({nombre:"Nuevo Platillo", cantidad:1, kilos:1, precio:0});
-       else if(pedidoEditando.tipo === 'evento') pedidoEditando.itemsDetalle.push({nombre:"Nuevo Platillo", personas:1, precio:0});
-       else pedidoEditando.itemsDetalle.push({nombre:"Nuevo Producto", cantidad:1, precio_unitario:0});
-       renderizarEditorPedido();
+    window.addPlatilloEdit = function () {
+      if (pedidoEditando.tipo === 'kilo') pedidoEditando.itemsDetalle.push({ nombre: "Nuevo Platillo", cantidad: 1, kilos: 1, precio: 0 });
+      else if (pedidoEditando.tipo === 'evento') pedidoEditando.itemsDetalle.push({ nombre: "Nuevo Platillo", personas: 1, precio: 0 });
+      else pedidoEditando.itemsDetalle.push({ nombre: "Nuevo Producto", cantidad: 1, precio_unitario: 0 });
+      renderizarEditorPedido();
     };
 
-    window.addExtraEdit = function() {
-       pedidoEditando.extras.push({nombre:"Nuevo Extra", cantidad:1, precio:0});
-       renderizarEditorPedido();
+    window.addExtraEdit = function () {
+      pedidoEditando.extras.push({ nombre: "Nuevo Extra", cantidad: 1, precio: 0 });
+      renderizarEditorPedido();
     };
 
-    window.guardarEdicionPedido = async function(id) {
-       let newTotal = parseFloat(document.getElementById('edit-total').value) || 0;
-       let newNotas = document.getElementById('edit-notas').value;
-       
-       // Preparar body
-       pedidoEditando.total = newTotal;
-       pedidoEditando.notas = newNotas;
+    window.guardarEdicionPedido = async function (id) {
+      let newTotal = parseFloat(document.getElementById('edit-total').value) || 0;
+      let newNotas = document.getElementById('edit-notas').value;
 
-       try {
-         let res = await authFetch('/pedidos/edit/' + id, {
-           method: 'PUT',
-           headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify(pedidoEditando)
-         });
-         if (!res.ok) throw new Error();
-         
-         alert("Pedido actualizado correctamente!");
-         cerrarModalEditar();
-         await cargarPedidos();
-       } catch(e) {
-         alert("Hubo un error al actualizar el pedido.");
-       }
+      // Preparar body
+      pedidoEditando.total = newTotal;
+      pedidoEditando.notas = newNotas;
+
+      try {
+        let res = await authFetch('/pedidos/edit/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pedidoEditando)
+        });
+        if (!res.ok) throw new Error();
+
+        alert("Pedido actualizado correctamente!");
+        cerrarModalEditar();
+        await cargarPedidos();
+      } catch (e) {
+        alert("Hubo un error al actualizar el pedido.");
+      }
     };
     // ==============================================================
 

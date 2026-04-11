@@ -10,21 +10,31 @@ app.use(express.json());
 mongoose.connect("mongodb://127.0.0.1:27017/paellaDB");
 
 // 📦 Modelo
-const Pedido = mongoose.model("Pedido", {
+const PedidoSchema = new mongoose.Schema({
+  folio: String,
   tipo: String,
-  cliente: String,
+  cliente: String,      // legacy
+  nombre: String,       // frontend actual
   telefono: String,
-  fecha: String,
-  hora: String,
-  entrega: String,
-  items: Array,
+  hora: String,         // legacy
+  horaEntrega: String,  // frontend actual
+  entrega: String,      // legacy
+  tipoEntrega: String,  // frontend actual
+  items: Array,         // legacy
+  itemsDetalle: Array,  // frontend actual
   extras: Array,
   notas: String,
   direccion: String,
   distancia: Number,
+  costoKm: Number,
+  costoFijo: Number,
   total: Number,
+  status: { type: String, default: "Pendiente" },
+  fechaEntrega: String,
   creadoEn: { type: Date, default: Date.now }
-});
+}, { strict: false });   // ← permite cualquier campo extra sin descartar
+
+const Pedido = mongoose.model("Pedido", PedidoSchema);
 
 // ✅ Guardar pedido
 app.post("/pedidos", async (req, res) => {
