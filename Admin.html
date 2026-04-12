@@ -1421,21 +1421,16 @@
       try {
         const body = { status: nuevoStatus, ...extras };
         if (metodoPago) body.metodoPago = metodoPago;
-        console.log('[PUT] enviando:', JSON.stringify(body));
         const res = await authFetch(`/pedidos/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
-        const respData = await res.json();
-        // Alerta final de debug: confirma qué guardó el servidor
-        if (extras.paelleras !== undefined) {
-          alert('SERVIDOR respondió:\npaelleras guardadas: ' + respData.paelleras + '\npaellerasDevueltas: ' + respData.paellerasDevueltas + '\nstatus: ' + respData.status);
-        }
+        await res.json();
         await cargarPedidos();
       } catch (e) {
         console.error('[_ejecutarCambioStatus] ERROR:', e);
-        alert('Error al cambiar estado: ' + e.message);
+        alert('Error al cambiar estado');
       }
     }
 
