@@ -909,7 +909,7 @@
           </div>
 
           <button class="btn btn-primary" style="width:100%; margin-top:25px; padding:16px; font-size:1.1rem;"
-            onclick="guardarVentaDirecta()">💾 Completar e ingresar venta al sistema</button>
+            onclick="abrirModalPagoVD()">💾 Completar e ingresar venta al sistema</button>
         </div>
 
         <!-- HISTORIAL EN VIVO DE VD -->
@@ -1564,7 +1564,18 @@
       document.getElementById('vd-total').value = total;
     }
 
-    async function guardarVentaDirecta() {
+    // Abre el modal de método de pago para venta directa (valida primero)
+    function abrirModalPagoVD() {
+      let total = parseFloat(document.getElementById('vd-total').value);
+      if (isNaN(total) || total <= 0) { alert("El total debe ser mayor a 0."); return; }
+      let itemsDetalle = productosVentaDirecta;
+      if (itemsDetalle.length === 0) { alert('Agrega al menos un producto.'); return; }
+      // Mostrar modal de pago
+      document.getElementById('modalPagoVD').style.display = 'flex';
+    }
+
+    async function guardarVentaDirecta(metodoPago) {
+      document.getElementById('modalPagoVD').style.display = 'none';
       let cliente = document.getElementById('vd-cliente').value.trim() || 'Venta en mostrador';
       let telefono = document.getElementById('vd-telefono').value.trim() || '';
       let fechaInput = document.getElementById('vd-fecha').value;
@@ -1593,7 +1604,8 @@
         notas: notas,
         tipoEntrega: 'pickup',
         horaEntrega: new Date().toTimeString().substring(0, 5),
-        direccion: ''
+        direccion: '',
+        metodoPago: metodoPago || null
       };
 
       try {
@@ -1809,6 +1821,31 @@
     guardarPedidosGuardados('k');
     guardarPedidosGuardados('e');
   </script>
+
+  <!-- Modal: Método de Pago para Venta Directa -->
+  <div id="modalPagoVD" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); justify-content:center; align-items:center; z-index:3000;">
+    <div style="background:white; border-radius:24px; padding:28px; max-width:380px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+      <div style="font-size:2rem; margin-bottom:8px;">💳</div>
+      <h3 style="margin:0 0 6px 0; font-size:1.3rem; color:#1e293b;">Método de Pago</h3>
+      <p style="color:#6b7280; margin-bottom:22px; font-size:0.9rem;">¿Cómo pagó el cliente?</p>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button onclick="guardarVentaDirecta('Efectivo')"
+          style="background:#10b981; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer; transition:opacity 0.2s;"
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">💵 Efectivo</button>
+        <button onclick="guardarVentaDirecta('Tarjeta')"
+          style="background:#3b82f6; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer; transition:opacity 0.2s;"
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">💳 Tarjeta</button>
+        <button onclick="guardarVentaDirecta('Transferencia')"
+          style="background:#8b5cf6; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer; transition:opacity 0.2s;"
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🏦 Transferencia</button>
+        <button onclick="guardarVentaDirecta(null)"
+          style="background:#f3f4f6; color:#4b5563; border:none; padding:10px; border-radius:14px; font-size:0.9rem; cursor:pointer;">Registrar sin método de pago</button>
+        <button onclick="document.getElementById('modalPagoVD').style.display='none'"
+          style="background:none; border:1px solid #e2e8f0; color:#94a3b8; padding:8px; border-radius:14px; font-size:0.85rem; cursor:pointer; margin-top:4px;">✕ Cancelar</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 
 </html>

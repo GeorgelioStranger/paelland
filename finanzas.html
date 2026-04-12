@@ -415,17 +415,22 @@
     </div>
 
     <!-- Filtros de período -->
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:24px; background:white; padding:14px 20px; border-radius:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+    <div
+      style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:24px; background:white; padding:14px 20px; border-radius:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
       <strong style="color:#374151; font-size:0.9rem; margin-right:4px;">Período:</strong>
       <button class="periodo-btn active" id="btn-hoy" onclick="seleccionarPeriodo('hoy', this)">📅 Hoy</button>
       <button class="periodo-btn" id="btn-semana" onclick="seleccionarPeriodo('semana', this)">🗓 Semana</button>
       <button class="periodo-btn" id="btn-mes" onclick="seleccionarPeriodo('mes', this)">📆 Mes</button>
       <span style="color:#cbd5e1; margin:0 4px;">|</span>
-      <div style="display:flex; align-items:center; gap:6px; background:#f9fafb; border:1.5px solid #e2e8f0; border-radius:30px; padding:4px 10px;">
-        <input type="date" id="fin-desde" style="border:none; background:transparent; font-size:0.82rem; color:#374151; outline:none; width:120px;">
+      <div
+        style="display:flex; align-items:center; gap:6px; background:#f9fafb; border:1.5px solid #e2e8f0; border-radius:30px; padding:4px 10px;">
+        <input type="date" id="fin-desde"
+          style="border:none; background:transparent; font-size:0.82rem; color:#374151; outline:none; width:120px;">
         <span style="color:#9ca3af; font-size:0.85rem;">&#8594;</span>
-        <input type="date" id="fin-hasta" style="border:none; background:transparent; font-size:0.82rem; color:#374151; outline:none; width:120px;">
-        <button class="periodo-btn" style="padding:5px 14px; font-size:0.8rem; margin:0;" onclick="seleccionarPeriodo('rango', null)">Buscar</button>
+        <input type="date" id="fin-hasta"
+          style="border:none; background:transparent; font-size:0.82rem; color:#374151; outline:none; width:120px;">
+        <button class="periodo-btn" style="padding:5px 14px; font-size:0.8rem; margin:0;"
+          onclick="seleccionarPeriodo('rango', null)">Buscar</button>
       </div>
     </div>
 

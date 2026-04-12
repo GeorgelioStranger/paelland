@@ -727,6 +727,7 @@
       <button class="tab-btn" data-tab="historial">📦 Historial entregados</button>
       <button class="tab-btn" data-tab="estadisticas">📊 Estadísticas</button>
       <button class="tab-btn" data-tab="clientes">👥 Clientes</button>
+      <button class="tab-btn" data-tab="paelleras">🫕 Paelleras</button>
     </div>
 
     <div id="tab-ventasdirectas" class="tab-content" style="display:block;">
@@ -783,6 +784,11 @@
 
     <div id="tab-clientes" class="tab-content" style="display:none;">
       <div id="listaClientes"></div>
+    </div>
+
+    <div id="tab-paelleras" class="tab-content" style="display:none;">
+      <div id="paelleras-kpis" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:24px;"></div>
+      <div id="listaPaelleras"></div>
     </div>
 
     <!-- TAB GASTOS -->
@@ -919,6 +925,24 @@
     </div>
   </div>
 
+  <!-- Modal: Paelleras entregadas (solo para eventos) -->
+  <div id="modalPaelleras" class="modal" style="z-index:2200;">
+    <div class="modal-content" style="max-width:380px; text-align:center;">
+      <div style="font-size:2.5rem; margin-bottom:8px;">🫕</div>
+      <h3 style="margin:0 0 6px 0; color:#1e293b;">¿Cuántas paelleras se entregan?</h3>
+      <p style="color:#6b7280; font-size:0.88rem; margin-bottom:20px;">Registra las paelleras que salen con este pedido para llevar control de devoluciones.</p>
+      <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:24px;">
+        <button onclick="ajustarPaelleras(-1)" style="background:#f1f5f9; border:none; width:44px; height:44px; border-radius:50%; font-size:1.6rem; cursor:pointer; line-height:1;">−</button>
+        <span id="paellerasCantidad" style="font-size:2.2rem; font-weight:800; color:#D85A30; min-width:50px;">1</span>
+        <button onclick="ajustarPaelleras(1)" style="background:#f1f5f9; border:none; width:44px; height:44px; border-radius:50%; font-size:1.6rem; cursor:pointer; line-height:1;">+</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button onclick="confirmarPaelleras()" style="background:#D85A30; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer;">✅ Confirmar entrega</button>
+        <button onclick="confirmarPaelleras(0)" style="background:#f3f4f6; color:#4b5563; border:none; padding:10px; border-radius:14px; font-size:0.9rem; cursor:pointer;">Continuar sin registrar paelleras</button>
+      </div>
+    </div>
+  </div>
+
   <script src="visor_ticket.js"></script>
   <script>
     // ===================== AUTENTICACIÓN Y ROLES =====================
@@ -970,7 +994,10 @@
     let chartVentas = null, chartPedidos = null;
     let filtros = { texto: '', desde: '', hasta: '', tipo: '', estado: '', metodoPago: '' };
     let productosVentaDirecta = [];
-    let _pendingEntregadoId = null;  // guarda el ID mientras se elige método de pago
+    let _pendingEntregadoId = null;   // guarda el ID mientras se elige método de pago
+    let _pendingEsEvento = false;     // true si el pedido pendiente es de tipo evento
+    let _pendingMetodoPago = null;    // guarda el método de pago entre modales
+    let _paellerasCantidadTmp = 1;   // cantidad en el modal de paelleras
 
     function getEntregados() { return todosPedidos.filter(p => p.status === 'Entregado'); }
 
@@ -1191,6 +1218,13 @@
           let estado = p.status || 'Pendiente';
           let badgeClass = estadoClase(estado);
           let estadoHtml = `<span class="badge ${badgeClass}">${estado}</span>`;
+          // Badge de método de pago
+          let pagoColors = { 'Efectivo': { bg: '#dcfce7', color: '#166534', icon: '💵' }, 'Tarjeta': { bg: '#dbeafe', color: '#1e3a8a', icon: '💳' }, 'Transferencia': { bg: '#ede9fe', color: '#5b21b6', icon: '🏦' } };
+          let pagoHtml = '';
+          if (p.metodoPago && pagoColors[p.metodoPago]) {
+            let pc = pagoColors[p.metodoPago];
+            pagoHtml = `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:8px; background:${pc.bg}; color:${pc.color}">${pc.icon} ${p.metodoPago}</span>`;
+          }
           let botonesHtml = '';
           if (mostrarBotones && p.status !== 'Entregado') {
             botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button><button class="btn-proceso" onclick="cambiarStatus('${p._id || p.id}','En proceso')">🟡 En proceso</button><button class="btn-entregado" onclick="cambiarStatus('${p._id || p.id}','Entregado')">✅ Entregado</button><button class="btn-editar" style="background:#8b5cf6;" onclick="abrirEditorPedido('${p._id || p.id}')">✏️ Editar</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
@@ -1198,7 +1232,7 @@
             botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           }
           let div = document.createElement('div'); div.className = 'pedido';
-          div.innerHTML = `<div><strong>${p.nombre || 'Sin nombre'}</strong> ${estadoHtml}</div>
+          div.innerHTML = `<div><strong>${p.nombre || 'Sin nombre'}</strong> ${estadoHtml}${pagoHtml}</div>
           <div>📞 ${p.telefono || 'Sin teléfono'}</div>
           <div>💰 $${Math.round(p.total || 0).toLocaleString()}</div>
           <div>🍽 Tipo: ${p.tipo === 'kilo' ? 'Kilo' : p.tipo === 'evento' ? 'Evento' : 'Venta directa'}</div>
@@ -1226,6 +1260,7 @@
       if (activeTab === 'clientes') renderizarClientes();
       if (activeTab === 'estadisticas') { actualizarGraficas(); actualizarResumenDiario(); }
       if (activeTab === 'ventasdirectas') renderizarVentasDirectas();
+      if (activeTab === 'paelleras') renderizarPaelleras();
     }
 
     function renderizarClientes() {
@@ -1286,7 +1321,7 @@
     }
 
     function verDetallePedido(id) {
-      let p = todosPedidos.find(p => p.id === id);
+      let p = todosPedidos.find(p => p._id === id || String(p.id) === String(id));
       if (!p) return;
       let html = `<h3>Detalle del pedido</h3><p><strong>Cliente:</strong> ${p.nombre || 'N/A'}</p><p><strong>Teléfono:</strong> ${p.telefono || 'N/A'}</p><p><strong>Tipo:</strong> ${p.tipo === 'kilo' ? 'Kilo' : p.tipo === 'evento' ? 'Evento' : 'Venta directa'}</p><p><strong>Fecha entrega:</strong> ${formatearFechaLocal(p.fechaEntrega)}</p><p><strong>Hora:</strong> ${p.horaEntrega || 'N/A'}</p><p><strong>Entrega:</strong> ${p.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Pick up'} ${p.direccion ? `- ${p.direccion}` : ''}</p><p><strong>Total:</strong> $${Math.round(p.total || 0).toLocaleString()}</p><p><strong>Estado:</strong> ${p.status || 'Pendiente'}</p>`;
       if (p.itemsDetalle && p.itemsDetalle.length) {
@@ -1310,11 +1345,17 @@
       if (!contenedor) return;
       if (ventas.length === 0) { contenedor.innerHTML = '<div class="empty-message">No hay ventas directas registradas.</div>'; return; }
       ventas.sort((a, b) => new Date(b.fechaEntrega) - new Date(a.fechaEntrega));
+      let pagoColors = { 'Efectivo': { bg: '#dcfce7', color: '#166534', icon: '💵' }, 'Tarjeta': { bg: '#dbeafe', color: '#1e3a8a', icon: '💳' }, 'Transferencia': { bg: '#ede9fe', color: '#5b21b6', icon: '🏦' } };
       let html = `<div class="fecha"><h2>📅 Todas las ventas directas</h2></div>`;
       ventas.forEach(v => {
         let items = v.itemsDetalle ? v.itemsDetalle.map(i => `${i.nombre} × ${i.cantidad}`).join(', ') : '';
+        let pagoHtml = '';
+        if (v.metodoPago && pagoColors[v.metodoPago]) {
+          let pc = pagoColors[v.metodoPago];
+          pagoHtml = `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:8px; background:${pc.bg}; color:${pc.color}">${pc.icon} ${v.metodoPago}</span>`;
+        }
         html += `<div class="pedido">
-        <div><strong>${v.nombre || 'Cliente anónimo'}</strong> <span class="badge entregado">Entregado</span></div>
+        <div><strong>${v.nombre || 'Cliente anónimo'}</strong> <span class="badge entregado">Entregado</span>${pagoHtml}</div>
         <div>📞 ${v.telefono || 'Sin teléfono'}</div>
         <div>💰 $${Math.round(v.total || 0).toLocaleString()}</div>
         <div>📅 ${formatearFechaLocal(v.fechaEntrega)}</div>
@@ -1334,6 +1375,8 @@
     function cambiarStatus(id, nuevoStatus) {
       if (nuevoStatus === 'Entregado') {
         _pendingEntregadoId = id;
+        const pedido = todosPedidos.find(p => p._id === id || String(p.id) === String(id));
+        _pendingEsEvento = !!(pedido && pedido.tipo === 'evento');
         document.getElementById('modalMetodoPago').style.display = 'flex';
       } else {
         _ejecutarCambioStatus(id, nuevoStatus, null);
@@ -1343,22 +1386,134 @@
     async function confirmarEntregado(metodoPago) {
       document.getElementById('modalMetodoPago').style.display = 'none';
       if (_pendingEntregadoId !== null) {
-        await _ejecutarCambioStatus(_pendingEntregadoId, 'Entregado', metodoPago);
-        _pendingEntregadoId = null;
+        if (_pendingEsEvento) {
+          _pendingMetodoPago = metodoPago;
+          _paellerasCantidadTmp = 1;
+          document.getElementById('paellerasCantidad').textContent = '1';
+          document.getElementById('modalPaelleras').style.display = 'flex';
+        } else {
+          await _ejecutarCambioStatus(_pendingEntregadoId, 'Entregado', metodoPago);
+          _pendingEntregadoId = null;
+        }
       }
     }
 
-    async function _ejecutarCambioStatus(id, nuevoStatus, metodoPago) {
+    function ajustarPaelleras(delta) {
+      _paellerasCantidadTmp = Math.max(0, _paellerasCantidadTmp + delta);
+      document.getElementById('paellerasCantidad').textContent = _paellerasCantidadTmp;
+    }
+
+    async function confirmarPaelleras(cantidadOverride) {
+      document.getElementById('modalPaelleras').style.display = 'none';
+      const cantidad = cantidadOverride !== undefined ? cantidadOverride : _paellerasCantidadTmp;
+      console.log('[confirmarPaelleras] cantidad:', cantidad, '| pendingId:', _pendingEntregadoId, '| metodoPago:', _pendingMetodoPago);
+      if (_pendingEntregadoId !== null) {
+        const extras = cantidad > 0 ? { paelleras: cantidad, paellerasDevueltas: 0 } : {};
+        console.log('[confirmarPaelleras] extras a enviar:', JSON.stringify(extras));
+        await _ejecutarCambioStatus(_pendingEntregadoId, 'Entregado', _pendingMetodoPago, extras);
+        _pendingEntregadoId = null;
+        _pendingEsEvento = false;
+        _pendingMetodoPago = null;
+      }
+    }
+
+    async function _ejecutarCambioStatus(id, nuevoStatus, metodoPago, extras = {}) {
       try {
-        const body = { status: nuevoStatus };
+        const body = { status: nuevoStatus, ...extras };
         if (metodoPago) body.metodoPago = metodoPago;
-        await authFetch(`/pedidos/${id}`, {
+        const res = await authFetch(`/pedidos/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
+        await res.json();
         await cargarPedidos();
-      } catch (e) { alert('Error al cambiar estado'); }
+      } catch (e) {
+        console.error('[_ejecutarCambioStatus] ERROR:', e);
+        alert('Error al cambiar estado');
+      }
+    }
+
+    // ===================== PAELLERAS =====================
+    function renderizarPaelleras() {
+      const eventos = todosPedidos.filter(p =>
+        p.tipo === 'evento' && p.status === 'Entregado' && (p.paelleras || 0) > 0
+      );
+      const pendientes = eventos.filter(p => (p.paelleras || 0) > (p.paellerasDevueltas || 0));
+      const totalEntregadas = eventos.reduce((s, p) => s + (p.paelleras || 0), 0);
+      const totalDevueltas  = eventos.reduce((s, p) => s + (p.paellerasDevueltas || 0), 0);
+      const totalPendientes = totalEntregadas - totalDevueltas;
+
+      // KPIs
+      const inventarioTotal = parseInt(localStorage.getItem('paelleras_inventario') || '0');
+      const disponibles = Math.max(0, inventarioTotal - totalPendientes);
+      document.getElementById('paelleras-kpis').innerHTML = `
+        <div class="card">
+          <h3>🫕 Inventario total</h3>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+            <div class="value" id="kpi-inventario-val">${inventarioTotal}</div>
+            <button onclick="editarInventarioPaelleras()" title="Editar inventario" style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; padding:4px 10px; font-size:0.8rem; cursor:pointer; color:#475569; margin-top:0;">&#9998; Editar</button>
+          </div>
+        </div>
+        <div class="card"><h3>🟠 Con clientes</h3><div class="value" style="color:#f59e0b;">${totalPendientes}</div></div>
+        <div class="card"><h3>✅ Devueltas (historial)</h3><div class="value" style="color:#10b981;">${totalDevueltas}</div></div>
+        <div class="card"><h3>🟢 Disponibles en casa</h3><div class="value" style="color:#3b82f6;">${disponibles}</div></div>
+        <div class="card"><h3>⚠️ Clientes pendientes</h3><div class="value" style="color:#D85A30;">${pendientes.length}</div></div>`;
+
+      const contenedor = document.getElementById('listaPaelleras');
+      if (pendientes.length === 0) {
+        contenedor.innerHTML = `<div class="empty-message">🎉 ¡Todas las paelleras han sido devueltas!</div>`;
+        return;
+      }
+
+      pendientes.sort((a, b) => new Date(a.fechaEntrega) - new Date(b.fechaEntrega));
+      contenedor.innerHTML = pendientes.map(p => {
+        const faltantes = (p.paelleras || 0) - (p.paellerasDevueltas || 0);
+        const pid = p._id || p.id;
+        return `<div class="pedido" style="border-left-color:#f59e0b;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div><strong style="color:#D85A30; font-size:1.05rem;">${escapeHtml(p.nombre || 'Sin nombre')}</strong>
+              <span style="display:inline-block; background:#fef3c7; color:#92400e; padding:3px 10px; border-radius:50px; font-size:0.72rem; font-weight:700; margin-left:8px;">⚠️ ${faltantes} paellera${faltantes !== 1 ? 's' : ''} pendiente${faltantes !== 1 ? 's' : ''}</span>
+            </div>
+            <button onclick="devolverPaellera('${pid}')" style="background:#D85A30; color:white; border:none; padding:8px 18px; border-radius:40px; font-weight:700; font-size:0.9rem; cursor:pointer;">🫕 Registrar devolución</button>
+          </div>
+          <div style="margin-top:8px; display:flex; gap:16px; flex-wrap:wrap; font-size:0.88rem; color:#475569;">
+            <span>📞 ${p.telefono || 'Sin teléfono'}</span>
+            <span>📅 ${formatearFechaLocal(p.fechaEntrega)}</span>
+            <span>🫕 Entregadas: <strong>${p.paelleras}</strong></span>
+            <span>✅ Devueltas: <strong>${p.paellerasDevueltas || 0}</strong></span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function editarInventarioPaelleras() {
+      const actual = localStorage.getItem('paelleras_inventario') || '0';
+      const nuevo = prompt('¿Cuántas paelleras tienes en total en tu inventario?', actual);
+      const n = parseInt(nuevo);
+      if (nuevo !== null && !isNaN(n) && n >= 0) {
+        localStorage.setItem('paelleras_inventario', n);
+        renderizarPaelleras(); // refrescar KPIs
+      }
+    }
+
+    async function devolverPaellera(id) {
+      const pedido = todosPedidos.find(p => p._id === id || String(p.id) === String(id));
+      if (!pedido) return;
+      const faltantes = (pedido.paelleras || 0) - (pedido.paellerasDevueltas || 0);
+      if (faltantes <= 0) { alert('Este cliente ya devolvió todas sus paelleras.'); return; }
+      const input = prompt(`¿Cuántas paelleras devuelve ${pedido.nombre}?\n(Pendientes: ${faltantes})`, faltantes);
+      const cant = parseInt(input);
+      if (!cant || cant <= 0 || isNaN(cant)) return;
+      const nuevaDevueltas = Math.min((pedido.paellerasDevueltas || 0) + cant, pedido.paelleras || 0);
+      try {
+        await authFetch(`/pedidos/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paellerasDevueltas: nuevaDevueltas })
+        });
+        await cargarPedidos();
+      } catch (e) { alert('Error al registrar devolución.'); }
     }
     async function eliminarPedido(id) {
       if (!confirm('¿Eliminar permanentemente?')) return;
@@ -1418,6 +1573,7 @@
       if (tabId === 'ventasdirectas') renderizarVentasDirectas();
       if (tabId === 'activos' || tabId === 'historial') refrescarListas();
       if (tabId === 'gastos') activarPestanaGastos();
+      if (tabId === 'paelleras') renderizarPaelleras();
     }
 
     function exportarCSV() {
@@ -1469,8 +1625,11 @@
     document.getElementById('gasto-fecha').value = new Date().toISOString().split('T')[0];
 
     window.cambiarStatus = cambiarStatus; window.confirmarEntregado = confirmarEntregado;
+    window.confirmarPaelleras = confirmarPaelleras; window.ajustarPaelleras = ajustarPaelleras;
     window.eliminarPedido = eliminarPedido; window.verDetallePedido = verDetallePedido; window.cerrarModal = cerrarModal;
     window.verHistorialCompleto = verHistorialCompleto; window.cerrarModalHistorial = cerrarModalHistorial;
+    window.editarInventarioPaelleras = editarInventarioPaelleras;
+    window.devolverPaellera = devolverPaellera;
 
     // ================== LÓGICA DE GASTOS ==================
     let gastosActuales = [];
@@ -1601,7 +1760,7 @@
     let pedidoEditando = null;
 
     window.abrirEditorPedido = function (id) {
-      const original = todosPedidos.find(p => p.id === id);
+      const original = todosPedidos.find(p => p._id === id || String(p.id) === String(id));
       if (!original) return;
       pedidoEditando = JSON.parse(JSON.stringify(original));
       if (!pedidoEditando.extras) pedidoEditando.extras = [];

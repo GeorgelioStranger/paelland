@@ -124,32 +124,7 @@ app.post('/pedidos', async (req, res) => {
   }
 });
 
-// Cambiar status + metodoPago
-app.put('/pedidos/:id', authMiddleware, async (req, res) => {
-  try {
-    const idParam = req.params.id;
-    const updateData = {};
-    if (req.body.status) updateData.status = req.body.status;
-    if (req.body.metodoPago) updateData.metodoPago = req.body.metodoPago;
-
-    let pedido = null;
-    // Intentar por _id de Mongo primero
-    if (idParam.length === 24) {
-      pedido = await Pedido.findByIdAndUpdate(idParam, updateData, { new: true }).catch(() => null);
-    }
-    // Fallback: buscar por id numérico
-    if (!pedido) {
-      pedido = await Pedido.findOneAndUpdate({ id: parseInt(idParam) }, updateData, { new: true });
-    }
-    if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
-    res.json(pedido);
-  } catch (error) {
-    console.error("Error al actualizar pedido:", error);
-    res.status(500).json({ error: 'Error al actualizar pedido' });
-  }
-});
-
-// Editar completo (SOLO ADMIN)
+// Editar completo (SOLO ADMIN) — debe ir ANTES de /pedidos/:id para que Express no lo intercepte
 app.put('/pedidos/edit/:id', authMiddleware, async (req, res) => {
   if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
   try {
@@ -168,15 +143,39 @@ app.put('/pedidos/edit/:id', authMiddleware, async (req, res) => {
     };
     let pedido = null;
     if (idParam.length === 24) {
-      pedido = await Pedido.findByIdAndUpdate(idParam, updateFields, { new: true }).catch(() => null);
+      pedido = await Pedido.findByIdAndUpdate(idParam, { $set: updateFields }, { new: true }).catch(() => null);
     }
     if (!pedido) {
-      pedido = await Pedido.findOneAndUpdate({ id: parseInt(idParam) }, updateFields, { new: true });
+      pedido = await Pedido.findOneAndUpdate({ id: parseInt(idParam) }, { $set: updateFields }, { new: true });
     }
     if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
     res.json(pedido);
   } catch (error) {
     res.status(500).json({ error: 'Error al editar pedido completo' });
+  }
+});
+
+// Actualizar campos del pedido (status, metodoPago, paelleras, paellerasDevueltas, etc.)
+app.put('/pedidos/:id', authMiddleware, async (req, res) => {
+  try {
+    const idParam = req.params.id;
+    const { _id, __v, createdAt, ...updateData } = req.body;
+    console.log(`[PUT /pedidos/${idParam}] body:`, JSON.stringify(updateData));
+    let pedido = null;
+    // strict:false es necesario en las opciones del update para que Mongoose persista campos fuera del schema
+    const updateOptions = { new: true, strict: false };
+    if (idParam.length === 24) {
+      pedido = await Pedido.findByIdAndUpdate(idParam, { $set: updateData }, updateOptions).catch(() => null);
+    }
+    if (!pedido) {
+      pedido = await Pedido.findOneAndUpdate({ id: parseInt(idParam) }, { $set: updateData }, updateOptions);
+    }
+    if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+    console.log(`[PUT OK] paelleras=${pedido.paelleras} status=${pedido.status}`);
+    res.json(pedido);
+  } catch (error) {
+    console.error('Error al actualizar pedido:', error);
+    res.status(500).json({ error: 'Error al actualizar pedido' });
   }
 });
 
