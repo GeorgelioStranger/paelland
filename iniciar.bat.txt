@@ -1,0 +1,23 @@
+﻿@echo off
+title Sistema Paella - Automático
+echo ======================================
+echo   Iniciando Sistema de Pedidos Paella
+echo ======================================
+echo.
+
+:: Cerrar procesos previos que usen el puerto 3001 (evita conflictos)
+for /f "tokens=5" %%a in ('netstat -aon ^| find ":3001" ^| find "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
+
+:: Iniciar el backend en una ventana nueva
+start "Backend Paella" cmd /k node server.js
+
+:: Esperar 3 segundos a que el servidor arranque
+timeout /t 3 /nobreak >nul
+
+:: Abrir el navegador en la página principal
+start http://localhost:3001
+
+echo.
+echo Sistema corriendo. Cierra esta ventana cuando quieras apagar.
+echo El servidor seguirá funcionando hasta que cierres la ventana "Backend Paella".
+pause >nul

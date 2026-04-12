@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cotizador Paella - Guardar, Confirmar y PDF</title>
+  <!-- Eliminado HTML2Canvas y jsPDF, ahora usamos visor_ticket.js -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Estilos del Cotizador (Dashboard Layout) */
+    body {
+      display: flex;
+      background: var(--bg-main);
+      overflow-x: hidden;
+    }
+
+    /* Sidebar Navegación Expandible */
+    .sidebar-nav {
+      width: 80px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border-right: 1px solid var(--border-light);
+      height: 100vh;
+      position: fixed;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 0;
+      z-index: 1000;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .sidebar-nav:hover {
+      width: 220px;
+      align-items: flex-start;
+      padding: 30px 20px;
+      box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+    }
+
+    .sidebar-nav a {
+      text-decoration: none;
+      font-size: 26px;
+      color: var(--text-light);
+      margin-bottom: 15px;
+      transition: all 0.2s;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      width: 100%;
+      border-radius: 12px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    .sidebar-nav:hover a {
+      justify-content: flex-start;
+    }
+
+    .sidebar-nav a:hover,
+    .sidebar-nav a.active {
+      color: var(--brand-red);
+      background: var(--brand-red-light);
+      transform: translateX(5px);
+    }
+    
+    .nav-label {
+      font-size: 16px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    
+    .sidebar-nav:hover .nav-label {
+      opacity: 1;
+      transition-delay: 0.1s;
+    }
+
+    /* Contenedor Principal */
+    .main-wrapper {
+      margin-left: 80px;
+      padding: 40px;
+      width: calc(100% - 80px);
+      max-width: 1400px;
+      transition: margin-left 0.3s, width 0.3s;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 2.2rem;
+      margin: 0;
+      line-height: 1;
+      color: var(--brand-black);
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-top: 5px;
+    }
+
+    /* Menú de Pestañas */
+    .tabs {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .tab {
+      flex: 1;
+      max-width: 200px;
+      padding: 12px;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 50px;
+      background: transparent;
+      border: 2px solid var(--border-light);
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: var(--brand-red-light);
+      color: var(--brand-red);
+      border-color: var(--brand-red);
+    }
+
+    /* Grid Layout: Dos columnas en pantalla grande */
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    @media(min-width: 1100px) {
+      .panel.active {
+        grid-template-columns: 1fr 400px;
+      }
+
+      .qbox-sticky-wrapper {
+        position: sticky;
+        top: 40px;
+      }
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px
+    }
+
+    .row3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px
+    }
+
+    @media (max-width: 768px) {
+      .sidebar-nav {
+        width: 100%;
+        height: 70px;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        padding: 0;
+        bottom: 0;
+        top: auto;
+        border-right: none;
+        border-top: 1px solid var(--border-light);
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+      }
+      .sidebar-nav:hover {
+        width: 100%;
+        padding: 0;
+        align-items: center;
+      }
+      .sidebar-nav a {
+        margin-bottom: 0;
+        padding: 10px;
+        justify-content: center;
+      }
+      .sidebar-nav:hover a {
+        justify-content: center;
+      }
+      .sidebar-nav a:hover, .sidebar-nav a.active {
+        transform: translateY(-5px);
+      }
+      .nav-label {
+        display: none !important;
+      }
+      .main-wrapper {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px 20px 90px 20px;
+      }
+
+      .row,
+      .row3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--bg-main);
+      padding-bottom: 12px;
+    }
+
+    /* Botones Toggles (Pick up / Domicilio) */
+    .toggle-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 12px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      background: var(--bg-main);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: var(--brand-yellow-light);
+      color: #b28800;
+      border-color: var(--brand-yellow);
+      box-shadow: 0 4px 10px rgba(242, 197, 17, 0.15);
+    }
+
+    /* Lista de Productos */
+    .item-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 15px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .item-row:last-child {
+      border-bottom: none;
+    }
+
+    .qty-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-main);
+      padding: 6px;
+      border-radius: 50px;
+      border: 1px solid var(--border-light);
+    }
+
+    .qty-btn {
+      background: white;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      font-size: 20px;
+      color: var(--brand-black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      transition: 0.1s;
+    }
+
+    .qty-btn:active {
+      transform: scale(0.9);
+    }
+
+    .qty-num {
+      font-size: 1.1rem;
+      font-weight: 700;
+      width: 24px;
+      text-align: center;
+    }
+
+    .sub-price {
+      font-size: 1.1rem;
+      font-weight: 700;
+      width: 90px;
+      text-align: right;
+      color: var(--text-main);
+    }
+
+    /* Ticket / Resumen (Caja Clara) */
+    .qbox {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border-radius: var(--radius-md);
+      padding: 30px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-light);
+    }
+
+    .qbox .qline {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1rem;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text-muted);
+    }
+
+    .qbox .qline:last-of-type {
+      border-bottom: none;
+    }
+
+    .qbox .qline.total {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--brand-black);
+      border-top: 2px dashed var(--border-light);
+      margin-top: 20px;
+      padding-top: 20px;
+      border-bottom: none;
+    }
+
+    /* Acciones del Ticket */
+    .qbox-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 25px;
+    }
+
+    /* Botones Extras */
+    .add-btn {
+      background: var(--bg-main);
+      border: 2px dashed var(--border-light);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+      font-size: 0.95rem;
+    }
+
+    .add-btn:hover {
+      border-color: var(--brand-red);
+      color: var(--brand-red);
+      background: var(--brand-red-light);
+    }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      color: var(--brand-red);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 5px;
+      opacity: 0.7;
+    }
+
+    .remove-btn:hover {
+      opacity: 1;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .metric {
+      background: var(--bg-main);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      border: 1px solid var(--border-light);
+      text-align: center;
+    }
+
+    .metric .ml {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .metric .mv {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--brand-black);
+    }
+
+    .platillo-row,
+    .extras-row {
+      display: grid;
+      grid-template-columns: 1fr 100px 90px 40px;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .col-hdr {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .warn-msg,
+    .closed-msg {
+      font-size: 0.85rem;
+      color: #b45309;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      margin-top: 10px;
+      font-weight: 500;
+    }
+
+    details {
+      margin-bottom: 15px;
+    }
+
+    details>summary {
+      list-style: none;
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--brand-black);
+      padding: 15px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+    }
+
+    details[open]>summary {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      border-bottom: none;
+    }
+
+    .details-body {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-top: none;
+      padding: 20px;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    }
+
+    .saved-list {
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .saved-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 0.95rem;
+    }
+
+    .btn-sm-action {
+      background: var(--bg-main);
+      border: 1px solid var(--border-light);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-sm-action:hover {
+      background: #e5e7eb;
+    }
+
+    .btn-disabled {
+      opacity: 0.5;
+      filter: grayscale(1);
+    }
+  </style>
+<body>
+  <script src="visor_ticket.js"></script>
+  <script>
+    // ===================== AUTENTICACIÓN Y ROLES =====================
+    const AUTH_TOKEN_KEY = 'auth_token';
+    const ROLE_KEY = 'user_role';
+    let authToken = localStorage.getItem(AUTH_TOKEN_KEY);
+    let userRole = localStorage.getItem(ROLE_KEY);
+
+    if (!authToken || !userRole) {
+      alert('Sesión inválida. Inicia sesión en el portal.');
+      window.location.href = '/';
+      throw new Error('No autenticado');
+    }
+
+    if (userRole === 'empleado') {
+      document.addEventListener("DOMContentLoaded", () => {
+         const linkEstadisticas = document.querySelector('a[href="/estadisticas"]');
+         if (linkEstadisticas) linkEstadisticas.style.display = 'none';
+         const linkFinanzas = document.querySelector('a[href="/finanzas"]');
+         if (linkFinanzas) linkFinanzas.style.display = 'none';
+      });
+    }
+
+    // Configurar menú de usuario
+    document.addEventListener("DOMContentLoaded", () => {
+      const uName = document.getElementById('user-name-display');
+      if (uName) {
+         uName.innerText = userRole === 'admin' ? '👋 Bienvenido, Jorge' : '👋 Bienvenida, Marce';
+      }
+    });
+    // =================================================================
+  </script>
+  <nav class="sidebar-nav">
+    <a href="/" style="text-decoration:none; font-size:32px;" title="Inicio">🥘<span class="nav-label" style="color:var(--brand-black); font-size:20px;">La Paella</span></a>
+    <a href="/cotizador" class="active" title="Registrar Pedido">📝<span class="nav-label">Cotizador</span></a>
+    <a href="/admin" title="Administración">📊<span class="nav-label">Historial</span></a>
+    <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
+    <a href="/finanzas" title="Finanzas">💸<span class="nav-label">Finanzas</span></a>
+  </nav>
+
+  <script>
+    function cerrarSesion() {
+      if(confirm('¿Deseas cerrar tu sesión actual?')) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_role');
+        window.location.href = '/';
+      }
+    }
+  </script>
+
+  <div class="main-wrapper">
+
+    <div class="header" style="justify-content: space-between;">
+      <div>
+        <h1>Punto de Venta</h1>
+        <p>Toma de pedidos y eventos · Lun a Dom (Cerrado martes)</p>
+      </div>
+      <div id="user-profile" style="text-align:right; font-size:14px; color:var(--text-muted); background: white; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
+         <span id="user-name-display" style="font-weight:600; color:var(--brand-red); font-size:16px;"></span><br>
+         <a href="#" onclick="cerrarSesion()" style="color:#94a3b8; text-decoration:none; font-size:12px; transition: color 0.2s;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'">Cerrar sesión</a>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('kilo')">Venta por kilo</button>
+      <button class="tab" onclick="setTab('evento')">Eventos y reuniones</button>
+      <button class="tab" onclick="setTab('ventadirecta')">Venta directa (Local)</button>
+    </div>
+
+    <!-- ===== PANEL KILO ===== -->
+    <div id="panel-kilo" class="panel active">
+      <div class="form-content">
+        <div class="card">
+          <h2>Datos del pedido</h2>
+          <div class="row3" style="margin-bottom:12px;">
+            <div class="field">
+              <label>Cliente</label>
+              <input type="text" id="k-cliente" placeholder="Nombre" oninput="kCalc()">
+            </div>
+            <div class="field">
+              <label>Teléfono (para WhatsApp)</label>
+              <div style="display:grid; grid-template-columns: 85px 1fr; gap:8px;">
+                <select id="k-pais" style="width:100%; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem; background: var(--bg-main);" onchange="if(this.value==='otro'){ let o = prompt('Ingresa el código de país con el signo + (ej. +54):'); if(o){ let opt = new Option('🌐 ' + o, o, true, true); this.add(opt, this.options[this.options.length-1]); this.value = o; } else { this.value = '+52'; } } kCalc()">
+                  <option value="+52" selected>🇲🇽 +52</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+34">🇪🇸 +34</option>
+                  <option value="otro">🌐 Otro...</option>
+                </select>
+                <input type="tel" id="k-telefono" placeholder="1234567890" style="width:100%; min-width:0;" oninput="kCalc()">
+              </div>
+            </div>
+            <div class="field">
+              <label>Día</label>
+              <select id="k-dia" onchange="kCambiarDia()">
+                <option value="lun">Lunes</option>
+                <option value="mie">Miércoles</option>
+                <option value="jue">Jueves</option>
+                <option value="vie">Viernes</option>
+                <option value="sab">Sábado</option>
+                <option value="dom">Domingo</option>
+                <option value="mar">Martes</option>
+              </select>
+              <div class="closed-msg" id="k-closed">No laboramos los martes.</div>
+            </div>
+          </div>
+          <div class="row3" style="margin-bottom:12px;">
+            <div class="field">
+              <label>Hora de entrega</label>
+              <input type="time" id="k-hora" value="13:00" oninput="kCalc()">
+              <div class="warn-msg" id="k-hora-warn">Horario: 11:30am – 4:00pm</div>
+            </div>
+            <div class="field">
+              <label>Tipo de entrega</label>
+              <div class="toggle-row" style="margin-top:4px;">
+                <button class="toggle-btn active" id="k-btn-pickup" onclick="kSetEntrega('pickup')">Pick up</button>
+                <button class="toggle-btn" id="k-btn-domicilio" onclick="kSetEntrega('domicilio')">A domicilio</button>
+              </div>
+            </div>
+          </div>
+          <div id="k-domicilio-box" style="display:none; margin-top:12px;">
+            <div class="row" style="margin-bottom:10px;">
+              <div class="field">
+                <label>Dirección</label>
+                <input type="text" id="k-direccion" placeholder="Calle, colonia, referencia" oninput="kCalc()">
+              </div>
+              <div class="field">
+                <label>Distancia (km)</label>
+                <input type="number" id="k-dist" value="0" min="0" step="0.5" oninput="kCalc()">
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label>Costo por km ($)</label>
+                <input type="number" id="k-km" value="10" min="0" oninput="kCalc()">
+              </div>
+              <div class="field">
+                <label>Costo fijo ($)</label>
+                <input type="number" id="k-fijo" value="30" min="0" oninput="kCalc()">
+              </div>
+            </div>
+            <div style="margin-top:8px;"><span id="k-zona"></span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h2 style="margin:0;">Productos</h2>
+            <span id="k-finde-badge" style="display:none;"><span class="badge badge-ok">Fin de semana — incluye
+                bolillos</span></span>
+          </div>
+          <div id="k-items"></div>
+        </div>
+
+        <details>
+          <summary>
+            <div class="summary-card"><span style="font-size:14px; font-weight:500;">Extras opcionales</span><span
+                class="chevron">&#9660;</span></div>
+          </summary>
+          <div class="details-body">
+            <div style="display:grid; grid-template-columns:1fr 80px 80px 30px; gap:8px; margin-bottom:6px;">
+              <span class="col-hdr">Concepto</span><span class="col-hdr">Precio</span><span
+                class="col-hdr">Cant.</span><span></span>
+            </div>
+            <div id="k-extras"></div>
+            <button class="add-btn" onclick="kAddExtra()" style="margin-top:4px;">+ Agregar extra</button>
+            <div class="field" style="margin-top:12px;">
+              <label>Notas adicionales (opcional)</label>
+              <textarea id="k-notas" placeholder="Indicaciones especiales, alergias, preferencias..."
+                oninput="kCalc()"></textarea>
+            </div>
+          </div>
+        </details>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="ml">Kilos totales</div>
+            <div class="mv" id="k-m-kilos">0</div>
+          </div>
+          <div class="metric">
+            <div class="ml">Bolillos incluidos</div>
+            <div class="mv" id="k-m-bolillos">—</div>
+          </div>
+          <div class="metric">
+            <div class="ml">Total</div>
+            <div class="mv" id="k-m-total">$0</div>
+          </div>
+        </div>
+      </div> <!-- /form-content (Columna izquierda) -->
+
+      <!-- Columna derecha: Sticky Resumen -->
+      <div class="qbox-sticky-wrapper">
+        <div class="qbox" id="k-qbox">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span style="font-size:14px; font-weight:500;">Resumen</span>
+            <span id="k-resumen-header" style="font-size:12px; color:var(--text2);"></span>
+          </div>
+          <div id="k-qlineas"></div>
+          <div id="k-qtraslado" style="display:none;" class="qline">
+            <span>Traslado (<span id="k-qdist">0</span> km × $<span id="k-qkm">10</span> + fijo $<span
+                id="k-qfijo">30</span>)</span>
+            <span id="k-qtraslado-val">$0</span>
+          </div>
+          <div class="qline total"><span>Total</span><span id="k-qtotal">$0</span></div>
+          <div class="qbox-actions">
+            <button id="k-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%" onclick="confirmarPedido('k')">✅ Validar y Enviar
+              WhatsApp</button>
+            <button id="k-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%" onclick="guardarPedido('k')">💾 Guardar Pedido
+              (Admin)</button>
+            <div style="display:flex; gap:10px;">
+              <button class="btn btn-ghost copy-btn" style="flex:1" onclick="kCopiar()">Copiar texto</button>
+              <button class="btn btn-ghost" style="flex:1" onclick="exportarPDF('k')">PDF</button>
+            </div>
+          </div>
+        </div>
+
+        <details class="card" style="margin-top: 20px; border:none; padding:0;">
+          <summary>
+            <div class="summary-card"><span>📋 Borradores Locales</span></div>
+          </summary>
+          <div class="details-body" id="k-saved-container"></div>
+        </details>
+      </div> <!-- /qbox-sticky-wrapper -->
+    </div>
+
+    <!-- ===== PANEL EVENTO ===== -->
+    <div id="panel-evento" class="panel">
+      <div class="form-content">
+        <div class="card">
+          <h2>Datos del evento</h2>
+          <div class="row3" style="margin-bottom:12px;">
+            <div class="field">
+              <label>Cliente</label>
+              <input type="text" id="e-cliente" placeholder="Nombre" oninput="eCalc()">
+            </div>
+            <div class="field">
+              <label>Teléfono (para WhatsApp)</label>
+              <div style="display:grid; grid-template-columns: 85px 1fr; gap:8px;">
+                <select id="e-pais" style="width:100%; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem; background: var(--bg-main);" onchange="if(this.value==='otro'){ let o = prompt('Ingresa el código de país con el signo + (ej. +54):'); if(o){ let opt = new Option('🌐 ' + o, o, true, true); this.add(opt, this.options[this.options.length-1]); this.value = o; } else { this.value = '+52'; } } eCalc()">
+                  <option value="+52" selected>🇲🇽 +52</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+34">🇪🇸 +34</option>
+                  <option value="otro">🌐 Otro...</option>
+                </select>
+                <input type="tel" id="e-telefono" placeholder="1234567890" style="width:100%; min-width:0;" oninput="eCalc()">
+              </div>
+            </div>
+            <div class="field">
+              <label>Fecha</label>
+              <input type="date" id="e-fecha" oninput="eCalc()">
+            </div>
+          </div>
+          <div class="row3" style="margin-bottom:12px;">
+            <div class="field">
+              <label>Hora del evento</label>
+              <input type="time" id="e-hora" value="14:00" oninput="eCalc()">
+            </div>
+            <div class="field">
+              <label>Tipo de entrega</label>
+              <div class="toggle-row" style="margin-top:4px;">
+                <button class="toggle-btn active" id="e-btn-pickup" onclick="eSetEntrega('pickup')">Pick up</button>
+                <button class="toggle-btn" id="e-btn-domicilio" onclick="eSetEntrega('domicilio')">A domicilio</button>
+              </div>
+            </div>
+          </div>
+          <div id="e-domicilio-box" style="display:none;">
+            <div class="row" style="margin-bottom:10px;">
+              <div class="field"><label>Dirección</label><input type="text" id="e-direccion"
+                  placeholder="Calle, colonia" oninput="eCalc()"></div>
+              <div class="field"><label>Distancia (km)</label><input type="number" id="e-dist" value="0" min="0"
+                  step="0.5" oninput="eCalc()"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Costo por km ($)</label><input type="number" id="e-km" value="10" min="0"
+                  oninput="eCalc()"></div>
+              <div class="field"><label>Costo fijo ($)</label><input type="number" id="e-fijo" value="30" min="0"
+                  oninput="eCalc()"></div>
+            </div>
+            <div style="margin-top:8px;"><span id="e-zona"></span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Platillos del evento</h2>
+          <div style="display:grid; grid-template-columns:1fr 72px 72px 30px; gap:8px; margin-bottom:6px;">
+            <span class="col-hdr">Platillo</span><span class="col-hdr">$/persona</span><span
+              class="col-hdr">Personas</span><span></span>
+          </div>
+          <div id="e-platillos"></div>
+          <button class="add-btn" onclick="eAddPlatillo()" style="margin-top:4px;">+ Agregar platillo</button>
+          <div class="warn-msg" id="e-min-warn" style="display:none; margin-top:10px;">Se requieren mínimo 7 personas
+            para servicio a eventos.</div>
+        </div>
+
+        <details>
+          <summary>
+            <div class="summary-card"><span style="font-size:14px; font-weight:500;">Extras opcionales</span><span
+                class="chevron">&#9660;</span></div>
+          </summary>
+          <div class="details-body">
+            <div style="display:grid; grid-template-columns:1fr 80px 80px 30px; gap:8px; margin-bottom:6px;">
+              <span class="col-hdr">Concepto</span><span class="col-hdr">Precio</span><span
+                class="col-hdr">Cant.</span><span></span>
+            </div>
+            <div id="e-extras"></div>
+            <button class="add-btn" onclick="eAddExtra()" style="margin-top:4px;">+ Agregar extra</button>
+            <div class="field" style="margin-top:12px;">
+              <label>Notas adicionales (opcional)</label>
+              <textarea id="e-notas" placeholder="Alergias, preferencias..." oninput="eCalc()"></textarea>
+            </div>
+          </div>
+        </details>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="ml">Personas totales</div>
+            <div class="mv" id="e-m-personas">0</div>
+          </div>
+          <div class="metric">
+            <div class="ml">Platillos</div>
+            <div class="mv" id="e-m-platos">$0</div>
+          </div>
+          <div class="metric">
+            <div class="ml">Total</div>
+            <div class="mv" id="e-m-total">$0</div>
+          </div>
+        </div>
+      </div> <!-- /form-content (Columna izquierda) -->
+
+      <!-- Columna derecha: Sticky Resumen -->
+      <div class="qbox-sticky-wrapper">
+        <div class="qbox" id="e-qbox">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span style="font-size:14px; font-weight:500;">Pedido</span>
+            <span id="e-resumen-header" style="font-size:12px; color:var(--text2);"></span>
+          </div>
+          <div id="e-qlineas"></div>
+          <div id="e-qtraslado" style="display:none;" class="qline">
+            <span>Traslado (<span id="e-qdist">0</span> km × $<span id="e-qkm">10</span> + fijo $<span
+                id="e-qfijo">30</span>)</span>
+            <span id="e-qtraslado-val">$0</span>
+          </div>
+          <div class="qline total"><span>Total</span><span id="e-qtotal">$0</span></div>
+          <div class="qbox-actions">
+            <button id="e-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%" onclick="confirmarPedido('e')">✅ Validar y Enviar
+              WhatsApp</button>
+            <button id="e-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%" onclick="guardarPedido('e')">💾 Guardar Pedido
+              (Admin)</button>
+            <div style="display:flex; gap:10px;">
+              <button class="btn btn-ghost copy-btn" style="flex:1" onclick="eCopiar()">Copiar texto</button>
+              <button class="btn btn-ghost" style="flex:1" onclick="exportarPDF('e')">PDF</button>
+            </div>
+          </div>
+        </div>
+
+        <details class="card" style="margin-top: 20px; border:none; padding:0;">
+          <summary>
+            <div class="summary-card"><span>📋 Borradores Locales</span></div>
+          </summary>
+          <div class="details-body" id="e-saved-container"></div>
+        </details>
+      </div> <!-- /qbox-sticky-wrapper -->
+    </div>
+
+    <!-- ===== PANEL VENTA DIRECTA ===== -->
+    <div id="panel-ventadirecta" class="panel">
+      <div class="form-content" style="width:100%; max-width:800px; margin:0 auto;">
+        <div class="card">
+          <h2>Registrar Venta Directa en Local</h2>
+          <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">Ventas rápidas de mostrador que no
+            requieren envío.</p>
+          <div class="row" style="margin-bottom:12px; display:flex; gap:15px;">
+            <div class="field" style="flex:1;">
+              <label>Cliente (opcional)</label>
+              <input type="text" id="vd-cliente" placeholder="Nombre">
+            </div>
+            <div class="field" style="flex:1;">
+              <label>Teléfono (opcional)</label>
+              <input type="tel" id="vd-telefono" placeholder="Teléfono">
+            </div>
+            <div class="field" style="flex:1;">
+              <label>Fecha de venta</label>
+              <input type="date" id="vd-fecha">
+            </div>
+          </div>
+
+          <div id="vd-productos-container" style="margin-bottom:15px; display:flex; flex-direction:column; gap:10px;">
+          </div>
+          <button class="btn btn-secondary" onclick="agregarProductoVentaDirecta()"
+            style="border-radius:var(--radius-sm);">+ Agregar producto</button>
+
+          <div class="row" style="margin-top:20px; display:flex; gap:15px; align-items:flex-end;">
+            <div class="field" style="flex:1;">
+              <label>Total de la venta ($)</label>
+              <input type="number" id="vd-total" step="0.01" placeholder="0.00" readonly
+                style="background:var(--bg-main); font-weight:800; font-size:1.2rem; color:var(--brand-black);">
+            </div>
+            <div class="field" style="flex:2;">
+              <label>Notas (opcional)</label>
+              <input type="text" id="vd-notas" placeholder="Ej. Pago en efectivo">
+            </div>
+          </div>
+
+          <button class="btn btn-primary" style="width:100%; margin-top:25px; padding:16px; font-size:1.1rem;"
+            onclick="abrirModalPagoVD()">💾 Completar e ingresar venta al sistema</button>
+        </div>
+
+        <!-- HISTORIAL EN VIVO DE VD -->
+        <div class="card" style="margin-top: 25px;">
+          <h3 style="margin:0 0 15px 0; font-size:1.1rem; color:var(--brand-black);">📊 Últimas Ventas Directas
+            Registradas Hoy</h3>
+          <div id="vd-historial-envivo" style="font-size:0.9rem; color:var(--text-muted);">
+            Cargando historial desde la nube...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> <!-- /main-wrapper -->
+
+  <script>
+    const DIAS_FINDE = ["sab", "dom"];
+    const K_ITEMS_SEMANA = [
+      { nombre: "Paella mar y tierra — kilo", precio: 350, kilos: 1, cantidad: 0 },
+      { nombre: "Paella mar y tierra — medio kilo", precio: 180, kilos: 0.5, cantidad: 0 },
+    ];
+    const K_ITEMS_FINDE = [
+      { nombre: "Paella mar y tierra — kilo", precio: 350, kilos: 1, cantidad: 0 },
+      { nombre: "Paella mar y tierra — medio kilo", precio: 180, kilos: 0.5, cantidad: 0 },
+      { nombre: "Paella negra — kilo", precio: 350, kilos: 1, cantidad: 0 },
+      { nombre: "Paella negra — medio kilo", precio: 180, kilos: 0.5, cantidad: 0 },
+      { nombre: "Paella de carnes — kilo", precio: 310, kilos: 1, cantidad: 0 },
+      { nombre: "Paella de carnes — medio kilo", precio: 160, kilos: 0.5, cantidad: 0 }
+    ];
+    const E_MENU = [
+      { nombre: "Paella mar y tierra", precio: 200, personas: 0 },
+      { nombre: "Paella negra", precio: 200, personas: 0 },
+      { nombre: "Paella de carnes", precio: 180, personas: 0 },
+      { nombre: "Fideuá", precio: 200, personas: 0 },
+      { nombre: "Vegetariana", precio: 170, personas: 0 },
+    ];
+
+    let kItems = K_ITEMS_SEMANA.map(i => ({ ...i }));
+    let kEsFinde = false;
+    let kEntrega = "pickup";
+    let kExtras = [];
+    let eItems = E_MENU.map(i => ({ ...i }));
+    let eEntrega = "pickup";
+    let eExtras = [];
+
+    // ---------- Funciones comunes ----------
+    function setTab(t) {
+      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("panel-" + t).classList.add("active");
+      event.target.classList.add("active");
+    }
+
+    function zonaInfo(km) {
+      if (!km) return { label: "Sin distancia", cls: "badge-gray" };
+      if (km <= 5) return { label: "Zona 1 — Local", cls: "badge-info" };
+      if (km <= 15) return { label: "Zona 2 — Cercana", cls: "badge-warn" };
+      if (km <= 30) return { label: "Zona 3 — Media", cls: "badge-warn" };
+      return { label: "Zona 4 — Lejana", cls: "badge-danger" };
+    }
+
+    function fmtHora(val) {
+      if (!val) return "";
+      const [h, m] = val.split(":").map(Number);
+      const hh = h > 12 ? h - 12 : h === 0 ? 12 : h;
+      return hh + ":" + (m < 10 ? "0" + m : m) + " " + (h >= 12 ? "pm" : "am");
+    }
+
+    function fmtFecha(val) {
+      if (!val) return "";
+      return new Date(val + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+    }
+
+    function validarHora(val, warnId) {
+      const w = document.getElementById(warnId);
+      if (!val) { w.style.display = "none"; return; }
+      const [h, m] = val.split(":").map(Number), mins = h * 60 + m;
+      w.style.display = (mins < 11 * 60 + 30 || mins > 16 * 60) ? "block" : "none";
+    }
+
+    // ---------- KILO ----------
+    function kInit() {
+      let currDay = new Date().getDay();
+      let days = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"];
+      let todayStr = days[currDay] || "lun";
+      if (todayStr === "mar") todayStr = "mie"; // No laboran martes
+      const selectDia = document.getElementById("k-dia");
+      if (selectDia) selectDia.value = todayStr;
+      kCambiarDia();
+      kSetEntrega("pickup");
+    }
+
+    function kCambiarDia() {
+      const dia = document.getElementById("k-dia").value;
+      const cerrado = dia === "mar";
+      kEsFinde = DIAS_FINDE.includes(dia);
+      document.getElementById("k-closed").style.display = cerrado ? "block" : "none";
+      document.getElementById("k-finde-badge").style.display = kEsFinde ? "inline" : "none";
+      kItems = (kEsFinde ? K_ITEMS_FINDE : K_ITEMS_SEMANA).map(i => ({ ...i }));
+      kRenderItems();
+      kCalc();
+    }
+
+    function kSetEntrega(t) {
+      kEntrega = t;
+      document.getElementById("k-btn-pickup").classList.toggle("active", t === "pickup");
+      document.getElementById("k-btn-domicilio").classList.toggle("active", t === "domicilio");
+      document.getElementById("k-domicilio-box").style.display = t === "domicilio" ? "block" : "none";
+      kCalc();
+    }
+
+    function kRenderItems() {
+      const c = document.getElementById("k-items");
+      c.innerHTML = kItems.map((it, i) => `
+    <div class="item-row">
+      <div><div style="font-size:14px;">${it.nombre}</div><div style="font-size:12px;color:var(--text2);">$${it.precio}</div></div>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="kQty(${i},-1)">−</button>
+        <span class="qty-num" id="kq-${i}">${it.cantidad}</span>
+        <button class="qty-btn" onclick="kQty(${i},1)">+</button>
+      </div>
+      <div class="sub-price" id="ks-${i}">$0</div>
+    </div>`).join("");
+    }
+
+    function kQty(i, d) {
+      kItems[i].cantidad = Math.max(0, kItems[i].cantidad + d);
+      document.getElementById("kq-" + i).textContent = kItems[i].cantidad;
+      document.getElementById("ks-" + i).textContent = "$" + (kItems[i].cantidad * kItems[i].precio).toLocaleString("es-MX");
+      kCalc();
+    }
+
+    function kAddExtra() { kExtras.push({ nombre: "", precio: 0, cantidad: 1 }); kRenderExtras(); }
+    function kRenderExtras() {
+      const c = document.getElementById("k-extras");
+      c.innerHTML = kExtras.map((ex, i) => `
+    <div class="extras-row">
+      <input type="text" value="${ex.nombre}" placeholder="Ej. Salsa extra" oninput="kExtras[${i}].nombre=this.value;kCalc()">
+      <input type="number" value="${ex.precio}" min="0" oninput="kExtras[${i}].precio=+this.value;kCalc()">
+      <input type="number" value="${ex.cantidad}" min="1" oninput="kExtras[${i}].cantidad=+this.value;kCalc()">
+      <button class="remove-btn" onclick="kExtras.splice(${i},1);kRenderExtras();kCalc()">✕</button>
+    </div>`).join("");
+    }
+
+    function kCalc() {
+      validarHora(document.getElementById("k-hora").value, "k-hora-warn");
+      const dia = document.getElementById("k-dia").value;
+      const hora = document.getElementById("k-hora").value;
+      const dias = { lun: "Lunes", mar: "Martes", mie: "Miércoles", jue: "Jueves", vie: "Viernes", sab: "Sábado", dom: "Domingo" };
+      document.getElementById("k-resumen-header").textContent = [dias[dia], fmtHora(hora)].filter(Boolean).join(" · ");
+      let totalKilos = 0, totalPaella = 0, lineas = "";
+      kItems.forEach(it => { const sub = it.cantidad * it.precio; totalKilos += it.cantidad * it.kilos; totalPaella += sub; if (it.cantidad > 0) lineas += `<div class="qline"><span>${it.nombre} × ${it.cantidad}</span><span>$${sub.toLocaleString("es-MX")}</span></div>`; });
+      let totalExtras = 0;
+      kExtras.forEach(ex => { const sub = ex.precio * ex.cantidad; totalExtras += sub; if (ex.nombre && ex.cantidad > 0) lineas += `<div class="qline"><span>${ex.nombre} × ${ex.cantidad}</span><span>$${sub.toLocaleString("es-MX")}</span></div>`; });
+      let traslado = 0;
+      if (kEntrega === "domicilio") {
+        const dist = parseFloat(document.getElementById("k-dist").value) || 0;
+        const km = parseFloat(document.getElementById("k-km").value) || 10;
+        const fijo = parseFloat(document.getElementById("k-fijo").value) || 30;
+        traslado = dist > 0 ? dist * km + fijo : 0;
+        document.getElementById("k-qdist").textContent = dist;
+        document.getElementById("k-qkm").textContent = km;
+        document.getElementById("k-qfijo").textContent = fijo;
+        document.getElementById("k-qtraslado-val").textContent = "$" + Math.round(traslado).toLocaleString("es-MX");
+        document.getElementById("k-qtraslado").style.display = "flex";
+        const z = zonaInfo(dist);
+        document.getElementById("k-zona").innerHTML = `<span class="badge ${z.cls}">${z.label}</span>`;
+      } else { document.getElementById("k-qtraslado").style.display = "none"; }
+      const total = totalPaella + totalExtras + traslado;
+      const kilosEnteros = Math.floor(totalKilos);
+      const bolillos = kEsFinde ? kilosEnteros * 2 : 0;
+      document.getElementById("k-m-kilos").textContent = totalKilos % 1 === 0 ? totalKilos : totalKilos.toFixed(1);
+      document.getElementById("k-m-bolillos").textContent = kEsFinde ? (bolillos || "0") : "—";
+      document.getElementById("k-m-total").textContent = "$" + Math.round(total).toLocaleString("es-MX");
+      document.getElementById("k-qlineas").innerHTML = lineas || '<div class="qline"><span style="color:var(--text2)">Sin productos</span></div>';
+      document.getElementById("k-qtotal").textContent = "$" + Math.round(total).toLocaleString("es-MX");
+
+      // Validar botones
+      const kCliente = document.getElementById("k-cliente").value.trim();
+      const kTel = document.getElementById("k-telefono").value.trim();
+      const kilosSelec = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
+      if (kCliente && kTel.length >= 7 && kilosSelec > 0) {
+        if(document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.remove("btn-disabled");
+        if(document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.remove("btn-disabled");
+      } else {
+        if(document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.add("btn-disabled");
+        if(document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.add("btn-disabled");
+      }
+    }
+
+    function kCopiar() {
+      const dia = document.getElementById("k-dia").value;
+      if (dia === "mar") { alert("No laboramos los martes."); return; }
+      const cliente = document.getElementById("k-cliente").value || "Cliente";
+      const hora = document.getElementById("k-hora").value;
+      const dias = { lun: "Lunes", mar: "Martes", mie: "Miércoles", jue: "Jueves", vie: "Viernes", sab: "Sábado", dom: "Domingo" };
+      let totalPaella = 0, totalKilos = 0, totalExtras = 0, lineas = "";
+      kItems.forEach(it => { if (it.cantidad > 0) { const sub = it.cantidad * it.precio; totalPaella += sub; totalKilos += it.cantidad * it.kilos; lineas += `  • ${it.nombre} × ${it.cantidad} = $${sub.toLocaleString("es-MX")}\n`; } });
+      kExtras.forEach(ex => { if (ex.nombre && ex.cantidad > 0) { const sub = ex.precio * ex.cantidad; totalExtras += sub; lineas += `  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`; } });
+      const kilosEnteros = Math.floor(totalKilos);
+      const bolillos = kEsFinde ? kilosEnteros * 2 : 0;
+      const bolillosStr = kEsFinde && bolillos > 0 ? `  + ${bolillos} bolillos incluidos\n` : "";
+      let traslado = 0, trasladoStr = "";
+      if (kEntrega === "domicilio") {
+        const dist = parseFloat(document.getElementById("k-dist").value) || 0;
+        const km = parseFloat(document.getElementById("k-km").value) || 10;
+        const fijo = parseFloat(document.getElementById("k-fijo").value) || 30;
+        const dir = document.getElementById("k-direccion").value;
+        traslado = dist > 0 ? dist * km + fijo : 0;
+        trasladoStr = `\n*Entrega a domicilio*${dir ? ": " + dir : ""}\nTraslado (${dist} km): $${Math.round(traslado).toLocaleString("es-MX")}\n`;
+      } else { trasladoStr = "\n*Pick up en local*\n"; }
+      const notas = document.getElementById("k-notas").value;
+      const total = totalPaella + totalExtras + traslado;
+      const txt = `*Pedido Paella — Para llevar*\n👤 ${cliente}\n📅 ${dias[dia]}${hora ? " a las " + fmtHora(hora) : ""}\n\n*Productos:*\n${lineas}${bolillosStr}${trasladoStr}${notas ? "\n*Notas:* " + notas + "\n" : ""}\n*Total: $${Math.round(total).toLocaleString("es-MX")}*`;
+      navigator.clipboard.writeText(txt).then(() => { const btn = document.querySelectorAll("#panel-kilo .copy-btn")[0]; btn.textContent = "Copiado!"; setTimeout(() => btn.textContent = "Copiar texto", 2000); });
+    }
+
+    // ---------- EVENTO ----------
+    function eSetEntrega(t) {
+      eEntrega = t;
+      document.getElementById("e-btn-pickup").classList.toggle("active", t === "pickup");
+      document.getElementById("e-btn-domicilio").classList.toggle("active", t === "domicilio");
+      document.getElementById("e-domicilio-box").style.display = t === "domicilio" ? "block" : "none";
+      eCalc();
+    }
+
+    function eRenderPlatillos() {
+      const c = document.getElementById("e-platillos");
+      c.innerHTML = eItems.map((p, i) => `
+    <div class="platillo-row">
+      <input type="text" value="${p.nombre}" oninput="eItems[${i}].nombre=this.value;eCalc()">
+      <input type="number" value="${p.precio}" min="0" oninput="eItems[${i}].precio=+this.value;eCalc()">
+      <input type="number" value="${p.personas}" min="0" oninput="eItems[${i}].personas=+this.value;eCalc()">
+      <button class="remove-btn" onclick="eItems.splice(${i},1);eRenderPlatillos();eCalc()">✕</button>
+    </div>`).join("");
+    }
+    function eAddPlatillo() { eItems.push({ nombre: "Nuevo platillo", precio: 180, personas: 0 }); eRenderPlatillos(); eCalc(); }
+    function eAddExtra() { eExtras.push({ nombre: "", precio: 0, cantidad: 1 }); eRenderExtras(); }
+    function eRenderExtras() {
+      const c = document.getElementById("e-extras");
+      c.innerHTML = eExtras.map((ex, i) => `
+    <div class="extras-row">
+      <input type="text" value="${ex.nombre}" placeholder="Ej. Bebidas, mesero..." oninput="eExtras[${i}].nombre=this.value;eCalc()">
+      <input type="number" value="${ex.precio}" min="0" oninput="eExtras[${i}].precio=+this.value;eCalc()">
+      <input type="number" value="${ex.cantidad}" min="1" oninput="eExtras[${i}].cantidad=+this.value;eCalc()">
+      <button class="remove-btn" onclick="eExtras.splice(${i},1);eRenderExtras();eCalc()">✕</button>
+    </div>`).join("");
+    }
+    function eCalc() {
+      const fecha = document.getElementById("e-fecha").value;
+      const hora = document.getElementById("e-hora").value;
+      document.getElementById("e-resumen-header").textContent = [fmtFecha(fecha), fmtHora(hora)].filter(Boolean).join(" · ");
+      let totalPersonas = 0, totalPlatillos = 0, lineas = "";
+      eItems.forEach(p => { const sub = p.personas * p.precio; totalPersonas += p.personas; totalPlatillos += sub; if (p.personas > 0) lineas += `<div class="qline"><span>${p.nombre} (${p.personas} pers × $${p.precio})</span><span>$${sub.toLocaleString("es-MX")}</span></div>`; });
+      let totalExtras = 0;
+      eExtras.forEach(ex => { const sub = ex.precio * ex.cantidad; totalExtras += sub; if (ex.nombre && ex.cantidad > 0) lineas += `<div class="qline"><span>${ex.nombre} × ${ex.cantidad}</span><span>$${sub.toLocaleString("es-MX")}</span></div>`; });
+      let traslado = 0;
+      if (eEntrega === "domicilio") {
+        const dist = parseFloat(document.getElementById("e-dist").value) || 0;
+        const km = parseFloat(document.getElementById("e-km").value) || 10;
+        const fijo = parseFloat(document.getElementById("e-fijo").value) || 30;
+        traslado = dist > 0 ? dist * km + fijo : 0;
+        document.getElementById("e-qdist").textContent = dist;
+        document.getElementById("e-qkm").textContent = km;
+        document.getElementById("e-qfijo").textContent = fijo;
+        document.getElementById("e-qtraslado-val").textContent = "$" + Math.round(traslado).toLocaleString("es-MX");
+        document.getElementById("e-qtraslado").style.display = "flex";
+        const z = zonaInfo(dist);
+        document.getElementById("e-zona").innerHTML = `<span class="badge ${z.cls}">${z.label}</span>`;
+      } else { document.getElementById("e-qtraslado").style.display = "none"; }
+      const total = totalPlatillos + totalExtras + traslado;
+      document.getElementById("e-min-warn").style.display = totalPersonas > 0 && totalPersonas < 7 ? "block" : "none";
+      document.getElementById("e-m-personas").textContent = totalPersonas;
+      document.getElementById("e-m-platos").textContent = "$" + totalPlatillos.toLocaleString("es-MX");
+      document.getElementById("e-m-total").textContent = "$" + Math.round(total).toLocaleString("es-MX");
+      document.getElementById("e-qlineas").innerHTML = lineas || '<div class="qline"><span style="color:var(--text2)">Sin platillos</span></div>';
+      document.getElementById("e-qtotal").textContent = "$" + Math.round(total).toLocaleString("es-MX");
+
+      // Validar botones
+      const eCliente = document.getElementById("e-cliente").value.trim();
+      const eTel = document.getElementById("e-telefono").value.trim();
+      const paxSelec = eItems.reduce((acc, curr) => acc + curr.personas, 0);
+      if (eCliente && eTel.length >= 7 && paxSelec > 0) {
+        if(document.getElementById("e-btn-enviar")) document.getElementById("e-btn-enviar").classList.remove("btn-disabled");
+        if(document.getElementById("e-btn-guardar")) document.getElementById("e-btn-guardar").classList.remove("btn-disabled");
+      } else {
+        if(document.getElementById("e-btn-enviar")) document.getElementById("e-btn-enviar").classList.add("btn-disabled");
+        if(document.getElementById("e-btn-guardar")) document.getElementById("e-btn-guardar").classList.add("btn-disabled");
+      }
+    }
+    function eCopiar() {
+      const cliente = document.getElementById("e-cliente").value || "Cliente";
+      const fecha = document.getElementById("e-fecha").value;
+      const hora = document.getElementById("e-hora").value;
+      let totalPlatillos = 0, totalExtras = 0, totalPersonas = 0, lineas = "";
+      eItems.forEach(p => { if (p.personas > 0) { const sub = p.personas * p.precio; totalPlatillos += sub; totalPersonas += p.personas; lineas += `  • ${p.nombre}: ${p.personas} pers × $${p.precio} = $${sub.toLocaleString("es-MX")}\n`; } });
+      eExtras.forEach(ex => { if (ex.nombre && ex.cantidad > 0) { const sub = ex.precio * ex.cantidad; totalExtras += sub; lineas += `  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`; } });
+      let traslado = 0, trasladoStr = "";
+      if (eEntrega === "domicilio") {
+        const dist = parseFloat(document.getElementById("e-dist").value) || 0;
+        const km = parseFloat(document.getElementById("e-km").value) || 10;
+        const fijo = parseFloat(document.getElementById("e-fijo").value) || 30;
+        const dir = document.getElementById("e-direccion").value;
+        traslado = dist > 0 ? dist * km + fijo : 0;
+        trasladoStr = `\n*Entrega a domicilio*${dir ? ": " + dir : ""}\nTraslado (${dist} km): $${Math.round(traslado).toLocaleString("es-MX")}\n`;
+      } else { trasladoStr = "\n*Pick up en local*\n"; }
+      const notas = document.getElementById("e-notas").value;
+      const total = totalPlatillos + totalExtras + traslado;
+      const txt = `*Pedido— Servicio a Eventos*\n👤 ${cliente}${fecha ? "\n📅 " + fmtFecha(fecha) : ""}${hora ? " · " + fmtHora(hora) : ""}\n\n*Platillos:*\n${lineas}${trasladoStr}${notas ? "\n*Notas:* " + notas + "\n" : ""}\n*Total: $${Math.round(total).toLocaleString("es-MX")}*\n\n_Servicio en paellera · Mínimo 7 personas_`;
+      navigator.clipboard.writeText(txt).then(() => { const btn = document.querySelectorAll("#panel-evento .copy-btn")[0]; btn.textContent = "Copiado!"; setTimeout(() => btn.textContent = "Copiar texto", 2000); });
+    }
+
+    // ---------- GUARDAR PEDIDO (localStorage + backend) ----------
+    function guardarPedido(tipo) {
+      const folioUnico = new Date().getTime().toString().slice(-6);
+      let data = { tipo, fecha: new Date().toISOString(), folio: folioUnico };
+      if (tipo === 'k') {
+        const checkC = document.getElementById("k-cliente").value.trim();
+        const checkT = document.getElementById("k-telefono").value.trim();
+        const checkK = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
+        if (!checkC || checkT.length < 7 || checkK === 0) {
+           alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
+           return;
+        }
+
+        data.cliente = document.getElementById("k-cliente").value;
+        const codK = document.getElementById("k-pais").value;
+        const numK = document.getElementById("k-telefono").value;
+        data.telefono = numK ? (codK + " " + numK) : "";
+        data.dia = document.getElementById("k-dia").value;
+        data.hora = document.getElementById("k-hora").value;
+        data.entrega = kEntrega;
+        data.items = kItems.map(i => ({ ...i }));
+        data.extras = kExtras.map(e => ({ ...e }));
+        data.notas = document.getElementById("k-notas").value;
+
+        if (kEntrega === 'domicilio') {
+          data.direccion = document.getElementById("k-direccion").value;
+          let distK = parseFloat(document.getElementById("k-dist").value);
+          data.distancia = isNaN(distK) ? 0 : distK;
+          let kmK = parseFloat(document.getElementById("k-km").value);
+          data.costoKm = isNaN(kmK) ? 10 : kmK;
+          let fijoK = parseFloat(document.getElementById("k-fijo").value);
+          data.costoFijo = isNaN(fijoK) ? 30 : fijoK;
+          data.costoEnvio = data.costoFijo + (data.distancia * data.costoKm);
+        }
+        data.total = parseFloat(document.getElementById("k-qtotal").textContent.replace('$', '').replace(/\./g, '').replace(',', ''));
+
+      } else {
+        const checkC = document.getElementById("e-cliente").value.trim();
+        const checkT = document.getElementById("e-telefono").value.trim();
+        const checkP = eItems.reduce((acc, curr) => acc + curr.personas, 0);
+        if (!checkC || checkT.length < 7 || checkP === 0) {
+           alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
+           return;
+        }
+
+        data.cliente = document.getElementById("e-cliente").value;
+        const codE = document.getElementById("e-pais").value;
+        const numE = document.getElementById("e-telefono").value;
+        data.telefono = numE ? (codE + " " + numE) : "";
+        data.fecha = document.getElementById("e-fecha").value;
+        data.hora = document.getElementById("e-hora").value;
+        data.entrega = eEntrega;
+        data.items = eItems.map(i => ({ ...i }));
+        data.extras = eExtras.map(e => ({ ...e }));
+        data.notas = document.getElementById("e-notas").value;
+
+        if (eEntrega === 'domicilio') {
+          data.direccion = document.getElementById("e-direccion").value;
+          let distE = parseFloat(document.getElementById("e-dist").value);
+          data.distancia = isNaN(distE) ? 0 : distE;
+          let kmE = parseFloat(document.getElementById("e-km").value);
+          data.costoKm = isNaN(kmE) ? 10 : kmE;
+          let fijoE = parseFloat(document.getElementById("e-fijo").value);
+          data.costoFijo = isNaN(fijoE) ? 30 : fijoE;
+          data.costoEnvio = data.costoFijo + (data.distancia * data.costoKm);
+        }
+        data.total = parseFloat(document.getElementById("e-qtotal").textContent.replace('$', '').replace(/\./g, '').replace(',', ''));
+      }
+
+      // Guardar en localStorage
+      let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
+      saved.push(data);
+      localStorage.setItem("Pedidos", JSON.stringify(saved));
+
+      // Enviar al backend
+      enviarAlBackend(data);
+
+      // Actualizar lista de pedidos guardados en la interfaz
+      guardarPedidosGuardados(tipo);
+
+      // Notificación visual (Ticket/PDF) debe ir ANTES de limpiar
+      if (confirm("Pedido guardado correctamente. \n\n¿Deseas imprimir o generar PDF del ticket ahora?")) {
+         let pedidoAImprimir = {
+            id: data.folio,
+            ...data,
+            nombre: data.cliente,
+            itemsDetalle: data.items,
+            total: data.total,
+            tipo: tipo === 'k' ? 'kilo' : 'evento'
+         };
+         generarTicketPDF(pedidoAImprimir);
+      }
+      
+      // Limpiar formulario y reiniciar estado visual
+      if (tipo === 'k') {
+         document.getElementById("k-cliente").value = '';
+         document.getElementById("k-telefono").value = '';
+         document.getElementById("k-notas").value = '';
+         document.getElementById("k-direccion").value = '';
+         kExtras = [];
+         kInit();
+      } else {
+         document.getElementById("e-cliente").value = '';
+         document.getElementById("e-telefono").value = '';
+         document.getElementById("e-notas").value = '';
+         document.getElementById("e-direccion").value = '';
+         eExtras = [];
+         eItems = [{ nombre: "Paella mar y tierra", precio: 180, personas: 10 }];
+         eInit();
+      }
+    }
+
+    // ---------- FUNCIÓN PARA CONVERTIR DÍA A FECHA REAL (próximo día de la semana) ----------
+    function convertirDiaAFecha(dia) {
+      const diasMap = {
+        'lun': 1, 'mar': 2, 'mie': 3, 'jue': 4, 'vie': 5, 'sab': 6, 'dom': 0
+      };
+      const hoy = new Date();
+      const diaActual = hoy.getDay(); // 0=domingo, 1=lunes...
+      let diasHasta = diasMap[dia] - diaActual;
+      if (diasHasta < 0) diasHasta += 7;
+      if (diasHasta === 0 && hoy.getHours() >= 16) diasHasta = 7; // si ya pasó el horario, siguiente semana
+      const fecha = new Date(hoy);
+      fecha.setDate(hoy.getDate() + diasHasta);
+      // Formato YYYY-MM-DD
+      return fecha.toISOString().split('T')[0];
+    }
+
+    // ---------- ENVIAR AL BACKEND (NUEVO) ----------
+    async function enviarAlBackend(data) {
+      // Construir array de items con detalle
+      let itemsDetalle = [];
+      if (data.tipo === 'k') {
+        // Para kilos: cada item del pedido (producto con cantidad)
+        itemsDetalle = data.items.map(item => ({
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          kilos: item.kilos || 0,
+          precio_unitario: item.precio,
+          subtotal: item.cantidad * item.precio
+        }));
+      } else {
+        // Para eventos: cada platillo con número de personas
+        itemsDetalle = data.items.map(item => ({
+          nombre: item.nombre,
+          personas: item.personas,
+          precio_por_persona: item.precio,
+          subtotal: item.personas * item.precio
+        }));
+      }
+
+      // Determinar fecha de entrega real
+      let fechaEntregaReal;
+      if (data.tipo === 'k') {
+        fechaEntregaReal = convertirDiaAFecha(data.dia);
+      } else {
+        fechaEntregaReal = data.fecha; // evento ya tiene fecha en formato YYYY-MM-DD
+      }
+
+      const pedido = {
+        folio: data.folio,
+        nombre: data.cliente,
+        telefono: data.telefono,
+        tipo: data.tipo === 'k' ? 'kilo' : 'evento',
+        itemsDetalle: itemsDetalle,
+        extras: data.extras || [],
+        notas: data.notas || '',
+        tipoEntrega: data.entrega,
+        direccion: data.direccion || '',
+        distancia: data.distancia || 0,
+        costoKm: data.costoKm || 0,
+        costoFijo: data.costoFijo || 0,
+        costoEnvio: data.costoEnvio || 0,
+        horaEntrega: data.hora,
+        fechaEntrega: fechaEntregaReal,
+        total: data.total
+      };
+
+      try {
+        const res = await fetch('/pedidos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer Jorgito06'   // <-- usa la misma contraseña
+          },
+          body: JSON.stringify(pedido)
+        });
+        const result = await res.json();
+        console.log("Backend response:", result);
+      } catch (error) {
+        console.error("Error al enviar al backend:", error);
+      }
+    }
+
+    function guardarPedidosGuardados(tipo) {
+      const container = document.getElementById(`${tipo}-saved-container`);
+      if (!container) return;
+      let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
+      saved = saved.filter(c => c.tipo === tipo);
+      if (saved.length === 0) {
+        container.innerHTML = "<div class='saved-list'>No hay Pedidos guardadas.</div>";
+        return;
+      }
+      let html = `<div class='saved-list'>`;
+      saved.forEach((c, idx) => {
+        const fechaCorta = new Date(c.fecha).toLocaleString();
+        html += `<div class='saved-item'>
+      <span><strong>${c.cliente || "Sin nombre"}</strong> - $${Math.round(c.total).toLocaleString()} (${fechaCorta})</span>
+      <div>
+        <button class="add-btn" style="padding:2px 6px; font-size:11px;" onclick="cargarPedido(${idx})">Cargar</button>
+        <button class="remove-btn" onclick="eliminarPedido(${idx}, '${tipo}')">✕</button>
+      </div>
+    </div>`;
+      });
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
+    function cargarPedido(idx) {
+      let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
+      const data = saved[idx];
+      if (!data) return;
+      if (data.tipo === 'k') {
+        document.getElementById("k-cliente").value = data.cliente || "";
+        if (data.telefono && data.telefono.includes(' ')) {
+          const parts = data.telefono.split(' ', 2);
+          document.getElementById("k-pais").value = parts[0];
+          document.getElementById("k-telefono").value = data.telefono.substring(parts[0].length + 1);
+        } else {
+          document.getElementById("k-telefono").value = data.telefono || "";
+        }
+        document.getElementById("k-dia").value = data.dia || "lun";
+        document.getElementById("k-hora").value = data.hora || "13:00";
+        kCambiarDia(); // actualiza items según día
+        kSetEntrega(data.entrega);
+        if (data.entrega === 'domicilio') {
+          document.getElementById("k-direccion").value = data.direccion || "";
+          document.getElementById("k-dist").value = data.distancia || 0;
+          document.getElementById("k-km").value = data.costoKm || 10;
+          document.getElementById("k-fijo").value = data.costoFijo || 30;
+        }
+        // cargar items
+        for (let i = 0; i < kItems.length && i < data.items.length; i++) {
+          kItems[i].cantidad = data.items[i].cantidad || 0;
+        }
+        kRenderItems();
+        kExtras = data.extras.map(e => ({ ...e }));
+        kRenderExtras();
+        document.getElementById("k-notas").value = data.notas || "";
+        kCalc();
+      } else {
+        document.getElementById("e-cliente").value = data.cliente || "";
+        if (data.telefono && data.telefono.includes(' ')) {
+          const parts = data.telefono.split(' ', 2);
+          document.getElementById("e-pais").value = parts[0];
+          document.getElementById("e-telefono").value = data.telefono.substring(parts[0].length + 1);
+        } else {
+          document.getElementById("e-telefono").value = data.telefono || "";
+        }
+        document.getElementById("e-fecha").value = data.fecha || "";
+        document.getElementById("e-hora").value = data.hora || "14:00";
+        eSetEntrega(data.entrega);
+        if (data.entrega === 'domicilio') {
+          document.getElementById("e-direccion").value = data.direccion || "";
+          document.getElementById("e-dist").value = data.distancia || 0;
+          document.getElementById("e-km").value = data.costoKm || 10;
+          document.getElementById("e-fijo").value = data.costoFijo || 30;
+        }
+        eItems = data.items.map(i => ({ ...i }));
+        eRenderPlatillos();
+        eExtras = data.extras.map(e => ({ ...e }));
+        eRenderExtras();
+        document.getElementById("e-notas").value = data.notas || "";
+        eCalc();
+      }
+      alert("Pedido cargado.");
+    }
+
+    function eInit() {
+      eRenderPlatillos(); eRenderExtras(); eSetEntrega("pickup"); document.getElementById("e-fecha").value = new Date().toISOString().split('T')[0]; eCalc();
+    }
+
+    // ---------- LÓGICA VENTA DIRECTA ----------
+    let productosVentaDirecta = [];
+
+    function agregarProductoVentaDirecta() {
+      let container = document.getElementById('vd-productos-container');
+      let idx = productosVentaDirecta.length;
+      let div = document.createElement('div');
+      div.className = 'item-row';
+      div.id = `prod-${idx}`;
+      div.style.background = 'var(--bg-main)';
+      div.style.padding = '10px';
+      div.style.borderRadius = 'var(--radius-sm)';
+      div.style.border = '1px solid var(--border-light)';
+
+      div.innerHTML = `
+      <select id="prod-nombre-${idx}" style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--border-light);" onchange="actualizarPreciosProductos()">
+        <option value="Paella mar y tierra - kilo">Paella mar y tierra - kilo ($350)</option>
+        <option value="Paella mar y tierra - medio kilo">Paella mar y tierra - medio kilo ($180)</option>
+        <option value="Paella negra - kilo">Paella negra - kilo ($350)</option>
+        <option value="Paella negra - medio kilo">Paella negra - medio kilo ($180)</option>
+        <option value="Paella de carnes - kilo">Paella de carnes - kilo ($310)</option>
+        <option value="Paella de carnes - medio kilo">Paella de carnes - medio kilo ($160)</option>
+      </select>
+      <input type="number" id="prod-cant-${idx}" placeholder="Cant." value="1" min="1" style="width:70px; padding:8px; border-radius:6px; border:1px solid var(--border-light);" oninput="actualizarPreciosProductos()">
+      <button class="remove-btn" onclick="eliminarProductoVentaDirecta(${idx})">✕</button>
+      `;
+      container.appendChild(div);
+      productosVentaDirecta.push({ idx, nombre: '', cantidad: 1, precio: 0 });
+      actualizarPreciosProductos();
+    }
+
+    function eliminarProductoVentaDirecta(idx) {
+      let div = document.getElementById(`prod-${idx}`);
+      if (div) div.remove();
+      productosVentaDirecta = productosVentaDirecta.filter(p => p.idx !== idx);
+      actualizarPreciosProductos();
+    }
+
+    function actualizarPreciosProductos() {
+      let nuevos = [];
+      for (let i = 0; i < productosVentaDirecta.length; i++) {
+        let select = document.getElementById(`prod-nombre-${productosVentaDirecta[i].idx}`);
+        let cantidad = document.getElementById(`prod-cant-${productosVentaDirecta[i].idx}`);
+        if (select && cantidad) {
+          let nombre = select.value;
+          let precio = 0;
+          if (nombre.includes('kilo') && !nombre.includes('medio')) {
+            if (nombre.includes('de carnes')) precio = 310;
+            else precio = 350;
+          } else if (nombre.includes('medio kilo')) {
+            if (nombre.includes('de carnes')) precio = 160;
+            else precio = 180;
+          }
+          nuevos.push({ idx: productosVentaDirecta[i].idx, nombre, cantidad: parseInt(cantidad.value) || 1, precio });
+        }
+      }
+      productosVentaDirecta = nuevos;
+      let total = productosVentaDirecta.reduce((sum, p) => sum + (p.precio * p.cantidad), 0);
+      document.getElementById('vd-total').value = total;
+    }
+
+    // Abre el modal de método de pago para venta directa (valida primero)
+    function abrirModalPagoVD() {
+      let total = parseFloat(document.getElementById('vd-total').value);
+      if (isNaN(total) || total <= 0) { alert("El total debe ser mayor a 0."); return; }
+      let itemsDetalle = productosVentaDirecta;
+      if (itemsDetalle.length === 0) { alert('Agrega al menos un producto.'); return; }
+      // Mostrar modal de pago
+      document.getElementById('modalPagoVD').style.display = 'flex';
+    }
+
+    async function guardarVentaDirecta(metodoPago) {
+      document.getElementById('modalPagoVD').style.display = 'none';
+      let cliente = document.getElementById('vd-cliente').value.trim() || 'Venta en mostrador';
+      let telefono = document.getElementById('vd-telefono').value.trim() || '';
+      let fechaInput = document.getElementById('vd-fecha').value;
+      let fecha = fechaInput ? fechaInput : new Date().toISOString().split('T')[0];
+      let total = parseFloat(document.getElementById('vd-total').value);
+      if (isNaN(total) || total <= 0) { alert("El total debe ser mayor a 0."); return; }
+
+      let notas = document.getElementById('vd-notas').value;
+      let itemsDetalle = productosVentaDirecta.map(p => ({
+        nombre: p.nombre,
+        cantidad: p.cantidad,
+        precio_unitario: p.precio,
+        subtotal: p.precio * p.cantidad
+      }));
+
+      if (itemsDetalle.length === 0) { alert('Agrega al menos un producto.'); return; }
+
+      let nuevoPedido = {
+        nombre: cliente,
+        telefono: telefono,
+        tipo: 'venta_directa',
+        status: 'Entregado', // Las ventas directas nacen entregadas
+        fechaEntrega: fecha,
+        total: total,
+        itemsDetalle: itemsDetalle,
+        notas: notas,
+        tipoEntrega: 'pickup',
+        horaEntrega: new Date().toTimeString().substring(0, 5),
+        direccion: '',
+        metodoPago: metodoPago || null
+      };
+
+      try {
+        let res = await fetch('/pedidos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(nuevoPedido)
+        });
+        if (!res.ok) throw new Error();
+
+        // Limpiar el formulario
+        document.getElementById('vd-cliente').value = '';
+        document.getElementById('vd-telefono').value = '';
+        document.getElementById('vd-total').value = '';
+        document.getElementById('vd-notas').value = '';
+        document.getElementById('vd-productos-container').innerHTML = '';
+        productosVentaDirecta = [];
+        agregarProductoVentaDirecta();
+
+        // Recargar la nueva vista de historial
+        await cargarHistorialVentaDirecta();
+
+        // Notificación visual de éxito
+        let btn = document.querySelector('#panel-ventadirecta .btn-primary');
+        let oldText = btn.innerHTML;
+        btn.innerHTML = '✅ VENTA REGISTRADA CORRECTAMENTE';
+        btn.style.background = '#22c55e';
+        setTimeout(() => {
+          btn.innerHTML = oldText;
+          btn.style.background = ''; // vuelve a CSS original
+          
+          if (confirm("Venta registrada. ¿Deseas imprimir el Ticket/PDF ahora?")) {
+             nuevoPedido.id = new Date().getTime().toString().slice(-6);
+             generarTicketPDF(nuevoPedido);
+          }
+        }, 1500);
+      } catch (e) {
+        alert('Error al guardar venta directa en el servidor.');
+      }
+    }
+
+    async function cargarHistorialVentaDirecta() {
+      const container = document.getElementById('vd-historial-envivo');
+      if (!container) return;
+      try {
+        const res = await fetch('/pedidos', {
+          headers: { 'Authorization': 'Bearer lapaella2026' } // Contraseña admin requerida para GET /pedidos
+        });
+        if (!res.ok) throw new Error();
+
+        const pedidos = await res.json();
+
+        // Filtramos solo ventas directas de hoy o recientes
+        let ventas = pedidos.filter(p => p.tipo === 'venta_directa');
+
+        if (ventas.length === 0) {
+          container.innerHTML = "Aún no hay ventas directas en la nube.";
+          return;
+        }
+
+        // Tomamos las últimas 5
+        ventas = ventas.slice(0, 5);
+
+        let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
+        ventas.forEach(v => {
+          let hora = new Date(v.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          html += `<div style="display:flex; justify-content:space-between; padding:10px; background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-sm); align-items:center;">
+             <div>
+               <div style="font-weight:bold; color:var(--text-main);">${v.nombre}</div>
+               <div style="font-size:0.8rem;">${hora} - ${v.itemsDetalle.length} prod(s).</div>
+             </div>
+             <div style="font-weight:bold; color:#22c55e;">+$${Math.round(v.total).toLocaleString()}</div>
+           </div>`;
+        });
+        html += '</div>';
+
+        container.innerHTML = html;
+      } catch (error) {
+        container.innerHTML = '<span style="color:var(--brand-red);">No se pudo cargar el historial desde la nube.</span>';
+      }
+    }
+
+    // Inicializar todo
+    kInit(); eInit();
+    document.getElementById('vd-fecha').value = new Date().toISOString().split('T')[0];
+    agregarProductoVentaDirecta(); // Para que aparezca uno por defecto
+    cargarHistorialVentaDirecta(); // Cargar historial al cargar la vista
+
+
+    function eliminarPedido(idx, tipo) {
+      let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
+      saved.splice(idx, 1);
+      localStorage.setItem("Pedidos", JSON.stringify(saved));
+      guardarPedidosGuardados(tipo);
+    }
+
+    // ---------- PDF ----------
+    function exportarPDF(tipo) {
+      let data = { tipo, fecha: new Date().toISOString() };
+      let itemsDetalle = [];
+      if (tipo === 'k') {
+        const checkK = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
+        if(checkK === 0) { alert("Debes agregar al menos 1 producto para generar el PDF."); return; }
+        data.nombre = document.getElementById("k-cliente").value || "Cliente";
+        data.entrega = kEntrega;
+        data.extras = kExtras;
+        data.notas = document.getElementById("k-notas").value;
+        if (kEntrega === 'domicilio') {
+          data.distancia = parseFloat(document.getElementById("k-dist").value) || 0;
+          data.costoKm = parseFloat(document.getElementById("k-km").value) || 10;
+          data.costoFijo = parseFloat(document.getElementById("k-fijo").value) || 30;
+        }
+        data.total = parseFloat(document.getElementById("k-qtotal").textContent.replace('$', '').replace(/,/g, ''));
+        itemsDetalle = kItems;
+      } else {
+        const checkP = eItems.reduce((acc, curr) => acc + curr.personas, 0);
+        if(checkP === 0) { alert("Debes agregar al menos 1 producto para generar el PDF."); return; }
+        data.nombre = document.getElementById("e-cliente").value || "Cliente";
+        data.entrega = eEntrega;
+        data.extras = eExtras;
+        data.notas = document.getElementById("e-notas").value;
+        if (eEntrega === 'domicilio') {
+          data.distancia = parseFloat(document.getElementById("e-dist").value) || 0;
+          data.costoKm = parseFloat(document.getElementById("e-km").value) || 10;
+          data.costoFijo = parseFloat(document.getElementById("e-fijo").value) || 30;
+        }
+        data.total = parseFloat(document.getElementById("e-qtotal").textContent.replace('$', '').replace(/,/g, ''));
+        itemsDetalle = eItems;
+      }
+      let pedidoAImprimir = {
+          id: new Date().getTime().toString().slice(-6),
+          ...data,
+          tipoEntrega: data.entrega,
+          itemsDetalle: itemsDetalle,
+          tipo: tipo === 'k' ? 'kilo' : 'evento'
+      };
+      generarTicketPDF(pedidoAImprimir);
+    }
+
+    // ---------- CONFIRMAR PEDIDO Y WHATSAPP ----------
+    function confirmarPedido(tipo) {
+      let telefono, mensaje, cliente;
+      if (tipo === 'k') {
+        const codK = document.getElementById("k-pais").value;
+        const numK = document.getElementById("k-telefono").value;
+        telefono = numK ? (codK + numK) : "";
+        cliente = document.getElementById("k-cliente").value.trim();
+        const checkK = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
+        if (!cliente || numK.trim().length < 7 || checkK === 0) { alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto)."); return; }
+        const dia = document.getElementById("k-dia").value;
+        if (dia === "mar") { alert("No laboramos los martes."); return; }
+        const hora = document.getElementById("k-hora").value;
+        const dias = { lun: "Lunes", mar: "Martes", mie: "Miércoles", jue: "Jueves", vie: "Viernes", sab: "Sábado", dom: "Domingo" };
+        let totalPaella = 0, totalKilos = 0, totalExtras = 0, lineas = "";
+        kItems.forEach(it => { if (it.cantidad > 0) { const sub = it.cantidad * it.precio; totalPaella += sub; totalKilos += it.cantidad * it.kilos; lineas += `  • ${it.nombre} × ${it.cantidad} = $${sub.toLocaleString("es-MX")}\n`; } });
+        kExtras.forEach(ex => { if (ex.nombre && ex.cantidad > 0) { const sub = ex.precio * ex.cantidad; totalExtras += sub; lineas += `  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`; } });
+        const kilosEnteros = Math.floor(totalKilos);
+        const bolillos = kEsFinde ? kilosEnteros * 2 : 0;
+        const bolillosStr = kEsFinde && bolillos > 0 ? `  + ${bolillos} bolillos incluidos\n` : "";
+        let traslado = 0, trasladoStr = "";
+        if (kEntrega === "domicilio") {
+          const dist = parseFloat(document.getElementById("k-dist").value) || 0;
+          const km = parseFloat(document.getElementById("k-km").value) || 10;
+          const fijo = parseFloat(document.getElementById("k-fijo").value) || 30;
+          const dir = document.getElementById("k-direccion").value;
+          traslado = dist > 0 ? dist * km + fijo : 0;
+          trasladoStr = `\n*Entrega a domicilio*${dir ? ": " + dir : ""}\nTraslado (${dist} km): $${Math.round(traslado).toLocaleString("es-MX")}\n`;
+        } else { trasladoStr = "\n*Pick up en local*\n"; }
+        const notas = document.getElementById("k-notas").value;
+        const total = totalPaella + totalExtras + traslado;
+        mensaje = `*PEDIDO CONFIRMADO - PAELLA*\n👤 ${cliente}\n📅 ${dias[dia]}${hora ? " a las " + fmtHora(hora) : ""}\n\n*Productos:*\n${lineas}${bolillosStr}${trasladoStr}${notas ? "\n*Notas:* " + notas + "\n" : ""}\n*Total a pagar: $${Math.round(total).toLocaleString("es-MX")}*\n\nGracias por tu preferencia.`;
+      } else {
+        const codE = document.getElementById("e-pais").value;
+        const numE = document.getElementById("e-telefono").value;
+        telefono = numE ? (codE + numE) : "";
+        cliente = document.getElementById("e-cliente").value.trim();
+        const checkP = eItems.reduce((acc, curr) => acc + curr.personas, 0);
+        if (!cliente || numE.trim().length < 7 || checkP === 0) { alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto)."); return; }
+        const fecha = document.getElementById("e-fecha").value;
+        const hora = document.getElementById("e-hora").value;
+        let totalPlatillos = 0, totalExtras = 0, totalPersonas = 0, lineas = "";
+        eItems.forEach(p => { if (p.personas > 0) { const sub = p.personas * p.precio; totalPlatillos += sub; totalPersonas += p.personas; lineas += `  • ${p.nombre}: ${p.personas} pers × $${p.precio} = $${sub.toLocaleString("es-MX")}\n`; } });
+        eExtras.forEach(ex => { if (ex.nombre && ex.cantidad > 0) { const sub = ex.precio * ex.cantidad; totalExtras += sub; lineas += `  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`; } });
+        let traslado = 0, trasladoStr = "";
+        if (eEntrega === "domicilio") {
+          const dist = parseFloat(document.getElementById("e-dist").value) || 0;
+          const km = parseFloat(document.getElementById("e-km").value) || 10;
+          const fijo = parseFloat(document.getElementById("e-fijo").value) || 30;
+          const dir = document.getElementById("e-direccion").value;
+          traslado = dist > 0 ? dist * km + fijo : 0;
+          trasladoStr = `\n*Entrega a domicilio*${dir ? ": " + dir : ""}\nTraslado (${dist} km): $${Math.round(traslado).toLocaleString("es-MX")}\n`;
+        } else { trasladoStr = "\n*Pick up en local*\n"; }
+        const notas = document.getElementById("e-notas").value;
+        const total = totalPlatillos + totalExtras + traslado;
+        mensaje = `*PedidoCONFIRMADA - EVENTO*\n👤 ${cliente}${fecha ? "\n📅 " + fmtFecha(fecha) : ""}${hora ? " · " + fmtHora(hora) : ""}\n\n*Platillos:*\n${lineas}${trasladoStr}${notas ? "\n*Notas:* " + notas + "\n" : ""}\n*Total: $${Math.round(total).toLocaleString("es-MX")}*\n\n_Servicio en paellera - Mínimo 7 personas_\n\n¡Confirmado! En breve nos comunicamos.`;
+      }
+      // Guardar como pedido confirmado (se puede almacenar en localStorage separado)
+      let confirmados = JSON.parse(localStorage.getItem("pedidos_confirmados") || "[]");
+      confirmados.push({ tipo, cliente, telefono, mensaje, fecha: new Date().toISOString(), total: 0 });
+      localStorage.setItem("pedidos_confirmados", JSON.stringify(confirmados));
+      // Abrir WhatsApp
+      const numero = telefono.replace(/\D/g, '');
+      const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+      window.open(url, '_blank');
+      alert("Pedido confirmado. Se abrirá WhatsApp para enviar el mensaje al cliente.");
+    }
+
+    // Inicialización
+    kRenderItems();
+    eRenderPlatillos();
+    kCalc();
+    eCalc();
+    guardarPedidosGuardados('k');
+    guardarPedidosGuardados('e');
+  </script>
+
+  <!-- Modal: Método de Pago para Venta Directa -->
+  <div id="modalPagoVD" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); justify-content:center; align-items:center; z-index:3000;">
+    <div style="background:white; border-radius:24px; padding:28px; max-width:380px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+      <div style="font-size:2rem; margin-bottom:8px;">💳</div>
+      <h3 style="margin:0 0 6px 0; font-size:1.3rem; color:#1e293b;">Método de Pago</h3>
+      <p style="color:#6b7280; margin-bottom:22px; font-size:0.9rem;">¿Cómo pagó el cliente?</p>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button onclick="guardarVentaDirecta('Efectivo')"
+          style="background:#10b981; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer; transition:opacity 0.2s;"
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">💵 Efectivo</button>
+        <button onclick="guardarVentaDirecta('Tarjeta')"
+          style="background:#3b82f6; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer; transition:opacity 0.2s;"
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">💳 Tarjeta</button>
+        <button onclick="guardarVentaDirecta('Transferencia')"
+          style="background:#8b5cf6; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer; transition:opacity 0.2s;"
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🏦 Transferencia</button>
+        <button onclick="guardarVentaDirecta(null)"
+          style="background:#f3f4f6; color:#4b5563; border:none; padding:10px; border-radius:14px; font-size:0.9rem; cursor:pointer;">Registrar sin método de pago</button>
+        <button onclick="document.getElementById('modalPagoVD').style.display='none'"
+          style="background:none; border:1px solid #e2e8f0; color:#94a3b8; padding:8px; border-radius:14px; font-size:0.85rem; cursor:pointer; margin-top:4px;">✕ Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+
+</html>
