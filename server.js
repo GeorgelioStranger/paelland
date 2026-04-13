@@ -53,10 +53,36 @@ const gastoSchema = new mongoose.Schema({
   monto: { type: Number, required: true },
   categoria: { type: String, default: 'Otro' },
   fecha: String,
+  // Campos de integración con inventario
+  esInsumo: { type: Boolean, default: false },
+  nombreInsumo: String,
+  cantidadInsumo: Number,
+  unidadInsumo: String,
   creadoEn: { type: Date, default: Date.now }
 });
 
 const Gasto = mongoose.model('Gasto', gastoSchema);
+
+// ------------------- MODELO RECETA -------------------
+const recetaSchema = new mongoose.Schema({
+  nombre: { type: String, required: true },
+  tipo: { type: String, default: 'kilo' },  // kilo | evento | porcion
+  ingredientes: [{
+    nombre: String,
+    cantidad: Number,
+    unidad: String
+  }]
+});
+const Receta = mongoose.model('Receta', recetaSchema);
+
+// ------------------- MODELO INVENTARIO -------------------
+const inventarioSchema = new mongoose.Schema({
+  ingrediente: { type: String, required: true, unique: true },
+  cantidadDisponible: { type: Number, default: 0 },
+  unidad: { type: String, default: 'kg' },
+  ultimaActualizacion: { type: Date, default: Date.now }
+});
+const Inventario = mongoose.model('Inventario', inventarioSchema);
 
 // ------------------- MIDDLEWARE AUTH -------------------
 function authMiddleware(req, res, next) {
@@ -98,6 +124,7 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'Admin.html'))
 app.get('/estadisticas', (req, res) => res.sendFile(path.join(__dirname, 'estadisticas.html')));
 app.get('/cotizador', (req, res) => res.sendFile(path.join(__dirname, 'cotizador1.1.html')));
 app.get('/finanzas', (req, res) => res.sendFile(path.join(__dirname, 'finanzas.html')));
+app.get('/produccion', (req, res) => res.sendFile(path.join(__dirname, 'produccion.html')));
 
 // =================== PEDIDOS ===================
 
@@ -213,13 +240,32 @@ app.get('/gastos', authMiddleware, async (req, res) => {
 
 app.post('/gastos', authMiddleware, async (req, res) => {
   try {
+    const { descripcion, monto, categoria, fecha, esInsumo, nombreInsumo, cantidadInsumo, unidadInsumo } = req.body;
+    
     const gasto = new Gasto({
-      descripcion: req.body.descripcion,
-      monto: parseFloat(req.body.monto),
-      categoria: req.body.categoria || 'Otro',
-      fecha: req.body.fecha || new Date().toISOString().split('T')[0]
+      descripcion,
+      monto: parseFloat(monto),
+      categoria: categoria || 'Otro',
+      fecha: fecha || new Date().toISOString().split('T')[0],
+      esInsumo: !!esInsumo,
+      nombreInsumo,
+      cantidadInsumo: parseFloat(cantidadInsumo),
+      unidadInsumo
     });
     await gasto.save();
+
+    // Integración con Inventario
+    if (gasto.esInsumo && gasto.nombreInsumo && gasto.cantidadInsumo > 0) {
+      await Inventario.findOneAndUpdate(
+        { ingrediente: gasto.nombreInsumo },
+        { 
+          $inc: { cantidadDisponible: gasto.cantidadInsumo },
+          $set: { unidad: gasto.unidadInsumo || 'kg', ultimaActualizacion: new Date() }
+        },
+        { upsert: true, new: true }
+      );
+    }
+
     res.json({ ok: true, gasto });
   } catch (error) {
     res.status(500).json({ error: 'Error al guardar gasto' });
@@ -229,10 +275,99 @@ app.post('/gastos', authMiddleware, async (req, res) => {
 app.delete('/gastos/:id', authMiddleware, async (req, res) => {
   if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
   try {
+    const gasto = await Gasto.findById(req.params.id);
+    if (!gasto) return res.status(404).json({ error: 'Gasto no encontrado' });
+
+    // Si era un insumo, restar del inventario
+    if (gasto.esInsumo && gasto.nombreInsumo && gasto.cantidadInsumo > 0) {
+      await Inventario.findOneAndUpdate(
+        { ingrediente: gasto.nombreInsumo },
+        { 
+          $inc: { cantidadDisponible: -gasto.cantidadInsumo },
+          $set: { ultimaActualizacion: new Date() }
+        }
+      );
+    }
+
     await Gasto.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: 'Error al borrar gasto' });
+  }
+});
+
+// =================== RECETAS ===================
+
+app.get('/recetas', authMiddleware, async (req, res) => {
+  try {
+    const recetas = await Receta.find();
+    res.json(recetas);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener recetas' });
+  }
+});
+
+app.post('/recetas', authMiddleware, async (req, res) => {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  try {
+    const { _id, nombre, tipo, ingredientes } = req.body;
+    if (_id) {
+      const receta = await Receta.findByIdAndUpdate(_id, { nombre, tipo, ingredientes }, { new: true });
+      return res.json({ ok: true, receta });
+    }
+    const receta = new Receta({ nombre, tipo, ingredientes });
+    await receta.save();
+    res.json({ ok: true, receta });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al guardar receta' });
+  }
+});
+
+app.delete('/recetas/:id', authMiddleware, async (req, res) => {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  try {
+    await Receta.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar receta' });
+  }
+});
+
+// =================== INVENTARIO ===================
+
+app.get('/inventario', authMiddleware, async (req, res) => {
+  try {
+    const inventario = await Inventario.find().sort({ ingrediente: 1 });
+    res.json(inventario);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener inventario' });
+  }
+});
+
+app.put('/inventario/:ingrediente', authMiddleware, async (req, res) => {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  try {
+    const ingrediente = decodeURIComponent(req.params.ingrediente);
+    const { cantidadDisponible, unidad } = req.body;
+    const item = await Inventario.findOneAndUpdate(
+      { ingrediente },
+      { cantidadDisponible, unidad: unidad || 'kg', ultimaActualizacion: new Date() },
+      { new: true, upsert: true }
+    );
+    res.json({ ok: true, item });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar inventario' });
+  }
+});
+
+app.delete('/inventario/:ingrediente', authMiddleware, async (req, res) => {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  try {
+    const ingrediente = decodeURIComponent(req.params.ingrediente);
+    await Inventario.findOneAndDelete({ ingrediente });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar inventario' });
   }
 });
 

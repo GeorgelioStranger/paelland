@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Finanzas - La Paella</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="style.css">
   <style>
     body {
@@ -388,6 +389,7 @@
     <a href="/admin" title="Administración">📊<span class="nav-label">Historial</span></a>
     <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
     <a href="/finanzas" class="active" title="Finanzas">💸<span class="nav-label">Finanzas</span></a>
+    <a href="/produccion" title="Producción">🏭<span class="nav-label">Producción</span></a>
   </nav>
 
   <script>
@@ -432,6 +434,10 @@
         <button class="periodo-btn" style="padding:5px 14px; font-size:0.8rem; margin:0;"
           onclick="seleccionarPeriodo('rango', null)">Buscar</button>
       </div>
+      <button class="periodo-btn" style="background:#1e6f3f; color:white; border-color:#1e6f3f; margin-left:auto; display:flex; align-items:center; gap:6px;" onclick="exportarFinanzasExcel()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Exportar Excel
+      </button>
     </div>
 
     <!-- KPIs solo admin -->
@@ -475,7 +481,7 @@
         <h3>➕ Registrar Gasto</h3>
         <div class="form-field">
           <label>Descripción</label>
-          <input type="text" id="gasto-desc" placeholder="Ej. Hielo para paellas">
+          <input type="text" id="gasto-desc" placeholder="Ej. Arroz cocido">
         </div>
         <div class="form-row">
           <div class="form-field">
@@ -484,13 +490,40 @@
           </div>
           <div class="form-field">
             <label>Categoría</label>
-            <select id="gasto-cat">
+            <select id="gasto-cat" onchange="toggleInsumoFields()">
               <option>Insumos</option>
               <option>Gasolina</option>
               <option>Sueldos</option>
               <option>Renta local</option>
               <option>Otro</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Campos extra para Insumos -->
+        <div id="insumo-fields" style="display: block; background: #fff7ed; padding: 16px; border-radius: 12px; border: 1.5px dashed #fed7aa; margin-bottom: 16px; animation: slideDown 0.3s ease;">
+          <h4 style="font-size: 0.8rem; color: #9a3412; margin: 0 0 10px 0; display: flex; align-items: center; gap: 6px;">
+            📦 Integración con Inventario
+          </h4>
+          <div class="form-field">
+            <label>Nombre del ingrediente (en inventario)</label>
+            <input type="text" id="insumo-nombre" placeholder="Ej. Arroz cocido">
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>Cantidad a sumar</label>
+              <input type="number" id="insumo-cantidad" placeholder="0" min="0" step="0.1">
+            </div>
+            <div class="form-field">
+              <label>Unidad</label>
+              <select id="insumo-unidad">
+                <option value="kg">kg</option>
+                <option value="gr">gr</option>
+                <option value="L">L</option>
+                <option value="ml">ml</option>
+                <option value="pzas">pzas</option>
+              </select>
+            </div>
           </div>
         </div>
         <div class="form-field">
@@ -544,7 +577,24 @@
 
       // Cargar período inicial
       seleccionarPeriodo('hoy', document.getElementById('btn-hoy'));
+      
+      toggleInsumoFields(); // Inicializar estado campos
     };
+
+    function toggleInsumoFields() {
+      const cat = document.getElementById('gasto-cat').value;
+      const fields = document.getElementById('insumo-fields');
+      const desc = document.getElementById('gasto-desc').value;
+      const insNombre = document.getElementById('insumo-nombre');
+
+      if (cat === 'Insumos') {
+        fields.style.display = 'block';
+        // Auto-sugerir nombre basado en descripción si está vacío
+        if (!insNombre.value && desc) insNombre.value = desc;
+      } else {
+        fields.style.display = 'none';
+      }
+    }
 
     function authFetch(url, options = {}) {
       if (!options.headers) options.headers = {};
@@ -555,6 +605,7 @@
     // ==================== PERÍODO ====================
     let periodoActual = { desde: '', hasta: '' };
     let todosPedidos = [];
+    let gastosGlobales = [];
     let chartFinanzas = null, chartCategorias = null;
 
     function seleccionarPeriodo(tipo, btn) {
@@ -596,6 +647,7 @@
           authFetch('/pedidos')
         ]);
         const gastos = await resGastos.json();
+        gastosGlobales = gastos;
         todosPedidos = await resPedidos.json();
         renderizar(gastos, desde, hasta);
       } catch (e) {
@@ -717,14 +769,34 @@
       if (!monto || monto <= 0) { alert('El monto debe ser mayor a 0.'); return; }
 
       try {
+        const cat = document.getElementById('gasto-cat').value;
+        const body = { 
+          descripcion: desc, 
+          monto, 
+          categoria: cat, 
+          fecha 
+        };
+
+        if (cat === 'Insumos') {
+          body.esInsumo = true;
+          body.nombreInsumo = document.getElementById('insumo-nombre').value;
+          body.cantidadInsumo = parseFloat(document.getElementById('insumo-cantidad').value) || 0;
+          body.unidadInsumo = document.getElementById('insumo-unidad').value;
+        }
+
         const res = await authFetch('/gastos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ descripcion: desc, monto, categoria: cat, fecha })
+          body: JSON.stringify(body)
         });
         if (!res.ok) throw new Error();
+        
+        // Limpiar campos
         document.getElementById('gasto-desc').value = '';
         document.getElementById('gasto-monto').value = '';
+        document.getElementById('insumo-nombre').value = '';
+        document.getElementById('insumo-cantidad').value = '';
+        
         cargarDatos();
       } catch (e) {
         alert('Error al registrar el gasto.');
@@ -737,6 +809,106 @@
         await authFetch(`/gastos/${id}`, { method: 'DELETE' });
         cargarDatos();
       } catch (e) { alert('Error al eliminar.'); }
+    }
+
+    function exportarFinanzasExcel() {
+      if(!gastosGlobales || !todosPedidos) {
+        alert('Cargando datos, por favor intenta en unos segundos.');
+        return;
+      }
+      try {
+        const { desde, hasta } = periodoActual;
+        const gastos = gastosGlobales;
+        const pedidosPeriodo = todosPedidos.filter(p => {
+            const fe = p.fechaEntrega || '';
+            return p.status === 'Entregado' && fe >= desde && fe <= hasta;
+        });
+
+        const totalGastos = gastos.reduce((s, g) => s + (g.monto || 0), 0);
+        const ingresos = pedidosPeriodo.reduce((s, p) => s + (p.total || 0), 0);
+        const utilidad = ingresos - totalGastos;
+        const margen = ingresos > 0 ? ((utilidad / ingresos) * 100).toFixed(1) : 0;
+
+        const aoaResumen = [
+           ["REPORTE FINANCIERO - LA PAELLA"],
+           [`Período: ${desde} al ${hasta}`],
+           [],
+           ["MÉTRICA FINAL", "MONTO"],
+           ["Ingresos Brutos ($)", ingresos],
+           ["Total Gastos ($)", totalGastos],
+           ["Utilidad Neta ($)", utilidad],
+           ["Margen de Utilidad (%)", margen + "%"],
+           [],
+           ["GASTOS POR CATEGORÍA", "MONTO"]
+        ];
+        const cats = {};
+        gastos.forEach(g => { cats[g.categoria] = (cats[g.categoria] || 0) + (g.monto || 0); });
+        Object.keys(cats).forEach(c => {
+           aoaResumen.push([c, cats[c]]);
+        });
+        const wsResumen = XLSX.utils.aoa_to_sheet(aoaResumen);
+        wsResumen['!cols'] = [{wch: 30}, {wch: 20}];
+
+        const aoaIngresos = [
+           ["FECHA", "CLIENTE/PEDIDO", "TIPO", "MÉTODO PAGO", "MONTO INGRESADO ($)"]
+        ];
+        pedidosPeriodo.forEach(p => {
+           aoaIngresos.push([p.fechaEntrega || '', p.nombre || 'Sin nombre', p.tipo || 'N/A', p.metodoPago || 'N/A', p.total || 0]);
+        });
+        const wsIngresos = XLSX.utils.aoa_to_sheet(aoaIngresos);
+        wsIngresos['!cols'] = [{wch: 15}, {wch: 35}, {wch: 15}, {wch: 20}, {wch: 20}];
+
+        const aoaGastos = [
+           ["FECHA", "CATEGORÍA", "DESCRIPCIÓN", "MONTO GASTADO ($)"]
+        ];
+        gastos.forEach(g => {
+           aoaGastos.push([g.fecha || '', g.categoria || '', g.descripcion || '', g.monto || 0]);
+        });
+        const wsGastos = XLSX.utils.aoa_to_sheet(aoaGastos);
+        wsGastos['!cols'] = [{wch: 15}, {wch: 20}, {wch: 40}, {wch: 20}];
+
+        // DESGLOSE ESPECÍFICO POR CATEGORÍA
+        const aoaDesglose = [
+           ["DESGLOSE DETALLADO POR CATEGORÍA"],
+           [`Período: ${desde} al ${hasta}`],
+           []
+        ];
+        
+        const gastosPorCat = {};
+        gastos.forEach(g => {
+            const cat = g.categoria || "Sin categoría";
+            if (!gastosPorCat[cat]) gastosPorCat[cat] = [];
+            gastosPorCat[cat].push(g);
+        });
+
+        Object.keys(gastosPorCat).sort().forEach(cat => {
+            const arr = gastosPorCat[cat];
+            const sum = arr.reduce((s, g) => s + (g.monto || 0), 0);
+            
+            aoaDesglose.push([`CATEGORÍA: ${cat.toUpperCase()}`, "", ""]);
+            aoaDesglose.push([`Total Gastado: $${sum.toLocaleString()}`, "", ""]);
+            aoaDesglose.push(["FECHA", "DESCRIPCIÓN", "MONTO ($)"]);
+            
+            arr.forEach(g => {
+                aoaDesglose.push([g.fecha || '', g.descripcion || '', g.monto || 0]);
+            });
+            aoaDesglose.push([]);
+            aoaDesglose.push([]);
+        });
+        const wsDesglose = XLSX.utils.aoa_to_sheet(aoaDesglose);
+        wsDesglose['!cols'] = [{wch: 20}, {wch: 50}, {wch: 15}];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen Global");
+        XLSX.utils.book_append_sheet(wb, wsIngresos, "Ingresos");
+        XLSX.utils.book_append_sheet(wb, wsDesglose, "Desglose Categorías");
+        XLSX.utils.book_append_sheet(wb, wsGastos, "Todos los Gastos");
+        
+        XLSX.writeFile(wb, `Finanzas_${desde}_al_${hasta}.xlsx`);
+      } catch (e) {
+        console.error("Error al exportar:", e);
+        alert("Ocurrió un error al generar el Excel. Revisa la cónsola.");
+      }
     }
 
     function escapeHtml(str) {

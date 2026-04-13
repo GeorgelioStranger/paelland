@@ -37,7 +37,7 @@
       width: 220px;
       align-items: flex-start;
       padding: 30px 20px;
-      box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+      box-shadow: 4px 0 15px rgba(0, 0, 0, 0.05);
     }
 
     .sidebar-nav a {
@@ -66,14 +66,14 @@
       background: var(--brand-red-light);
       transform: translateX(5px);
     }
-    
+
     .nav-label {
       font-size: 16px;
       font-weight: 600;
       opacity: 0;
       transition: opacity 0.2s;
     }
-    
+
     .sidebar-nav:hover .nav-label {
       opacity: 1;
       transition-delay: 0.1s;
@@ -185,27 +185,34 @@
         top: auto;
         border-right: none;
         border-top: 1px solid var(--border-light);
-        box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+        box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
       }
+
       .sidebar-nav:hover {
         width: 100%;
         padding: 0;
         align-items: center;
       }
+
       .sidebar-nav a {
         margin-bottom: 0;
         padding: 10px;
         justify-content: center;
       }
+
       .sidebar-nav:hover a {
         justify-content: center;
       }
-      .sidebar-nav a:hover, .sidebar-nav a.active {
+
+      .sidebar-nav a:hover,
+      .sidebar-nav a.active {
         transform: translateY(-5px);
       }
+
       .nav-label {
         display: none !important;
       }
+
       .main-wrapper {
         margin-left: 0;
         width: 100%;
@@ -505,6 +512,7 @@
       filter: grayscale(1);
     }
   </style>
+
 <body>
   <script src="visor_ticket.js"></script>
   <script>
@@ -522,10 +530,11 @@
 
     if (userRole === 'empleado') {
       document.addEventListener("DOMContentLoaded", () => {
-         const linkEstadisticas = document.querySelector('a[href="/estadisticas"]');
-         if (linkEstadisticas) linkEstadisticas.style.display = 'none';
-         const linkFinanzas = document.querySelector('a[href="/finanzas"]');
-         if (linkFinanzas) linkFinanzas.style.display = 'none';
+        const hideLinks = ['/estadisticas', '/finanzas', '/produccion'];
+        hideLinks.forEach(path => {
+          const link = document.querySelector(`a[href="${path}"]`);
+          if (link) link.style.display = 'none';
+        });
       });
     }
 
@@ -533,22 +542,24 @@
     document.addEventListener("DOMContentLoaded", () => {
       const uName = document.getElementById('user-name-display');
       if (uName) {
-         uName.innerText = userRole === 'admin' ? '👋 Bienvenido, Jorge' : '👋 Bienvenida, Marce';
+        uName.innerText = userRole === 'admin' ? '👋 Bienvenido, Jorge' : '👋 Bienvenida, Marce';
       }
     });
     // =================================================================
   </script>
   <nav class="sidebar-nav">
-    <a href="/" style="text-decoration:none; font-size:32px;" title="Inicio">🥘<span class="nav-label" style="color:var(--brand-black); font-size:20px;">La Paella</span></a>
+    <a href="/" style="text-decoration:none; font-size:32px;" title="Inicio">🥘<span class="nav-label"
+        style="color:var(--brand-black); font-size:20px;">La Paella</span></a>
     <a href="/cotizador" class="active" title="Registrar Pedido">📝<span class="nav-label">Cotizador</span></a>
     <a href="/admin" title="Administración">📊<span class="nav-label">Historial</span></a>
     <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
     <a href="/finanzas" title="Finanzas">💸<span class="nav-label">Finanzas</span></a>
+    <a href="/produccion" title="Planeación de Producción">🏭<span class="nav-label">Producción</span></a>
   </nav>
 
   <script>
     function cerrarSesion() {
-      if(confirm('¿Deseas cerrar tu sesión actual?')) {
+      if (confirm('¿Deseas cerrar tu sesión actual?')) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_role');
         window.location.href = '/';
@@ -563,9 +574,12 @@
         <h1>Punto de Venta</h1>
         <p>Toma de pedidos y eventos · Lun a Dom (Cerrado martes)</p>
       </div>
-      <div id="user-profile" style="text-align:right; font-size:14px; color:var(--text-muted); background: white; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
-         <span id="user-name-display" style="font-weight:600; color:var(--brand-red); font-size:16px;"></span><br>
-         <a href="#" onclick="cerrarSesion()" style="color:#94a3b8; text-decoration:none; font-size:12px; transition: color 0.2s;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'">Cerrar sesión</a>
+      <div id="user-profile"
+        style="text-align:right; font-size:14px; color:var(--text-muted); background: white; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
+        <span id="user-name-display" style="font-weight:600; color:var(--brand-red); font-size:16px;"></span><br>
+        <a href="#" onclick="cerrarSesion()"
+          style="color:#94a3b8; text-decoration:none; font-size:12px; transition: color 0.2s;"
+          onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'">Cerrar sesión</a>
       </div>
     </div>
 
@@ -588,13 +602,16 @@
             <div class="field">
               <label>Teléfono (para WhatsApp)</label>
               <div style="display:grid; grid-template-columns: 85px 1fr; gap:8px;">
-                <select id="k-pais" style="width:100%; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem; background: var(--bg-main);" onchange="if(this.value==='otro'){ let o = prompt('Ingresa el código de país con el signo + (ej. +54):'); if(o){ let opt = new Option('🌐 ' + o, o, true, true); this.add(opt, this.options[this.options.length-1]); this.value = o; } else { this.value = '+52'; } } kCalc()">
+                <select id="k-pais"
+                  style="width:100%; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem; background: var(--bg-main);"
+                  onchange="if(this.value==='otro'){ let o = prompt('Ingresa el código de país con el signo + (ej. +54):'); if(o){ let opt = new Option('🌐 ' + o, o, true, true); this.add(opt, this.options[this.options.length-1]); this.value = o; } else { this.value = '+52'; } } kCalc()">
                   <option value="+52" selected>🇲🇽 +52</option>
                   <option value="+1">🇺🇸 +1</option>
                   <option value="+34">🇪🇸 +34</option>
                   <option value="otro">🌐 Otro...</option>
                 </select>
-                <input type="tel" id="k-telefono" placeholder="1234567890" style="width:100%; min-width:0;" oninput="kCalc()">
+                <input type="tel" id="k-telefono" placeholder="1234567890" style="width:100%; min-width:0;"
+                  oninput="kCalc()">
               </div>
             </div>
             <div class="field">
@@ -710,9 +727,11 @@
           </div>
           <div class="qline total"><span>Total</span><span id="k-qtotal">$0</span></div>
           <div class="qbox-actions">
-            <button id="k-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%" onclick="confirmarPedido('k')">✅ Validar y Enviar
+            <button id="k-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%"
+              onclick="confirmarPedido('k')">✅ Validar y Enviar
               WhatsApp</button>
-            <button id="k-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%" onclick="guardarPedido('k')">💾 Guardar Pedido
+            <button id="k-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%"
+              onclick="guardarPedido('k')">💾 Guardar Pedido
               (Admin)</button>
             <div style="display:flex; gap:10px;">
               <button class="btn btn-ghost copy-btn" style="flex:1" onclick="kCopiar()">Copiar texto</button>
@@ -743,13 +762,16 @@
             <div class="field">
               <label>Teléfono (para WhatsApp)</label>
               <div style="display:grid; grid-template-columns: 85px 1fr; gap:8px;">
-                <select id="e-pais" style="width:100%; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem; background: var(--bg-main);" onchange="if(this.value==='otro'){ let o = prompt('Ingresa el código de país con el signo + (ej. +54):'); if(o){ let opt = new Option('🌐 ' + o, o, true, true); this.add(opt, this.options[this.options.length-1]); this.value = o; } else { this.value = '+52'; } } eCalc()">
+                <select id="e-pais"
+                  style="width:100%; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem; background: var(--bg-main);"
+                  onchange="if(this.value==='otro'){ let o = prompt('Ingresa el código de país con el signo + (ej. +54):'); if(o){ let opt = new Option('🌐 ' + o, o, true, true); this.add(opt, this.options[this.options.length-1]); this.value = o; } else { this.value = '+52'; } } eCalc()">
                   <option value="+52" selected>🇲🇽 +52</option>
                   <option value="+1">🇺🇸 +1</option>
                   <option value="+34">🇪🇸 +34</option>
                   <option value="otro">🌐 Otro...</option>
                 </select>
-                <input type="tel" id="e-telefono" placeholder="1234567890" style="width:100%; min-width:0;" oninput="eCalc()">
+                <input type="tel" id="e-telefono" placeholder="1234567890" style="width:100%; min-width:0;"
+                  oninput="eCalc()">
               </div>
             </div>
             <div class="field">
@@ -849,9 +871,11 @@
           </div>
           <div class="qline total"><span>Total</span><span id="e-qtotal">$0</span></div>
           <div class="qbox-actions">
-            <button id="e-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%" onclick="confirmarPedido('e')">✅ Validar y Enviar
+            <button id="e-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%"
+              onclick="confirmarPedido('e')">✅ Validar y Enviar
               WhatsApp</button>
-            <button id="e-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%" onclick="guardarPedido('e')">💾 Guardar Pedido
+            <button id="e-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%"
+              onclick="guardarPedido('e')">💾 Guardar Pedido
               (Admin)</button>
             <div style="display:flex; gap:10px;">
               <button class="btn btn-ghost copy-btn" style="flex:1" onclick="eCopiar()">Copiar texto</button>
@@ -1091,11 +1115,11 @@
       const kTel = document.getElementById("k-telefono").value.trim();
       const kilosSelec = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
       if (kCliente && kTel.length >= 7 && kilosSelec > 0) {
-        if(document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.remove("btn-disabled");
-        if(document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.remove("btn-disabled");
+        if (document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.remove("btn-disabled");
+        if (document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.remove("btn-disabled");
       } else {
-        if(document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.add("btn-disabled");
-        if(document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.add("btn-disabled");
+        if (document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.add("btn-disabled");
+        if (document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.add("btn-disabled");
       }
     }
 
@@ -1192,11 +1216,11 @@
       const eTel = document.getElementById("e-telefono").value.trim();
       const paxSelec = eItems.reduce((acc, curr) => acc + curr.personas, 0);
       if (eCliente && eTel.length >= 7 && paxSelec > 0) {
-        if(document.getElementById("e-btn-enviar")) document.getElementById("e-btn-enviar").classList.remove("btn-disabled");
-        if(document.getElementById("e-btn-guardar")) document.getElementById("e-btn-guardar").classList.remove("btn-disabled");
+        if (document.getElementById("e-btn-enviar")) document.getElementById("e-btn-enviar").classList.remove("btn-disabled");
+        if (document.getElementById("e-btn-guardar")) document.getElementById("e-btn-guardar").classList.remove("btn-disabled");
       } else {
-        if(document.getElementById("e-btn-enviar")) document.getElementById("e-btn-enviar").classList.add("btn-disabled");
-        if(document.getElementById("e-btn-guardar")) document.getElementById("e-btn-guardar").classList.add("btn-disabled");
+        if (document.getElementById("e-btn-enviar")) document.getElementById("e-btn-enviar").classList.add("btn-disabled");
+        if (document.getElementById("e-btn-guardar")) document.getElementById("e-btn-guardar").classList.add("btn-disabled");
       }
     }
     function eCopiar() {
@@ -1230,8 +1254,8 @@
         const checkT = document.getElementById("k-telefono").value.trim();
         const checkK = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
         if (!checkC || checkT.length < 7 || checkK === 0) {
-           alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
-           return;
+          alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
+          return;
         }
 
         data.cliente = document.getElementById("k-cliente").value;
@@ -1262,8 +1286,8 @@
         const checkT = document.getElementById("e-telefono").value.trim();
         const checkP = eItems.reduce((acc, curr) => acc + curr.personas, 0);
         if (!checkC || checkT.length < 7 || checkP === 0) {
-           alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
-           return;
+          alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
+          return;
         }
 
         data.cliente = document.getElementById("e-cliente").value;
@@ -1303,33 +1327,33 @@
 
       // Notificación visual (Ticket/PDF) debe ir ANTES de limpiar
       if (confirm("Pedido guardado correctamente. \n\n¿Deseas imprimir o generar PDF del ticket ahora?")) {
-         let pedidoAImprimir = {
-            id: data.folio,
-            ...data,
-            nombre: data.cliente,
-            itemsDetalle: data.items,
-            total: data.total,
-            tipo: tipo === 'k' ? 'kilo' : 'evento'
-         };
-         generarTicketPDF(pedidoAImprimir);
+        let pedidoAImprimir = {
+          id: data.folio,
+          ...data,
+          nombre: data.cliente,
+          itemsDetalle: data.items,
+          total: data.total,
+          tipo: tipo === 'k' ? 'kilo' : 'evento'
+        };
+        generarTicketPDF(pedidoAImprimir);
       }
-      
+
       // Limpiar formulario y reiniciar estado visual
       if (tipo === 'k') {
-         document.getElementById("k-cliente").value = '';
-         document.getElementById("k-telefono").value = '';
-         document.getElementById("k-notas").value = '';
-         document.getElementById("k-direccion").value = '';
-         kExtras = [];
-         kInit();
+        document.getElementById("k-cliente").value = '';
+        document.getElementById("k-telefono").value = '';
+        document.getElementById("k-notas").value = '';
+        document.getElementById("k-direccion").value = '';
+        kExtras = [];
+        kInit();
       } else {
-         document.getElementById("e-cliente").value = '';
-         document.getElementById("e-telefono").value = '';
-         document.getElementById("e-notas").value = '';
-         document.getElementById("e-direccion").value = '';
-         eExtras = [];
-         eItems = [{ nombre: "Paella mar y tierra", precio: 180, personas: 10 }];
-         eInit();
+        document.getElementById("e-cliente").value = '';
+        document.getElementById("e-telefono").value = '';
+        document.getElementById("e-notas").value = '';
+        document.getElementById("e-direccion").value = '';
+        eExtras = [];
+        eItems = [{ nombre: "Paella mar y tierra", precio: 180, personas: 10 }];
+        eInit();
       }
     }
 
@@ -1636,10 +1660,10 @@
         setTimeout(() => {
           btn.innerHTML = oldText;
           btn.style.background = ''; // vuelve a CSS original
-          
+
           if (confirm("Venta registrada. ¿Deseas imprimir el Ticket/PDF ahora?")) {
-             nuevoPedido.id = new Date().getTime().toString().slice(-6);
-             generarTicketPDF(nuevoPedido);
+            nuevoPedido.id = new Date().getTime().toString().slice(-6);
+            generarTicketPDF(nuevoPedido);
           }
         }, 1500);
       } catch (e) {
@@ -1708,7 +1732,7 @@
       let itemsDetalle = [];
       if (tipo === 'k') {
         const checkK = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
-        if(checkK === 0) { alert("Debes agregar al menos 1 producto para generar el PDF."); return; }
+        if (checkK === 0) { alert("Debes agregar al menos 1 producto para generar el PDF."); return; }
         data.nombre = document.getElementById("k-cliente").value || "Cliente";
         data.entrega = kEntrega;
         data.extras = kExtras;
@@ -1722,7 +1746,7 @@
         itemsDetalle = kItems;
       } else {
         const checkP = eItems.reduce((acc, curr) => acc + curr.personas, 0);
-        if(checkP === 0) { alert("Debes agregar al menos 1 producto para generar el PDF."); return; }
+        if (checkP === 0) { alert("Debes agregar al menos 1 producto para generar el PDF."); return; }
         data.nombre = document.getElementById("e-cliente").value || "Cliente";
         data.entrega = eEntrega;
         data.extras = eExtras;
@@ -1736,11 +1760,11 @@
         itemsDetalle = eItems;
       }
       let pedidoAImprimir = {
-          id: new Date().getTime().toString().slice(-6),
-          ...data,
-          tipoEntrega: data.entrega,
-          itemsDetalle: itemsDetalle,
-          tipo: tipo === 'k' ? 'kilo' : 'evento'
+        id: new Date().getTime().toString().slice(-6),
+        ...data,
+        tipoEntrega: data.entrega,
+        itemsDetalle: itemsDetalle,
+        tipo: tipo === 'k' ? 'kilo' : 'evento'
       };
       generarTicketPDF(pedidoAImprimir);
     }
@@ -1823,8 +1847,10 @@
   </script>
 
   <!-- Modal: Método de Pago para Venta Directa -->
-  <div id="modalPagoVD" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); justify-content:center; align-items:center; z-index:3000;">
-    <div style="background:white; border-radius:24px; padding:28px; max-width:380px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+  <div id="modalPagoVD"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); justify-content:center; align-items:center; z-index:3000;">
+    <div
+      style="background:white; border-radius:24px; padding:28px; max-width:380px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
       <div style="font-size:2rem; margin-bottom:8px;">💳</div>
       <h3 style="margin:0 0 6px 0; font-size:1.3rem; color:#1e293b;">Método de Pago</h3>
       <p style="color:#6b7280; margin-bottom:22px; font-size:0.9rem;">¿Cómo pagó el cliente?</p>
@@ -1839,9 +1865,11 @@
           style="background:#8b5cf6; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer; transition:opacity 0.2s;"
           onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🏦 Transferencia</button>
         <button onclick="guardarVentaDirecta(null)"
-          style="background:#f3f4f6; color:#4b5563; border:none; padding:10px; border-radius:14px; font-size:0.9rem; cursor:pointer;">Registrar sin método de pago</button>
+          style="background:#f3f4f6; color:#4b5563; border:none; padding:10px; border-radius:14px; font-size:0.9rem; cursor:pointer;">Registrar
+          sin método de pago</button>
         <button onclick="document.getElementById('modalPagoVD').style.display='none'"
-          style="background:none; border:1px solid #e2e8f0; color:#94a3b8; padding:8px; border-radius:14px; font-size:0.85rem; cursor:pointer; margin-top:4px;">✕ Cancelar</button>
+          style="background:none; border:1px solid #e2e8f0; color:#94a3b8; padding:8px; border-radius:14px; font-size:0.85rem; cursor:pointer; margin-top:4px;">✕
+          Cancelar</button>
       </div>
     </div>
   </div>

@@ -588,6 +588,39 @@
       margin-top: 8px;
     }
 
+    /* Estilos Alertas Inteligentes */
+    #alertas-panel {
+      background: white;
+      border-radius: 24px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .alerta-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 16px;
+      margin-bottom: 12px;
+      border-left: 5px solid transparent;
+      animation: slideInAlerta 0.4s ease forwards;
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    @keyframes slideInAlerta { to { opacity: 1; transform: translateX(0); } }
+
+    .alerta-item:last-child { margin-bottom: 0; }
+    .alerta-icon { font-size: 1.5rem; min-width: 32px; text-align: center; }
+    .alerta-body { display: flex; flex-direction: column; gap: 2px; }
+    .alerta-body strong { font-size: 0.95rem; color: #1e293b; }
+    .alerta-body span { font-size: 0.85rem; color: #64748b; }
+
+    .alerta-item.rojo { background: #fef2f2; border-left-color: #ef4444; }
+    .alerta-item.naranja { background: #fff7ed; border-left-color: #f59e0b; }
+    .alerta-item.azul { background: #eff6ff; border-left-color: #3b82f6; }
+    .alerta-item.verde { background: #f0fdf4; border-left-color: #10b981; }
+
     @media (max-width: 768px) {
       .sidebar-nav {
         width: 100%;
@@ -651,6 +684,49 @@
         margin-left: 0 !important;
       }
     }
+
+    /* ===== ALERTAS INTELIGENTES ===== */
+    #alertas-panel {
+      margin-bottom: 24px;
+      display: none;
+    }
+    #alertas-panel h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .alertas-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .alerta-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: white;
+      border-radius: 16px;
+      padding: 14px 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border-left: 4px solid #e2e8f0;
+      animation: slideInDown 0.3s ease;
+    }
+    @keyframes slideInDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .alerta-item.rojo  { border-left-color: #ef4444; }
+    .alerta-item.naranja { border-left-color: #f59e0b; }
+    .alerta-item.verde { border-left-color: #10b981; }
+    .alerta-item.azul  { border-left-color: #3b82f6; }
+    .alerta-icon { font-size: 1.6rem; flex-shrink: 0; margin-top: 2px; }
+    .alerta-body { flex: 1; }
+    .alerta-body strong { display: block; font-size: 0.9rem; color: #1e293b; margin-bottom: 3px; }
+    .alerta-body span { font-size: 0.82rem; color: #64748b; line-height: 1.4; }
   </style>
 </head>
 
@@ -663,6 +739,7 @@
     <a href="/admin" class="active" title="Administración">📊<span class="nav-label">Historial</span></a>
     <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
     <a href="/finanzas" title="Finanzas">💸<span class="nav-label">Finanzas</span></a>
+    <a href="/produccion" title="Producción">🏭<span class="nav-label">Producción</span></a>
   </nav>
 
   <script>
@@ -687,6 +764,14 @@
         <a href="#" onclick="cerrarSesion()"
           style="color:#94a3b8; text-decoration:none; font-size:12px; transition: color 0.2s;"
           onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'">Cerrar sesión</a>
+      </div>
+    </div>
+
+    <!-- ===== PANEL ALERTAS INTELIGENTES (solo admin) ===== -->
+    <div id="alertas-panel">
+      <h2>🔔 Alertas Inteligentes</h2>
+      <div class="alertas-grid" id="alertas-lista">
+        <div style="color:#9ca3af; font-size:0.85rem; padding: 10px;">Cargando alertas...</div>
       </div>
     </div>
 
@@ -783,6 +868,7 @@
     </div>
 
     <div id="tab-clientes" class="tab-content" style="display:none;">
+      <div id="clientes-kpis" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:24px;"></div>
       <div id="listaClientes"></div>
     </div>
 
@@ -972,6 +1058,8 @@
       if (linkEstadisticas) linkEstadisticas.style.display = 'none';
       const linkFinanzas = document.querySelector('a[href="/finanzas"]');
       if (linkFinanzas) linkFinanzas.style.display = 'none';
+      const linkProduccion = document.querySelector('a[href="/produccion"]');
+      if (linkProduccion) linkProduccion.style.display = 'none';
 
       // Ocultar las pestañas internas que el empleado no debería ver en Admin
       const style = document.createElement('style');
@@ -1229,7 +1317,7 @@
           if (mostrarBotones && p.status !== 'Entregado') {
             botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button><button class="btn-proceso" onclick="cambiarStatus('${p._id || p.id}','En proceso')">🟡 En proceso</button><button class="btn-entregado" onclick="cambiarStatus('${p._id || p.id}','Entregado')">✅ Entregado</button><button class="btn-editar" style="background:#8b5cf6;" onclick="abrirEditorPedido('${p._id || p.id}')">✏️ Editar</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           } else if (mostrarBotones && p.status === 'Entregado') {
-            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
+            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button>${userRole === 'admin' ? `<button style="background:#f59e0b; color:white; border:none; padding:6px 14px; border-radius:40px; font-weight:500; cursor:pointer; margin-right:8px; margin-top:12px;" onclick="revertirAPendiente('${p._id || p.id}')">↩️ Regresar</button>` : ''}<button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           }
           let div = document.createElement('div'); div.className = 'pedido';
           div.innerHTML = `<div><strong>${p.nombre || 'Sin nombre'}</strong> ${estadoHtml}${pagoHtml}</div>
@@ -1267,8 +1355,13 @@
       let pedidosFiltrados = aplicarFiltrosAPedidos(todosPedidos);
       let entregadosFiltrados = pedidosFiltrados.filter(p => p.status === 'Entregado');
       let contenedor = document.getElementById('listaClientes');
+      let contenedorKpis = document.getElementById('clientes-kpis');
       if (!contenedor) return;
-      if (entregadosFiltrados.length === 0) { contenedor.innerHTML = '<div class="empty-message">No hay clientes con los filtros actuales.</div>'; return; }
+      if (entregadosFiltrados.length === 0) { 
+        if (contenedorKpis) contenedorKpis.innerHTML = '';
+        contenedor.innerHTML = '<div class="empty-message">No hay clientes con los filtros actuales.</div>'; 
+        return; 
+      }
       let clientesMap = new Map();
       entregadosFiltrados.forEach(p => {
         let nombre = p.nombre || 'Anónimo';
@@ -1280,13 +1373,60 @@
         }
 
         let key = `${nombre}|${telefono}`;
-        if (!clientesMap.has(key)) clientesMap.set(key, { nombre, telefono, pedidos: [], totalGastado: 0, totalPedidos: 0 });
+        if (!clientesMap.has(key)) clientesMap.set(key, { nombre, telefono, pedidos: [], totalGastado: 0, totalPedidos: 0, ultimaCompra: new Date(0) });
         let cliente = clientesMap.get(key);
         cliente.pedidos.push(p);
         cliente.totalGastado += (p.total || 0);
         cliente.totalPedidos += 1;
+        
+        let fechaPedido = new Date(p.fechaEntrega);
+        if (!isNaN(fechaPedido) && fechaPedido > cliente.ultimaCompra) {
+          cliente.ultimaCompra = fechaPedido;
+        }
       });
-      let clientesArray = Array.from(clientesMap.values()).sort((a, b) => b.totalGastado - a.totalGastado);
+      let clientesArray = Array.from(clientesMap.values()).sort((a, b) => {
+        if (b.totalPedidos !== a.totalPedidos) return b.totalPedidos - a.totalPedidos;
+        return b.totalGastado - a.totalGastado;
+      });
+
+      if (contenedorKpis && clientesArray.length > 0) {
+        let clienteMasValioso = clientesArray[0];
+        let hoy = new Date();
+        let enRiesgo = 0;
+        let totalGeneralGastado = 0;
+        
+        clientesArray.forEach(c => {
+          totalGeneralGastado += c.totalGastado;
+          let diffTime = Math.abs(hoy - c.ultimaCompra);
+          let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays > 30) {
+            enRiesgo++;
+          }
+        });
+        
+        let ltv = clientesArray.length > 0 ? totalGeneralGastado / clientesArray.length : 0;
+        
+        contenedorKpis.innerHTML = `
+          <div class="card">
+            <h3>💎 Más Valioso</h3>
+            <div class="value" style="color:#D85A30; font-size:1.4rem; font-weight:800; margin-top:5px;">${escapeHtml(clienteMasValioso.nombre)}</div>
+            <div style="color:#64748b; font-size:0.85rem; margin-top:4px;">${clienteMasValioso.totalPedidos} pedidos acumulados</div>
+          </div>
+          <div class="card">
+            <h3>⚠️ +30 días inactivos</h3>
+            <div class="value" style="color:#f59e0b; font-size:2rem; font-weight:800;">${enRiesgo}</div>
+            <div style="color:#64748b; font-size:0.85rem; margin-top:4px;">clientes a recuperar</div>
+          </div>
+          <div class="card">
+            <h3>📈 LTV (Global)</h3>
+            <div class="value" style="color:#10b981; font-size:2rem; font-weight:800;">$${Math.round(ltv).toLocaleString()}</div>
+            <div style="color:#64748b; font-size:0.85rem; margin-top:4px;">vida prom. por cliente</div>
+          </div>
+        `;
+      } else if (contenedorKpis) {
+        contenedorKpis.innerHTML = '';
+      }
+
       contenedor.innerHTML = '';
       clientesArray.forEach(cliente => {
         let pedidosRecientes = [...cliente.pedidos].sort((a, b) => new Date(b.fechaEntrega) - new Date(a.fechaEntrega)).slice(0, 3);
@@ -1417,6 +1557,22 @@
       }
     }
 
+    async function revertirAPendiente(id) {
+      const pedido = todosPedidos.find(p => p._id === id || String(p.id) === String(id));
+      const nombre = pedido?.nombre || 'este pedido';
+      if (!confirm(`¿Regresar el pedido de "${nombre}" a Pedidos Activos?\n\nEl estado cambiará a Pendiente y se limpiará el método de pago registrado.`)) return;
+      try {
+        await authFetch(`/pedidos/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'Pendiente', metodoPago: null, paelleras: null, paellerasDevueltas: null })
+        });
+        await cargarPedidos();
+        // Cambiar a la pestaña de activos para que vea el pedido revertido
+        cambiarPestana('activos');
+      } catch (e) { alert('Error al revertir pedido'); }
+    }
+
     async function _ejecutarCambioStatus(id, nuevoStatus, metodoPago, extras = {}) {
       try {
         const body = { status: nuevoStatus, ...extras };
@@ -1535,6 +1691,7 @@
         }
         todosPedidos = await res.json();
         refrescarListas();
+        calcularAlertas();
       } catch (e) {
         console.error(e);
         document.getElementById('listaActivos').innerHTML = '<div class="empty-message">❌ Error de conexión con el backend.</div>';
@@ -1630,6 +1787,7 @@
     window.verHistorialCompleto = verHistorialCompleto; window.cerrarModalHistorial = cerrarModalHistorial;
     window.editarInventarioPaelleras = editarInventarioPaelleras;
     window.devolverPaellera = devolverPaellera;
+    window.revertirAPendiente = revertirAPendiente;
 
     // ================== LÓGICA DE GASTOS ==================
     let gastosActuales = [];
@@ -1872,6 +2030,153 @@
         alert("Hubo un error al actualizar el pedido.");
       }
     };
+    // ==============================================================
+
+    // ===================== ALERTAS INTELIGENTES =====================
+    function calcularAlertas() {
+      if (userRole !== 'admin') return;
+      const panel = document.getElementById('alertas-panel');
+      const lista = document.getElementById('alertas-lista');
+      if (!panel || !lista) return;
+
+      const alertas = [];
+      const hoy = new Date();
+      const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+      const entregados = todosPedidos.filter(p => p.status === 'Entregado');
+      const diaSemanaHoy = hoy.getDay(); // 0=Dom
+      const diasNombre = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+      // --- 1. Ventas por día de semana (promedios históricos) ---
+      const ventasPorDiaSemana = {0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
+      entregados.forEach(p => {
+        if (!p.fechaEntrega) return;
+        const d = new Date(p.fechaEntrega + 'T12:00:00');
+        if (isNaN(d)) return;
+        const dow = d.getDay();
+        ventasPorDiaSemana[dow].push(p.total || 0);
+      });
+
+      const promedios = {};
+      for (let i = 0; i < 7; i++) {
+        const arr = ventasPorDiaSemana[i];
+        // Agrupar por fecha para sumar ventas del mismo día
+        const porFecha = {};
+        entregados.forEach(p => {
+          if (!p.fechaEntrega) return;
+          const d = new Date(p.fechaEntrega + 'T12:00:00');
+          if (isNaN(d) || d.getDay() !== i) return;
+          porFecha[p.fechaEntrega] = (porFecha[p.fechaEntrega] || 0) + (p.total || 0);
+        });
+        const vals = Object.values(porFecha);
+        promedios[i] = vals.length > 0 ? vals.reduce((a,b)=>a+b,0) / vals.length : 0;
+      }
+
+      // --- 2. Alerta: Caída de ventas hoy ---
+      const ventasHoy = entregados.filter(p => p.fechaEntrega === hoyStr).reduce((s,p) => s + (p.total||0), 0);
+      const promedioHoy = promedios[diaSemanaHoy];
+      if (promedioHoy > 0 && ventasHoy < promedioHoy * 0.80) {
+        const caida = Math.round(((promedioHoy - ventasHoy) / promedioHoy) * 100);
+        alertas.push({
+          tipo: 'rojo', icon: '📉',
+          titulo: `Ventas bajas hoy (${diasNombre[diaSemanaHoy]})`,
+          detalle: `$${Math.round(ventasHoy).toLocaleString()} vendidos — ${caida}% por debajo de tu promedio de $${Math.round(promedioHoy).toLocaleString()} para ${diasNombre[diaSemanaHoy].toLowerCase()}s.`
+        });
+      }
+
+      // --- 3. Alerta: Día de alta demanda mañana ---
+      const manana = new Date(hoy); manana.setDate(hoy.getDate() + 1);
+      const diaManana = manana.getDay();
+      const promedioManana = promedios[diaManana];
+      const promedioGlobal = Object.values(promedios).filter(v=>v>0);
+      const promGlobal = promedioGlobal.length > 0 ? promedioGlobal.reduce((a,b)=>a+b,0) / promedioGlobal.length : 0;
+      if (promedioManana > promGlobal * 1.30 && promGlobal > 0) {
+        const porcArriba = Math.round(((promedioManana - promGlobal) / promGlobal) * 100);
+        alertas.push({
+          tipo: 'azul', icon: '📈',
+          titulo: `Mañana (${diasNombre[diaManana]}) — Día de alta demanda`,
+          detalle: `Históricamente vendes ${porcArriba}% más que el promedio general. Demanda estimada: ~$${Math.round(promedioManana).toLocaleString()}. Prepárate con inventario extra.`
+        });
+      }
+
+      // --- 4. Pedidos pendientes para mañana ---
+      const mananStr = `${manana.getFullYear()}-${String(manana.getMonth()+1).padStart(2,'0')}-${String(manana.getDate()).padStart(2,'0')}`;
+      const pedidosManana = todosPedidos.filter(p => p.fechaEntrega === mananStr && p.status !== 'Entregado');
+      if (pedidosManana.length > 0) {
+        const totalManana = pedidosManana.reduce((s,p) => s + (p.total||0), 0);
+        alertas.push({
+          tipo: 'naranja', icon: '📦',
+          titulo: `${pedidosManana.length} pedido${pedidosManana.length>1?'s':''} pendiente${pedidosManana.length>1?'s':''} para mañana`,
+          detalle: `Total comprometido: $${Math.round(totalManana).toLocaleString()}. Revisa que tengas stock suficiente.`
+        });
+      }
+
+      // --- 5. Clientes inactivos (top 3) ---
+      const clientesMap = new Map();
+      entregados.forEach(p => {
+        const nombre = p.nombre || 'Anónimo';
+        if (nombre.toLowerCase() === 'venta en mostrador' || nombre.toLowerCase() === 'venta en local') return;
+        if (p.tipo === 'venta_directa' && nombre === 'Anónimo') return;
+        const key = `${nombre}|${p.telefono||''}`;
+        if (!clientesMap.has(key)) clientesMap.set(key, { nombre, telefono: p.telefono, ultimaCompra: new Date(0), pedidos: 0 });
+        const c = clientesMap.get(key);
+        c.pedidos++;
+        const fp = new Date(p.fechaEntrega);
+        if (!isNaN(fp) && fp > c.ultimaCompra) c.ultimaCompra = fp;
+      });
+      const inactivos = Array.from(clientesMap.values())
+        .filter(c => c.pedidos >= 2)
+        .map(c => ({ ...c, dias: Math.ceil((hoy - c.ultimaCompra) / 86400000) }))
+        .filter(c => c.dias > 30)
+        .sort((a,b) => a.dias - b.dias)
+        .slice(0, 3);
+      if (inactivos.length > 0) {
+        const nombres = inactivos.map(c => `<strong>${escapeHtml(c.nombre)}</strong> (${c.dias} días, ${c.pedidos} pedidos)`).join(', ');
+        alertas.push({
+          tipo: 'naranja', icon: '👤',
+          titulo: `${inactivos.length} cliente${inactivos.length>1?'s':''} inactivo${inactivos.length>1?'s':''}`,
+          detalle: `Clientes recurrentes que no compran hace +30 días: ${nombres}. Considera contactarlos.`
+        });
+      }
+
+      // --- 6. Margen bajo del mes actual ---
+      const inicioMes = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-01`;
+      const ingresosMes = entregados.filter(p => p.fechaEntrega && p.fechaEntrega >= inicioMes && p.fechaEntrega <= hoyStr).reduce((s,p) => s + (p.total||0), 0);
+      if (ingresosMes > 0) {
+        // Intenta obtener gastos del mes
+        authFetch(`/gastos?desde=${inicioMes}&hasta=${hoyStr}`).then(r => r.json()).then(gastos => {
+          const totalGastos = gastos.reduce((s,g) => s + (g.monto||0), 0);
+          const margen = ((ingresosMes - totalGastos) / ingresosMes) * 100;
+          if (margen < 20 && totalGastos > 0) {
+            alertas.unshift({
+              tipo: 'rojo', icon: '💸',
+              titulo: `Margen del mes en ${margen.toFixed(1)}%`,
+              detalle: `Ingresos: $${Math.round(ingresosMes).toLocaleString()} — Gastos: $${Math.round(totalGastos).toLocaleString()} — Utilidad: $${Math.round(ingresosMes-totalGastos).toLocaleString()}. Objetivo: mantener margen >20%.`
+            });
+            renderAlertasUI(alertas, panel, lista);
+          }
+        }).catch(() => {});
+      }
+
+      // --- Render inmediato (sin la alerta de margen que es async) ---
+      renderAlertasUI(alertas, panel, lista);
+    }
+
+    function renderAlertasUI(alertas, panel, lista) {
+      if (alertas.length === 0) {
+        panel.style.display = 'block';
+        lista.innerHTML = `<div class="alerta-item verde"><span class="alerta-icon">✅</span><div class="alerta-body"><strong>Todo en orden</strong><span>No hay alertas por el momento. ¡Buen trabajo!</span></div></div>`;
+        return;
+      }
+      panel.style.display = 'block';
+      lista.innerHTML = alertas.map((a, i) => `
+        <div class="alerta-item ${a.tipo}" style="animation-delay: ${i * 0.08}s">
+          <span class="alerta-icon">${a.icon}</span>
+          <div class="alerta-body">
+            <strong>${a.titulo}</strong>
+            <span>${a.detalle}</span>
+          </div>
+        </div>`).join('');
+    }
     // ==============================================================
 
     cargarPedidos();
