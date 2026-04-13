@@ -588,106 +588,13 @@
       margin-top: 8px;
     }
 
-    /* Estilos Alertas Inteligentes */
+    /* ===== ALERTAS INTELIGENTES & TOASTS ===== */
     #alertas-panel {
       background: white;
       border-radius: 24px;
       padding: 24px;
       margin-bottom: 24px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-    .alerta-item {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 16px;
-      border-radius: 16px;
-      margin-bottom: 12px;
-      border-left: 5px solid transparent;
-      animation: slideInAlerta 0.4s ease forwards;
-      opacity: 0;
-      transform: translateX(-10px);
-    }
-    @keyframes slideInAlerta { to { opacity: 1; transform: translateX(0); } }
-
-    .alerta-item:last-child { margin-bottom: 0; }
-    .alerta-icon { font-size: 1.5rem; min-width: 32px; text-align: center; }
-    .alerta-body { display: flex; flex-direction: column; gap: 2px; }
-    .alerta-body strong { font-size: 0.95rem; color: #1e293b; }
-    .alerta-body span { font-size: 0.85rem; color: #64748b; }
-
-    .alerta-item.rojo { background: #fef2f2; border-left-color: #ef4444; }
-    .alerta-item.naranja { background: #fff7ed; border-left-color: #f59e0b; }
-    .alerta-item.azul { background: #eff6ff; border-left-color: #3b82f6; }
-    .alerta-item.verde { background: #f0fdf4; border-left-color: #10b981; }
-
-    @media (max-width: 768px) {
-      .sidebar-nav {
-        width: 100%;
-        height: 70px;
-        flex-direction: row;
-        justify-content: space-around;
-        align-items: center;
-        padding: 0;
-        bottom: 0;
-        top: auto;
-        border-right: none;
-        border-top: 1px solid var(--border-light);
-        box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
-      }
-
-      .sidebar-nav:hover {
-        width: 100%;
-        padding: 0;
-        align-items: center;
-      }
-
-      .sidebar-nav a {
-        margin-bottom: 0;
-        padding: 10px;
-        justify-content: center;
-      }
-
-      .sidebar-nav:hover a {
-        justify-content: center;
-      }
-
-      .sidebar-nav a:hover,
-      .sidebar-nav a.active {
-        transform: translateY(-5px);
-      }
-
-      .nav-label {
-        display: none !important;
-      }
-
-      .main-wrapper {
-        margin-left: 0;
-        width: 100%;
-        padding: 20px 20px 90px 20px;
-      }
-
-      .graficas {
-        grid-template-columns: 1fr;
-      }
-
-      .filtros {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .botones-filtro {
-        flex-direction: column !important;
-      }
-
-      .btn-excel {
-        margin-left: 0 !important;
-      }
-    }
-
-    /* ===== ALERTAS INTELIGENTES ===== */
-    #alertas-panel {
-      margin-bottom: 24px;
       display: none;
     }
     #alertas-panel h2 {
@@ -708,25 +615,214 @@
       display: flex;
       align-items: flex-start;
       gap: 14px;
-      background: white;
-      border-radius: 16px;
       padding: 14px 18px;
+      border-radius: 16px;
+      background: white;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
       border-left: 4px solid #e2e8f0;
-      animation: slideInDown 0.3s ease;
+      animation: slideInAlerta 0.4s ease forwards;
+      opacity: 0;
     }
-    @keyframes slideInDown {
-      from { opacity: 0; transform: translateY(-8px); }
+    @keyframes slideInAlerta { 
+      from { opacity: 0; transform: translateY(-10px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    .alerta-item.rojo  { border-left-color: #ef4444; }
-    .alerta-item.naranja { border-left-color: #f59e0b; }
-    .alerta-item.verde { border-left-color: #10b981; }
-    .alerta-item.azul  { border-left-color: #3b82f6; }
-    .alerta-icon { font-size: 1.6rem; flex-shrink: 0; margin-top: 2px; }
-    .alerta-body { flex: 1; }
+
+    .alerta-item.rojo { background: #fef2f2; border-left-color: #ef4444; }
+    .alerta-item.naranja { background: #fff7ed; border-left-color: #f59e0b; }
+    .alerta-item.azul { background: #eff6ff; border-left-color: #3b82f6; }
+    .alerta-item.verde { background: #f0fdf4; border-left-color: #10b981; }
+
+    .alerta-icon { font-size: 1.6rem; min-width: 32px; text-align: center; flex-shrink: 0; }
+    .alerta-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
     .alerta-body strong { display: block; font-size: 0.9rem; color: #1e293b; margin-bottom: 3px; }
     .alerta-body span { font-size: 0.82rem; color: #64748b; line-height: 1.4; }
+
+    /* Estilos Toast Notifications */
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      padding: 16px 20px;
+      min-width: 300px;
+      max-width: 450px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-left: 6px solid #D85A30;
+      animation: toastIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards, toastOut 0.5s 4.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+      transform: translateX(120%);
+    }
+    @keyframes toastIn { to { transform: translateX(0); } }
+    @keyframes toastOut { to { transform: translateX(120%); opacity: 0; } }
+
+    .toast.success { border-left-color: #10b981; }
+    .toast.error { border-left-color: #ef4444; }
+    .toast.info { border-left-color: #3b82f6; }
+
+    .toast-icon { font-size: 1.8rem; }
+    .toast-content { flex: 1; }
+    .toast-title { display: block; font-weight: 800; color: #1e293b; font-size: 0.95rem; }
+    .toast-msg { font-size: 0.85rem; color: #64748b; }
+
+    @media (max-width: 768px) {
+      .sidebar-nav {
+        width: 100%;
+        height: calc(70px + var(--safe-area-bottom));
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: flex-start;
+        padding: 10px 10px var(--safe-area-bottom) 10px;
+        bottom: 0;
+        top: auto;
+        border-right: none;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
+        border-radius: 20px 20px 0 0;
+        z-index: 5000;
+      }
+
+      .sidebar-nav:hover {
+        width: 100%;
+        padding: 10px 10px var(--safe-area-bottom) 10px;
+      }
+
+      .sidebar-nav a {
+        margin-bottom: 0;
+        padding: 12px;
+        justify-content: center;
+        flex-direction: column;
+        gap: 4px;
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .sidebar-nav a.active {
+        background: var(--brand-red-light);
+        color: var(--brand-red);
+        transform: translateY(-5px);
+      }
+
+      .nav-label {
+        display: block !important;
+        font-size: 0.65rem !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .main-wrapper {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px 20px 90px 20px;
+      }
+
+      .graficas {
+        grid-template-columns: 1fr;
+      }
+
+      .filtros {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn-excel {
+        margin-left: 0 !important;
+      }
+      
+      .mobile-only { display: block; }
+
+      .filtros {
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        border: 1px solid var(--border-light);
+      }
+      .filtros.expanded { display: flex; }
+      
+      .filtros-mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+        padding: 14px 20px;
+        border-radius: 12px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        border: 1px solid var(--border-light);
+      }
+
+      .tabs {
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 10px;
+        gap: 10px;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+      }
+      .tab-btn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        scroll-snap-align: start;
+        padding: 10px 20px;
+        font-size: 0.9rem;
+      }
+
+      /* Card de pedido optimizada para móvil */
+      .pedido {
+        padding: 12px;
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        background: white;
+        margin-bottom: 12px;
+        position: relative;
+        overflow: hidden;
+      }
+      .pedido > div:first-child {
+        font-size: 1rem;
+        margin-bottom: 6px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .pedido .badge {
+        font-size: 0.65rem;
+        padding: 2px 8px;
+      }
+      .pedido .detalle-lista {
+        font-size: 0.8rem;
+        padding: 6px 10px;
+        border-radius: 8px;
+        margin-top: 8px;
+      }
+      .pedido button {
+        width: auto !important;
+        padding: 8px 12px !important;
+        font-size: 0.75rem !important;
+        margin-top: 10px !important;
+      }
+    }
+
   </style>
 </head>
 
@@ -754,7 +850,7 @@
 
   <div class="main-wrapper">
     <div class="header" style="justify-content: space-between;">
-      <div>
+      <div class="mobile-hide">
         <h1>Panel de Administración</h1>
         <p>Control de pedidos, ventas en sitio y gestión operativa</p>
       </div>
@@ -775,7 +871,14 @@
       </div>
     </div>
 
+    <!-- Contenedor para notificaciones emergentes -->
+    <div id="toast-container"></div>
+
     <!-- Filtros -->
+    <div class="filtros-mobile-header mobile-only" onclick="document.querySelector('.filtros').classList.toggle('expanded')">
+      <span>🔍 Filtrar y Buscar</span>
+      <span class="indicator">▼</span>
+    </div>
     <div class="filtros">
       <div class="filtro-group"><label>🔍 Cliente / Teléfono</label><input type="text" id="filtroTexto"
           placeholder="Nombre o teléfono..."></div>
@@ -1699,7 +1802,7 @@
     }
 
     async function cargarPedidosEnTiempoReal() {
-      // Si hay un modal abierto o el usuario está editando, no actualizamos detrás para no espantarlo o romper su sesión
+      // Si hay un modal abierto o el usuario está editando, no actualizamos detrás para no espantarlo
       if (document.getElementById('modalDetalle').style.display === 'flex' ||
         document.getElementById('modalHistorialCliente').style.display === 'flex' ||
         document.getElementById('modalEditarPedido').style.display === 'flex') {
@@ -1711,12 +1814,79 @@
           let nuevosPedidos = await res.json();
           // Comparar si hubo verdaderos cambios
           if (JSON.stringify(nuevosPedidos) !== JSON.stringify(todosPedidos)) {
+            // Detectar nuevos pedidos para notificar
+            if (todosPedidos.length > 0) {
+              const idsViejos = new Set(todosPedidos.map(p => String(p._id || p.id)));
+              const nuevosDetectados = nuevosPedidos.filter(p => !idsViejos.has(String(p._id || p.id)));
+              
+              if (nuevosDetectados.length > 0) {
+                nuevosDetectados.forEach(p => {
+                  showToast(`📦 ¡Nuevo pedido de ${p.nombre || 'Cliente'}!`, 'info');
+                  playNotificationSound();
+                });
+              }
+            }
+
             todosPedidos = nuevosPedidos;
             refrescarListas();
+            // IMPORTANTE: Recalcular alertas cuando cambian los datos
+            calcularAlertas();
           }
         }
       } catch (e) {
         // Fallo silencioso en recargas de fondo
+      }
+    }
+
+    // ===================== SISTEMA DE NOTIFICACIONES (TOASTS) =====================
+    function showToast(mensaje, tipo = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${tipo}`;
+      
+      let icon = '🔔';
+      if (tipo === 'success') icon = '✅';
+      if (tipo === 'error') icon = '❌';
+      if (tipo === 'info') icon = '📦';
+
+      toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">
+          <span class="toast-title">${tipo === 'info' ? 'Nuevo Pedido' : 'Notificación'}</span>
+          <span class="toast-msg">${mensaje}</span>
+        </div>
+      `;
+
+      container.appendChild(toast);
+
+      // Eliminar del DOM después de que termine la animación (5s total)
+      setTimeout(() => {
+        toast.remove();
+      }, 5000);
+    }
+
+    function playNotificationSound() {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+        oscillator.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.5); // A4
+
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.5);
+      } catch (e) {
+        console.warn('No se pudo reproducir el sonido (posible bloqueo del navegador):', e);
       }
     }
 
@@ -2168,14 +2338,18 @@
         return;
       }
       panel.style.display = 'block';
-      lista.innerHTML = alertas.map((a, i) => `
-        <div class="alerta-item ${a.tipo}" style="animation-delay: ${i * 0.08}s">
+      let html = '';
+      alertas.forEach((a, i) => {
+        html += `
+        <div class="alerta-item ${a.tipo}" style="animation-delay: ${i * 0.1}s">
           <span class="alerta-icon">${a.icon}</span>
           <div class="alerta-body">
             <strong>${a.titulo}</strong>
             <span>${a.detalle}</span>
           </div>
-        </div>`).join('');
+        </div>`;
+      });
+      lista.innerHTML = html;
     }
     // ==============================================================
 

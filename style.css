@@ -195,3 +195,55 @@ textarea:focus {
   background: var(--brand-yellow-light);
   color: #B28800;
 }
+
+/* ================= OPTIMIZACIÓN MÓVIL (UX APP) ================= */
+@media (max-width: 768px) {
+  :root {
+    --nav-height: 70px;
+    --safe-area-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  /* Typography & Spacing */
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.3rem; }
+  
+  .card {
+    padding: 16px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Touch Targets (Inputs & Buttons) */
+  input[type="text"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea,
+  .btn {
+    min-height: 48px !important;
+    font-size: 16px !important; /* Evita zoom automático en iOS */
+  }
+
+  .btn {
+    width: 100%; /* Botones de ancho completo en móvil */
+    padding: 14px 20px;
+  }
+
+  /* Utility Classes */
+  .mobile-hide {
+    display: none !important;
+  }
+
+  /* Animación de elevación al tocar */
+  .btn:active, .card:active {
+    transform: scale(0.98);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.1s ease-out;
+  }
+
+  /* Estructura Base */
+  .main-wrapper {
+    padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 20px);
+  }
+}

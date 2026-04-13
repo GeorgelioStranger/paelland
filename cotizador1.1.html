@@ -511,6 +511,146 @@
       opacity: 0.5;
       filter: grayscale(1);
     }
+
+    /* ================= OPTIMIZACIÓN MÓVIL ESPECÍFICA ================= */
+    .mobile-only { display: none; }
+
+    @media (max-width: 768px) {
+      .mobile-only { display: block; }
+
+      .sidebar-nav {
+        width: 100%;
+        height: calc(70px + var(--safe-area-bottom));
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: flex-start;
+        padding: 10px 10px var(--safe-area-bottom) 10px;
+        bottom: 0;
+        top: auto;
+        border-right: none;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
+        border-radius: 20px 20px 0 0;
+        z-index: 5000;
+      }
+
+      .sidebar-nav a {
+        margin-bottom: 0;
+        padding: 12px;
+        justify-content: center;
+        flex-direction: column;
+        gap: 4px;
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .sidebar-nav a.active {
+        background: var(--brand-red-light);
+        color: var(--brand-red);
+        transform: translateY(-5px);
+      }
+
+      .nav-label {
+        display: block !important;
+        font-size: 0.65rem !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .main-wrapper {
+        margin-left: 0;
+        padding: 16px 16px 160px 16px; /* Espacio extra para el bottom bar */
+      }
+
+      .row2, .row3 { grid-template-columns: 1fr; gap: 12px; }
+      
+      .panel-content { grid-template-columns: 1fr; }
+      
+      .sticky-box { display: none; } /* Ocultamos el resumen lateral original en móvil */
+
+      /* Bottom Bar & Sheet */
+      #mobile-total-bar {
+        position: fixed;
+        bottom: calc(70px + var(--safe-area-bottom) + 10px);
+        left: 16px;
+        right: 16px;
+        background: var(--brand-black);
+        color: white;
+        border-radius: 24px;
+        z-index: 4500;
+        box-shadow: 0 15px 45px rgba(0,0,0,0.3);
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        display: flex;
+        flex-direction: column;
+        max-height: 70px; /* Compacto por defecto */
+      }
+
+      #mobile-total-bar.expanded {
+        max-height: 80vh;
+        bottom: calc(70px + var(--safe-area-bottom) + 0px);
+        left: 0;
+        right: 0;
+        border-radius: 24px 24px 0 0;
+      }
+
+      .bar-header {
+        height: 70px;
+        min-height: 70px;
+        padding: 0 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+      }
+
+      .total-info { display: flex; flex-direction: column; }
+      .total-info .label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
+      .total-info #m-total-display { font-size: 1.4rem; font-weight: 800; color: var(--brand-yellow); }
+
+      .expand-indicator { display: flex; align-items: center; gap: 6px; color: #94a3b8; }
+      #expand-arrow { transition: transform 0.3s; }
+      #mobile-total-bar.expanded #expand-arrow { transform: rotate(180deg); }
+      .indicator-text { font-size: 0.8rem; font-weight: 600; }
+
+      .btn-confirm-mobile {
+        background: var(--brand-red);
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 14px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 12px rgba(227, 45, 52, 0.4);
+      }
+
+      #bottom-sheet-content {
+        padding: 24px;
+        overflow-y: auto;
+        background: #1e293b; /* Un poco más claro que el negro base */
+        border-top: 1px solid rgba(255,255,255,0.05);
+      }
+
+      .sheet-handle {
+        width: 40px;
+        height: 5px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 10px;
+        margin: -10px auto 20px auto;
+      }
+
+      #bottom-sheet-content h3 { color: white; margin-bottom: 16px; font-size: 1.1rem; }
+      
+      #m-resumen-detalle {
+        font-size: 0.9rem;
+        color: #cbd5e1;
+        line-height: 1.6;
+      }
+    }
   </style>
 
 <body>
@@ -570,7 +710,7 @@
   <div class="main-wrapper">
 
     <div class="header" style="justify-content: space-between;">
-      <div>
+      <div class="mobile-hide">
         <h1>Punto de Venta</h1>
         <p>Toma de pedidos y eventos · Lun a Dom (Cerrado martes)</p>
       </div>
@@ -1013,6 +1153,70 @@
       w.style.display = (mins < 11 * 60 + 30 || mins > 16 * 60) ? "block" : "none";
     }
 
+    // ---------- LÓGICA MÓVIL (BOTTOM SHEET) ----------
+    function vibrate(ms) {
+      if ("vibrate" in navigator) navigator.vibrate(ms);
+    }
+
+    function toggleBottomSheet() {
+      const bar = document.getElementById('mobile-total-bar');
+      bar.classList.toggle('expanded');
+      vibrate(25);
+    }
+
+    function updateMobileSummary() {
+      const mTotal = document.getElementById('m-total-display');
+      const mDetalle = document.getElementById('m-resumen-detalle');
+      if (!mTotal || !mDetalle) return;
+
+      // Detectar pestaña activa para obtener el total y el resumen correcto
+      let total = "$0";
+      let lineasHtml = "";
+      
+      const kiloActive = document.getElementById('panel-kilo').classList.contains('active');
+      const eventoActive = document.getElementById('panel-evento').classList.contains('active');
+      const vdActive = document.getElementById('panel-ventadirecta').classList.contains('active');
+
+      if (kiloActive) {
+        total = document.getElementById('k-qtotal').textContent;
+        lineasHtml = document.getElementById('k-qlineas').innerHTML;
+      } else if (eventoActive) {
+        total = document.getElementById('e-qtotal').textContent;
+        lineasHtml = document.getElementById('e-qlineas').innerHTML;
+      } else if (vdActive) {
+        total = "$" + (parseFloat(document.getElementById('vd-total').value) || 0).toLocaleString();
+        lineasHtml = "Venta directa en mostrador";
+      }
+
+      mTotal.textContent = total;
+      mDetalle.innerHTML = lineasHtml;
+
+      // Feedback visual del botón si hay contenido
+      const btn = document.querySelector('.btn-confirm-mobile');
+      if (total !== "$0") {
+        btn.style.background = "var(--brand-red)";
+        btn.style.opacity = "1";
+      } else {
+        btn.style.background = "#94a3b8";
+        btn.style.opacity = "0.5";
+      }
+    }
+
+    window.confirmarPedidoActual = function() {
+      const kiloActive = document.getElementById('panel-kilo').classList.contains('active');
+      const eventoActive = document.getElementById('panel-evento').classList.contains('active');
+      const vdActive = document.getElementById('panel-ventadirecta').classList.contains('active');
+
+      vibrate(30);
+      if (kiloActive) {
+        confirmarPedido('k');
+      } else if (eventoActive) {
+        confirmarPedido('e');
+      } else if (vdActive) {
+        abrirModalPagoVD();
+      }
+    };
+
     // ---------- KILO ----------
     function kInit() {
       let currDay = new Date().getDay();
@@ -1114,6 +1318,10 @@
       const kCliente = document.getElementById("k-cliente").value.trim();
       const kTel = document.getElementById("k-telefono").value.trim();
       const kilosSelec = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
+
+      // Sincronizar barra móvil
+      updateMobileSummary();
+
       if (kCliente && kTel.length >= 7 && kilosSelec > 0) {
         if (document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.remove("btn-disabled");
         if (document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.remove("btn-disabled");
@@ -1210,6 +1418,9 @@
       document.getElementById("e-m-total").textContent = "$" + Math.round(total).toLocaleString("es-MX");
       document.getElementById("e-qlineas").innerHTML = lineas || '<div class="qline"><span style="color:var(--text2)">Sin platillos</span></div>';
       document.getElementById("e-qtotal").textContent = "$" + Math.round(total).toLocaleString("es-MX");
+
+      // Sincronizar barra móvil
+      updateMobileSummary();
 
       // Validar botones
       const eCliente = document.getElementById("e-cliente").value.trim();
@@ -1870,6 +2081,31 @@
         <button onclick="document.getElementById('modalPagoVD').style.display='none'"
           style="background:none; border:1px solid #e2e8f0; color:#94a3b8; padding:8px; border-radius:14px; font-size:0.85rem; cursor:pointer; margin-top:4px;">✕
           Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor para la Barra de Acción Móvil y Bottom Sheet -->
+  <div id="mobile-total-bar" class="mobile-only" onclick="toggleBottomSheet()">
+    <div class="bar-header">
+      <div class="total-info">
+        <span class="label">Total Pedido</span>
+        <span id="m-total-display">$0.00</span>
+      </div>
+      <div class="expand-indicator">
+        <span id="expand-arrow">▲</span>
+        <span class="indicator-text">Ver detalle</span>
+      </div>
+      <button class="btn-confirm-mobile" onclick="event.stopPropagation(); window.confirmarPedidoActual()">
+        Confirmar
+      </button>
+    </div>
+    
+    <div id="bottom-sheet-content">
+      <div class="sheet-handle"></div>
+      <h3>Resumen del Pedido</h3>
+      <div id="m-resumen-detalle">
+        <!-- Se llena dinámicamente -->
       </div>
     </div>
   </div>
