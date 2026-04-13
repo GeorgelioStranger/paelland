@@ -315,12 +315,12 @@
         <div class="value" id="promedio">$0</div>
       </div>
       <div class="card">
-        <h3>🍽️ Pedidos kilo</h3>
-        <div class="value" id="pedidosKilo">0</div>
+        <h3>⚖️ Kg vendidos total</h3>
+        <div class="value" id="kilosTotal">0 kg</div>
       </div>
       <div class="card">
-        <h3>🎉 Pedidos evento</h3>
-        <div class="value" id="pedidosEvento">0</div>
+        <h3>👥 Personas servidas</h3>
+        <div class="value" id="personasServidas">0</div>
       </div>
     </div>
 
@@ -400,6 +400,28 @@
     let chartTipo = null;
     let chartEntrega = null;
 
+    // Calcula kilos de un pedido (kilo + venta_directa)
+    function calcularKilosPedido(pedido) {
+      if (!pedido.itemsDetalle) return 0;
+      let total = 0;
+      if (pedido.tipo === 'kilo') {
+        pedido.itemsDetalle.forEach(item => { total += (item.kilos || 0) * (item.cantidad || 0); });
+      } else if (pedido.tipo === 'venta_directa') {
+        pedido.itemsDetalle.forEach(item => {
+          const nombre = (item.nombre || '').toLowerCase();
+          if (nombre.includes('medio kilo')) total += 0.5 * (item.cantidad || 0);
+          else if (nombre.includes('kilo')) total += 1 * (item.cantidad || 0);
+        });
+      }
+      return total;
+    }
+
+    // Calcula personas de un pedido evento
+    function calcularPersonasEvento(pedido) {
+      if (pedido.tipo !== 'evento' || !pedido.itemsDetalle) return 0;
+      return pedido.itemsDetalle.reduce((s, item) => s + (item.personas || 0), 0);
+    }
+
     // Generar array de fechas entre dos fechas
     function generarRangoFechas(inicioStr, finStr) {
       const fechas = [];
@@ -452,11 +474,14 @@
       const pedidosKilo = entregadosEnRango.filter(p => p.tipo === 'kilo').length;
       const pedidosEvento = entregadosEnRango.filter(p => p.tipo === 'evento').length;
 
+      const kilosTotal = entregadosEnRango.reduce((s, p) => s + calcularKilosPedido(p), 0);
+      const personasServidas = entregadosEnRango.filter(p => p.tipo === 'evento').reduce((s, p) => s + calcularPersonasEvento(p), 0);
+
       document.getElementById('totalVentas').innerText = '$' + Math.round(totalVentas).toLocaleString();
       document.getElementById('totalPedidos').innerText = totalPedidos;
       document.getElementById('promedio').innerText = '$' + Math.round(promedio).toLocaleString();
-      document.getElementById('pedidosKilo').innerText = pedidosKilo;
-      document.getElementById('pedidosEvento').innerText = pedidosEvento;
+      document.getElementById('kilosTotal').innerText = kilosTotal % 1 === 0 ? kilosTotal + ' kg' : kilosTotal.toFixed(1) + ' kg';
+      document.getElementById('personasServidas').innerText = personasServidas;
 
       // Ventas por día (en el rango)
       const ventasPorDia = {};
