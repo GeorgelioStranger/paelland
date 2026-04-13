@@ -1229,7 +1229,7 @@
           if (mostrarBotones && p.status !== 'Entregado') {
             botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button><button class="btn-proceso" onclick="cambiarStatus('${p._id || p.id}','En proceso')">🟡 En proceso</button><button class="btn-entregado" onclick="cambiarStatus('${p._id || p.id}','Entregado')">✅ Entregado</button><button class="btn-editar" style="background:#8b5cf6;" onclick="abrirEditorPedido('${p._id || p.id}')">✏️ Editar</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           } else if (mostrarBotones && p.status === 'Entregado') {
-            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
+            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button>${userRole === 'admin' ? `<button style="background:#f59e0b; color:white; border:none; padding:6px 14px; border-radius:40px; font-weight:500; cursor:pointer; margin-right:8px; margin-top:12px;" onclick="revertirAPendiente('${p._id || p.id}')">↩️ Regresar</button>` : ''}<button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           }
           let div = document.createElement('div'); div.className = 'pedido';
           div.innerHTML = `<div><strong>${p.nombre || 'Sin nombre'}</strong> ${estadoHtml}${pagoHtml}</div>
@@ -1415,6 +1415,22 @@
         _pendingEsEvento = false;
         _pendingMetodoPago = null;
       }
+    }
+
+    async function revertirAPendiente(id) {
+      const pedido = todosPedidos.find(p => p._id === id || String(p.id) === String(id));
+      const nombre = pedido?.nombre || 'este pedido';
+      if (!confirm(`¿Regresar el pedido de "${nombre}" a Pedidos Activos?\n\nEl estado cambiará a Pendiente y se limpiará el método de pago registrado.`)) return;
+      try {
+        await authFetch(`/pedidos/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'Pendiente', metodoPago: null, paelleras: null, paellerasDevueltas: null })
+        });
+        await cargarPedidos();
+        // Cambiar a la pestaña de activos para que vea el pedido revertido
+        cambiarPestana('activos');
+      } catch (e) { alert('Error al revertir pedido'); }
     }
 
     async function _ejecutarCambioStatus(id, nuevoStatus, metodoPago, extras = {}) {
@@ -1630,6 +1646,7 @@
     window.verHistorialCompleto = verHistorialCompleto; window.cerrarModalHistorial = cerrarModalHistorial;
     window.editarInventarioPaelleras = editarInventarioPaelleras;
     window.devolverPaellera = devolverPaellera;
+    window.revertirAPendiente = revertirAPendiente;
 
     // ================== LÓGICA DE GASTOS ==================
     let gastosActuales = [];
