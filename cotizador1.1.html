@@ -520,16 +520,16 @@
 
       .sidebar-nav {
         width: 100%;
-        height: calc(70px + var(--safe-area-bottom));
+        height: 65px;
         flex-direction: row;
-        justify-content: space-around;
-        align-items: flex-start;
-        padding: 10px 10px var(--safe-area-bottom) 10px;
+        justify-content: space-evenly;
+        align-items: center;
+        padding: 0 10px;
         bottom: 0;
         top: auto;
         border-right: none;
         border-top: 1px solid rgba(255,255,255,0.1);
-        background: rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
@@ -539,12 +539,10 @@
 
       .sidebar-nav a {
         margin-bottom: 0;
-        padding: 12px;
+        padding: 10px;
         justify-content: center;
-        flex-direction: column;
-        gap: 4px;
         border-radius: 12px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.3s ease;
       }
 
       .sidebar-nav a.active {
@@ -554,11 +552,7 @@
       }
 
       .nav-label {
-        display: block !important;
-        font-size: 0.65rem !important;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        display: none !important;
       }
 
       .main-wrapper {

@@ -679,11 +679,11 @@
     @media (max-width: 768px) {
       .sidebar-nav {
         width: 100%;
-        height: calc(70px + var(--safe-area-bottom));
+        height: 65px;
         flex-direction: row;
-        justify-content: space-around;
-        align-items: flex-start;
-        padding: 10px 10px var(--safe-area-bottom) 10px;
+        justify-content: space-evenly;
+        align-items: center;
+        padding: 0 10px;
         bottom: 0;
         top: auto;
         border-right: none;
@@ -696,19 +696,12 @@
         z-index: 5000;
       }
 
-      .sidebar-nav:hover {
-        width: 100%;
-        padding: 10px 10px var(--safe-area-bottom) 10px;
-      }
-
       .sidebar-nav a {
         margin-bottom: 0;
-        padding: 12px;
+        padding: 10px;
         justify-content: center;
-        flex-direction: column;
-        gap: 4px;
         border-radius: 12px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.3s ease;
       }
 
       .sidebar-nav a.active {
@@ -718,11 +711,7 @@
       }
 
       .nav-label {
-        display: block !important;
-        font-size: 0.65rem !important;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        display: none !important;
       }
 
       .main-wrapper {
@@ -829,8 +818,7 @@
 <body>
   <!-- Sidebar de Navegación Fija -->
   <nav class="sidebar-nav">
-    <a href="/" style="text-decoration:none; font-size:32px;" title="Inicio">🥘<span class="nav-label"
-        style="color:var(--brand-black); font-size:20px;">La Paella</span></a>
+    <a href="/" style="text-decoration:none; font-size:32px;" title="Inicio">🥘<span class="nav-label" style="color:var(--brand-black); font-size:20px;">La Paella</span></a>
     <a href="/cotizador" title="Registrar Pedido">📝<span class="nav-label">Cotizador</span></a>
     <a href="/admin" class="active" title="Administración">📊<span class="nav-label">Historial</span></a>
     <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
