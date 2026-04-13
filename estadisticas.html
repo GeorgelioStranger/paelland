@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Estadísticas - Paella</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -14,70 +14,62 @@
       display: flex;
       overflow-x: hidden;
     }
+    @media (min-width: 769px) {
+      .sidebar-nav {
+        width: 80px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 0;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 5000;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow-x: hidden;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.05);
+      }
 
-    .sidebar-nav {
-      width: 80px;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(10px);
-      border-right: 1px solid var(--border-light);
-      height: 100vh;
-      position: fixed;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 30px 0;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      overflow: hidden;
-      white-space: nowrap;
-    }
+      .sidebar-nav:hover {
+        width: 240px;
+        align-items: flex-start;
+        padding: 20px;
+      }
 
-    .sidebar-nav:hover {
-      width: 220px;
-      align-items: flex-start;
-      padding: 30px 20px;
-      box-shadow: 4px 0 15px rgba(0,0,0,0.05);
-    }
+      .sidebar-nav a {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        margin-bottom: 8px;
+        text-decoration: none;
+        color: #64748b;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+      }
 
-    .sidebar-nav a {
-      text-decoration: none;
-      font-size: 26px;
-      color: var(--text-light);
-      margin-bottom: 15px;
-      transition: all 0.2s;
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      width: 100%;
-      border-radius: 12px;
-      padding: 10px;
-      box-sizing: border-box;
-    }
+      .sidebar-nav a:hover,
+      .sidebar-nav a.active {
+        background: var(--brand-red-light);
+        color: var(--brand-red);
+      }
 
-    .sidebar-nav:hover a {
-      justify-content: flex-start;
-    }
+      .nav-label {
+        margin-left: 15px;
+        font-weight: 600;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
 
-    .sidebar-nav a:hover,
-    .sidebar-nav a.active {
-      color: var(--brand-red);
-      background: var(--brand-red-light);
-      transform: translateX(5px);
-    }
-    
-    .nav-label {
-      font-size: 16px;
-      font-weight: 600;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    
-    .sidebar-nav:hover .nav-label {
-      opacity: 1;
-      transition-delay: 0.1s;
+      .sidebar-nav:hover .nav-label {
+        opacity: 1;
+      }
     }
 
     .main-wrapper {
@@ -222,10 +214,9 @@
       background: #475569;
     }
 
-    @media (max-width: 768px) {
-      .sidebar-nav {
+    @media (max-width: 768px) {      .sidebar-nav {
         width: 100%;
-        height: 65px;
+        height: 70px;
         flex-direction: row;
         display: flex;
         justify-content: stretch;
@@ -233,38 +224,39 @@
         padding: 0;
         bottom: 0;
         top: auto;
+        position: fixed;
+        left: 0;
         border-right: none;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
+        border-top: 2px solid #f1f5f9;
+        background: #ffffff;
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.05);
         border-radius: 20px 20px 0 0;
-        z-index: 5000;
+        z-index: 9999;
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
         user-select: none;
       }
       .sidebar-nav a {
         flex: 1;
-        margin-bottom: 0;
+        margin: 0;
         padding: 0;
         display: flex;
-        flex-direction: column;
         justify-content: center;
         align-items: center;
         border-radius: 0;
-        transition: background 0.15s ease, color 0.15s ease;
+        transition: none !important;
         height: 100%;
+        background: transparent;
       }
       .sidebar-nav a:hover, .sidebar-nav a.active {
-        background: var(--brand-red-light);
-        color: var(--brand-red);
+        background: #fff5f5 !important;
+        color: var(--brand-red) !important;
         transform: none;
       }
       .nav-label {
         display: none !important;
       }
+
       .main-wrapper {
         margin-left: 0;
         width: 100%;
