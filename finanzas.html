@@ -164,6 +164,13 @@
       border: 1px solid var(--border-light);
       position: relative;
       overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      border-color: var(--brand-red-light);
     }
 
     .kpi-card::before {
@@ -365,7 +372,18 @@
       .sec-grid,
       .charts-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
       }
+
+      .chart-card canvas {
+        max-height: 300px;
+      }
+
+      #chartCategorias {
+        max-height: 180px !important;
+        margin: 0 auto;
+      }
+
 
       .sidebar-nav {
         width: 0;
@@ -441,41 +459,34 @@
     </div>
 
     <!-- KPIs solo admin -->
+      <!-- KPIs solo admin -->
     <div id="kpi-section" style="display:none;">
       <div class="kpi-grid">
-        <div class="kpi-card kpi-ingresos">
+        <div class="kpi-card kpi-ingresos" onclick="scrollToCharts()" style="cursor:pointer;">
           <h3>💰 Ingresos Brutos</h3>
           <div class="kpi-val" id="kpi-ingresos">$0</div>
+          <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-top:4px;">Ver detalles →</div>
         </div>
-        <div class="kpi-card kpi-gastos">
+        <div class="kpi-card kpi-gastos" onclick="scrollToGastos()" style="cursor:pointer;">
           <h3>📉 Total Gastos</h3>
           <div class="kpi-val" id="kpi-gastos" style="color:#ef4444;">$0</div>
+          <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-top:4px;">Ver desglose →</div>
         </div>
-        <div class="kpi-card kpi-utilidad">
+        <div class="kpi-card kpi-utilidad" onclick="scrollToCharts()" style="cursor:pointer;">
           <h3>✅ Utilidad Neta</h3>
           <div class="kpi-val" id="kpi-utilidad" style="color:#10b981;">$0</div>
+          <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-top:4px;">Ver balance →</div>
         </div>
-        <div class="kpi-card kpi-margen">
+        <div class="kpi-card kpi-margen" onclick="scrollToCharts()" style="cursor:pointer;">
           <h3>📈 Margen %</h3>
           <div class="kpi-val" id="kpi-margen" style="color:#8b5cf6;">0%</div>
-        </div>
-      </div>
-
-      <!-- Gráficas solo admin -->
-      <div class="charts-grid" id="charts-section">
-        <div class="chart-card">
-          <h3>📊 Ingresos vs Gastos por día</h3>
-          <canvas id="chartFinanzas" height="120"></canvas>
-        </div>
-        <div class="chart-card">
-          <h3>🥧 Gastos por categoría</h3>
-          <canvas id="chartCategorias"></canvas>
+          <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-top:4px;">Ver tendencia →</div>
         </div>
       </div>
     </div>
 
     <!-- Contenido principal: Form + Lista -->
-    <div class="sec-grid">
+    <div class="sec-grid" id="seccion-registro-gastos">
       <!-- Formulario -->
       <div class="sec-card">
         <h3>➕ Registrar Gasto</h3>
@@ -534,12 +545,24 @@
       </div>
 
       <!-- Lista de gastos -->
-      <div class="sec-card">
+      <div class="sec-card" id="gastos-lista-card">
         <h3>🗓 Gastos del período <span id="gastos-total-badge"
             style="font-size:0.85rem; font-weight:600; color:#ef4444;"></span></h3>
         <div id="gastos-lista" style="max-height:380px; overflow-y:auto;">
           <div style="color:#9ca3af; text-align:center; padding:30px;">Cargando...</div>
         </div>
+      </div>
+    </div>
+
+    <!-- Gráficas solo admin al final -->
+    <div class="charts-grid" id="charts-section" style="display:none;">
+      <div class="chart-card">
+        <h3>📊 Ingresos vs Gastos por día</h3>
+        <canvas id="chartFinanzas" height="120"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>🥧 Gastos por categoría</h3>
+        <canvas id="chartCategorias"></canvas>
       </div>
     </div>
   </div>
@@ -569,7 +592,10 @@
 
       // Mostrar KPIs y gráficas solo al admin
       if (userRole === 'admin') {
-        document.getElementById('kpi-section').style.display = 'block';
+        const kpiSec = document.getElementById('kpi-section');
+        const chartSec = document.getElementById('charts-section');
+        if (kpiSec) kpiSec.style.display = 'block';
+        if (chartSec) chartSec.style.display = 'grid';
       }
 
       // Fecha default formulario
@@ -600,6 +626,25 @@
       if (!options.headers) options.headers = {};
       options.headers['Authorization'] = `Bearer ${authToken}`;
       return fetch(url, options);
+    }
+
+    // ==================== INTERACCION KPI ====================
+    function scrollToGastos() {
+      const el = document.getElementById('gastos-lista-card');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Efecto visual de resaltado temporal
+        el.style.transition = 'all 0.5s';
+        el.style.boxShadow = '0 0 20px rgba(227, 45, 52, 0.2)';
+        setTimeout(() => { el.style.boxShadow = ''; }, 2000);
+      }
+    }
+
+    function scrollToCharts() {
+      const el = document.getElementById('charts-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
 
     // ==================== PERÍODO ====================
