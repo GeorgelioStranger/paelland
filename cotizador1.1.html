@@ -37,7 +37,7 @@
       width: 220px;
       align-items: flex-start;
       padding: 30px 20px;
-      box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+      box-shadow: 4px 0 15px rgba(0, 0, 0, 0.05);
     }
 
     .sidebar-nav a {
@@ -66,14 +66,14 @@
       background: var(--brand-red-light);
       transform: translateX(5px);
     }
-    
+
     .nav-label {
       font-size: 16px;
       font-weight: 600;
       opacity: 0;
       transition: opacity 0.2s;
     }
-    
+
     .sidebar-nav:hover .nav-label {
       opacity: 1;
       transition-delay: 0.1s;
@@ -185,27 +185,34 @@
         top: auto;
         border-right: none;
         border-top: 1px solid var(--border-light);
-        box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+        box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
       }
+
       .sidebar-nav:hover {
         width: 100%;
         padding: 0;
         align-items: center;
       }
+
       .sidebar-nav a {
         margin-bottom: 0;
         padding: 10px;
         justify-content: center;
       }
+
       .sidebar-nav:hover a {
         justify-content: center;
       }
-      .sidebar-nav a:hover, .sidebar-nav a.active {
+
+      .sidebar-nav a:hover,
+      .sidebar-nav a.active {
         transform: translateY(-5px);
       }
+
       .nav-label {
         display: none !important;
       }
+
       .main-wrapper {
         margin-left: 0;
         width: 100%;
@@ -504,7 +511,148 @@
       opacity: 0.5;
       filter: grayscale(1);
     }
+
+    /* ================= OPTIMIZACIÓN MÓVIL ESPECÍFICA ================= */
+    .mobile-only { display: none; }
+
+    @media (max-width: 768px) {
+      .mobile-only { display: block; }
+
+      .sidebar-nav {
+        width: 100%;
+        height: calc(70px + var(--safe-area-bottom));
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: flex-start;
+        padding: 10px 10px var(--safe-area-bottom) 10px;
+        bottom: 0;
+        top: auto;
+        border-right: none;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
+        border-radius: 20px 20px 0 0;
+        z-index: 5000;
+      }
+
+      .sidebar-nav a {
+        margin-bottom: 0;
+        padding: 12px;
+        justify-content: center;
+        flex-direction: column;
+        gap: 4px;
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .sidebar-nav a.active {
+        background: var(--brand-red-light);
+        color: var(--brand-red);
+        transform: translateY(-5px);
+      }
+
+      .nav-label {
+        display: block !important;
+        font-size: 0.65rem !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .main-wrapper {
+        margin-left: 0;
+        padding: 16px 16px 160px 16px; /* Espacio extra para el bottom bar */
+      }
+
+      .row2, .row3 { grid-template-columns: 1fr; gap: 12px; }
+      
+      .panel-content { grid-template-columns: 1fr; }
+      
+      .sticky-box { display: none; } /* Ocultamos el resumen lateral original en móvil */
+
+      /* Bottom Bar & Sheet */
+      #mobile-total-bar {
+        position: fixed;
+        bottom: calc(70px + var(--safe-area-bottom) + 10px);
+        left: 16px;
+        right: 16px;
+        background: var(--brand-black);
+        color: white;
+        border-radius: 24px;
+        z-index: 4500;
+        box-shadow: 0 15px 45px rgba(0,0,0,0.3);
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        display: flex;
+        flex-direction: column;
+        max-height: 70px; /* Compacto por defecto */
+      }
+
+      #mobile-total-bar.expanded {
+        max-height: 80vh;
+        bottom: calc(70px + var(--safe-area-bottom) + 0px);
+        left: 0;
+        right: 0;
+        border-radius: 24px 24px 0 0;
+      }
+
+      .bar-header {
+        height: 70px;
+        min-height: 70px;
+        padding: 0 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+      }
+
+      .total-info { display: flex; flex-direction: column; }
+      .total-info .label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
+      .total-info #m-total-display { font-size: 1.4rem; font-weight: 800; color: var(--brand-yellow); }
+
+      .expand-indicator { display: flex; align-items: center; gap: 6px; color: #94a3b8; }
+      #expand-arrow { transition: transform 0.3s; }
+      #mobile-total-bar.expanded #expand-arrow { transform: rotate(180deg); }
+      .indicator-text { font-size: 0.8rem; font-weight: 600; }
+
+      .btn-confirm-mobile {
+        background: var(--brand-red);
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 14px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 12px rgba(227, 45, 52, 0.4);
+      }
+
+      #bottom-sheet-content {
+        padding: 24px;
+        overflow-y: auto;
+        background: #1e293b; /* Un poco más claro que el negro base */
+        border-top: 1px solid rgba(255,255,255,0.05);
+      }
+
+      .sheet-handle {
+        width: 40px;
+        height: 5px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 10px;
+        margin: -10px auto 20px auto;
+      }
+
+      #bottom-sheet-content h3 { color: white; margin-bottom: 16px; font-size: 1.1rem; }
+      
+      #m-resumen-detalle {
+        font-size: 0.9rem;
+        color: #cbd5e1;
+        line-height: 1.6;
+      }
+    }
   </style>
+
 <body>
   <script src="visor_ticket.js"></script>
   <script>
@@ -522,10 +670,11 @@
 
     if (userRole === 'empleado') {
       document.addEventListener("DOMContentLoaded", () => {
-         const linkEstadisticas = document.querySelector('a[href="/estadisticas"]');
-         if (linkEstadisticas) linkEstadisticas.style.display = 'none';
-         const linkFinanzas = document.querySelector('a[href="/finanzas"]');
-         if (linkFinanzas) linkFinanzas.style.display = 'none';
+        const hideLinks = ['/estadisticas', '/finanzas', '/produccion'];
+        hideLinks.forEach(path => {
+          const link = document.querySelector(`a[href="${path}"]`);
+          if (link) link.style.display = 'none';
+        });
       });
     }
 
@@ -533,22 +682,24 @@
     document.addEventListener("DOMContentLoaded", () => {
       const uName = document.getElementById('user-name-display');
       if (uName) {
-         uName.innerText = userRole === 'admin' ? '👋 Bienvenido, Jorge' : '👋 Bienvenida, Marce';
+        uName.innerText = userRole === 'admin' ? '👋 Bienvenido, Jorge' : '👋 Bienvenida, Marce';
       }
     });
     // =================================================================
   </script>
   <nav class="sidebar-nav">
-    <a href="/" style="text-decoration:none; font-size:32px;" title="Inicio">🥘<span class="nav-label" style="color:var(--brand-black); font-size:20px;">La Paella</span></a>
+    <a href="/" style="text-decoration:none; font-size:32px;" title="Inicio">🥘<span class="nav-label"
+        style="color:var(--brand-black); font-size:20px;">La Paella</span></a>
     <a href="/cotizador" class="active" title="Registrar Pedido">📝<span class="nav-label">Cotizador</span></a>
     <a href="/admin" title="Administración">📊<span class="nav-label">Historial</span></a>
     <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
     <a href="/finanzas" title="Finanzas">💸<span class="nav-label">Finanzas</span></a>
+    <a href="/produccion" title="Planeación de Producción">🏭<span class="nav-label">Producción</span></a>
   </nav>
 
   <script>
     function cerrarSesion() {
-      if(confirm('¿Deseas cerrar tu sesión actual?')) {
+      if (confirm('¿Deseas cerrar tu sesión actual?')) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_role');
         window.location.href = '/';
@@ -559,13 +710,16 @@
   <div class="main-wrapper">
 
     <div class="header" style="justify-content: space-between;">
-      <div>
+      <div class="mobile-hide">
         <h1>Punto de Venta</h1>
         <p>Toma de pedidos y eventos · Lun a Dom (Cerrado martes)</p>
       </div>
-      <div id="user-profile" style="text-align:right; font-size:14px; color:var(--text-muted); background: white; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
-         <span id="user-name-display" style="font-weight:600; color:var(--brand-red); font-size:16px;"></span><br>
-         <a href="#" onclick="cerrarSesion()" style="color:#94a3b8; text-decoration:none; font-size:12px; transition: color 0.2s;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'">Cerrar sesión</a>
+      <div id="user-profile"
+        style="text-align:right; font-size:14px; color:var(--text-muted); background: white; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
+        <span id="user-name-display" style="font-weight:600; color:var(--brand-red); font-size:16px;"></span><br>
+        <a href="#" onclick="cerrarSesion()"
+          style="color:#94a3b8; text-decoration:none; font-size:12px; transition: color 0.2s;"
+          onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'">Cerrar sesión</a>
       </div>
     </div>
 
@@ -588,27 +742,22 @@
             <div class="field">
               <label>Teléfono (para WhatsApp)</label>
               <div style="display:grid; grid-template-columns: 85px 1fr; gap:8px;">
-                <select id="k-pais" style="width:100%; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem; background: var(--bg-main);" onchange="if(this.value==='otro'){ let o = prompt('Ingresa el código de país con el signo + (ej. +54):'); if(o){ let opt = new Option('🌐 ' + o, o, true, true); this.add(opt, this.options[this.options.length-1]); this.value = o; } else { this.value = '+52'; } } kCalc()">
+                <select id="k-pais"
+                  style="width:100%; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem; background: var(--bg-main);"
+                  onchange="if(this.value==='otro'){ let o = prompt('Ingresa el código de país con el signo + (ej. +54):'); if(o){ let opt = new Option('🌐 ' + o, o, true, true); this.add(opt, this.options[this.options.length-1]); this.value = o; } else { this.value = '+52'; } } kCalc()">
                   <option value="+52" selected>🇲🇽 +52</option>
                   <option value="+1">🇺🇸 +1</option>
                   <option value="+34">🇪🇸 +34</option>
                   <option value="otro">🌐 Otro...</option>
                 </select>
-                <input type="tel" id="k-telefono" placeholder="1234567890" style="width:100%; min-width:0;" oninput="kCalc()">
+                <input type="tel" id="k-telefono" placeholder="1234567890" style="width:100%; min-width:0;"
+                  oninput="kCalc()">
               </div>
             </div>
             <div class="field">
-              <label>Día</label>
-              <select id="k-dia" onchange="kCambiarDia()">
-                <option value="lun">Lunes</option>
-                <option value="mie">Miércoles</option>
-                <option value="jue">Jueves</option>
-                <option value="vie">Viernes</option>
-                <option value="sab">Sábado</option>
-                <option value="dom">Domingo</option>
-                <option value="mar">Martes</option>
-              </select>
-              <div class="closed-msg" id="k-closed">No laboramos los martes.</div>
+              <label>Fecha de entrega</label>
+              <input type="date" id="k-fecha" oninput="kCambiarFecha()">
+              <div class="closed-msg" id="k-closed" style="display:none;">No laboramos los martes.</div>
             </div>
           </div>
           <div class="row3" style="margin-bottom:12px;">
@@ -710,9 +859,11 @@
           </div>
           <div class="qline total"><span>Total</span><span id="k-qtotal">$0</span></div>
           <div class="qbox-actions">
-            <button id="k-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%" onclick="confirmarPedido('k')">✅ Validar y Enviar
+            <button id="k-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%"
+              onclick="confirmarPedido('k')">✅ Validar y Enviar
               WhatsApp</button>
-            <button id="k-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%" onclick="guardarPedido('k')">💾 Guardar Pedido
+            <button id="k-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%"
+              onclick="guardarPedido('k')">💾 Guardar Pedido
               (Admin)</button>
             <div style="display:flex; gap:10px;">
               <button class="btn btn-ghost copy-btn" style="flex:1" onclick="kCopiar()">Copiar texto</button>
@@ -743,13 +894,16 @@
             <div class="field">
               <label>Teléfono (para WhatsApp)</label>
               <div style="display:grid; grid-template-columns: 85px 1fr; gap:8px;">
-                <select id="e-pais" style="width:100%; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem; background: var(--bg-main);" onchange="if(this.value==='otro'){ let o = prompt('Ingresa el código de país con el signo + (ej. +54):'); if(o){ let opt = new Option('🌐 ' + o, o, true, true); this.add(opt, this.options[this.options.length-1]); this.value = o; } else { this.value = '+52'; } } eCalc()">
+                <select id="e-pais"
+                  style="width:100%; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem; background: var(--bg-main);"
+                  onchange="if(this.value==='otro'){ let o = prompt('Ingresa el código de país con el signo + (ej. +54):'); if(o){ let opt = new Option('🌐 ' + o, o, true, true); this.add(opt, this.options[this.options.length-1]); this.value = o; } else { this.value = '+52'; } } eCalc()">
                   <option value="+52" selected>🇲🇽 +52</option>
                   <option value="+1">🇺🇸 +1</option>
                   <option value="+34">🇪🇸 +34</option>
                   <option value="otro">🌐 Otro...</option>
                 </select>
-                <input type="tel" id="e-telefono" placeholder="1234567890" style="width:100%; min-width:0;" oninput="eCalc()">
+                <input type="tel" id="e-telefono" placeholder="1234567890" style="width:100%; min-width:0;"
+                  oninput="eCalc()">
               </div>
             </div>
             <div class="field">
@@ -849,9 +1003,11 @@
           </div>
           <div class="qline total"><span>Total</span><span id="e-qtotal">$0</span></div>
           <div class="qbox-actions">
-            <button id="e-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%" onclick="confirmarPedido('e')">✅ Validar y Enviar
+            <button id="e-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%"
+              onclick="confirmarPedido('e')">✅ Validar y Enviar
               WhatsApp</button>
-            <button id="e-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%" onclick="guardarPedido('e')">💾 Guardar Pedido
+            <button id="e-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%"
+              onclick="guardarPedido('e')">💾 Guardar Pedido
               (Admin)</button>
             <div style="display:flex; gap:10px;">
               <button class="btn btn-ghost copy-btn" style="flex:1" onclick="eCopiar()">Copiar texto</button>
@@ -989,23 +1145,89 @@
       w.style.display = (mins < 11 * 60 + 30 || mins > 16 * 60) ? "block" : "none";
     }
 
+    // ---------- LÓGICA MÓVIL (BOTTOM SHEET) ----------
+    function vibrate(ms) {
+      if ("vibrate" in navigator) navigator.vibrate(ms);
+    }
+
+    function toggleBottomSheet() {
+      const bar = document.getElementById('mobile-total-bar');
+      bar.classList.toggle('expanded');
+      vibrate(25);
+    }
+
+    function updateMobileSummary() {
+      const mTotal = document.getElementById('m-total-display');
+      const mDetalle = document.getElementById('m-resumen-detalle');
+      if (!mTotal || !mDetalle) return;
+
+      // Detectar pestaña activa para obtener el total y el resumen correcto
+      let total = "$0";
+      let lineasHtml = "";
+      
+      const kiloActive = document.getElementById('panel-kilo').classList.contains('active');
+      const eventoActive = document.getElementById('panel-evento').classList.contains('active');
+      const vdActive = document.getElementById('panel-ventadirecta').classList.contains('active');
+
+      if (kiloActive) {
+        total = document.getElementById('k-qtotal').textContent;
+        lineasHtml = document.getElementById('k-qlineas').innerHTML;
+      } else if (eventoActive) {
+        total = document.getElementById('e-qtotal').textContent;
+        lineasHtml = document.getElementById('e-qlineas').innerHTML;
+      } else if (vdActive) {
+        total = "$" + (parseFloat(document.getElementById('vd-total').value) || 0).toLocaleString();
+        lineasHtml = "Venta directa en mostrador";
+      }
+
+      mTotal.textContent = total;
+      mDetalle.innerHTML = lineasHtml;
+
+      // Feedback visual del botón si hay contenido
+      const btn = document.querySelector('.btn-confirm-mobile');
+      if (total !== "$0") {
+        btn.style.background = "var(--brand-red)";
+        btn.style.opacity = "1";
+      } else {
+        btn.style.background = "#94a3b8";
+        btn.style.opacity = "0.5";
+      }
+    }
+
+    window.confirmarPedidoActual = function() {
+      const kiloActive = document.getElementById('panel-kilo').classList.contains('active');
+      const eventoActive = document.getElementById('panel-evento').classList.contains('active');
+      const vdActive = document.getElementById('panel-ventadirecta').classList.contains('active');
+
+      vibrate(30);
+      if (kiloActive) {
+        confirmarPedido('k');
+      } else if (eventoActive) {
+        confirmarPedido('e');
+      } else if (vdActive) {
+        abrirModalPagoVD();
+      }
+    };
+
     // ---------- KILO ----------
     function kInit() {
-      let currDay = new Date().getDay();
-      let days = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"];
-      let todayStr = days[currDay] || "lun";
-      if (todayStr === "mar") todayStr = "mie"; // No laboran martes
-      const selectDia = document.getElementById("k-dia");
-      if (selectDia) selectDia.value = todayStr;
-      kCambiarDia();
+      const fechaInput = document.getElementById("k-fecha");
+      if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+      kCambiarFecha();
       kSetEntrega("pickup");
     }
 
-    function kCambiarDia() {
-      const dia = document.getElementById("k-dia").value;
-      const cerrado = dia === "mar";
-      kEsFinde = DIAS_FINDE.includes(dia);
-      document.getElementById("k-closed").style.display = cerrado ? "block" : "none";
+    function kCambiarFecha() {
+      const fechaVal = document.getElementById("k-fecha").value;
+      let diaSemana = -1;
+      if (fechaVal) {
+        // Parsear sin offset de zona horaria
+        const [y, m, d] = fechaVal.split('-').map(Number);
+        diaSemana = new Date(y, m - 1, d).getDay(); // 0=dom, 6=sab
+      }
+      const esMar = diaSemana === 2;
+      kEsFinde = diaSemana === 0 || diaSemana === 6;
+      document.getElementById("k-closed").style.display = esMar ? "block" : "none";
       document.getElementById("k-finde-badge").style.display = kEsFinde ? "inline" : "none";
       kItems = (kEsFinde ? K_ITEMS_FINDE : K_ITEMS_SEMANA).map(i => ({ ...i }));
       kRenderItems();
@@ -1055,10 +1277,10 @@
 
     function kCalc() {
       validarHora(document.getElementById("k-hora").value, "k-hora-warn");
-      const dia = document.getElementById("k-dia").value;
+      const fechaVal = document.getElementById("k-fecha").value;
       const hora = document.getElementById("k-hora").value;
-      const dias = { lun: "Lunes", mar: "Martes", mie: "Miércoles", jue: "Jueves", vie: "Viernes", sab: "Sábado", dom: "Domingo" };
-      document.getElementById("k-resumen-header").textContent = [dias[dia], fmtHora(hora)].filter(Boolean).join(" · ");
+      const fechaDisplay = fechaVal ? fmtFecha(fechaVal) : "";
+      document.getElementById("k-resumen-header").textContent = [fechaDisplay, fmtHora(hora)].filter(Boolean).join(" · ");
       let totalKilos = 0, totalPaella = 0, lineas = "";
       kItems.forEach(it => { const sub = it.cantidad * it.precio; totalKilos += it.cantidad * it.kilos; totalPaella += sub; if (it.cantidad > 0) lineas += `<div class="qline"><span>${it.nombre} × ${it.cantidad}</span><span>$${sub.toLocaleString("es-MX")}</span></div>`; });
       let totalExtras = 0;
@@ -1090,21 +1312,29 @@
       const kCliente = document.getElementById("k-cliente").value.trim();
       const kTel = document.getElementById("k-telefono").value.trim();
       const kilosSelec = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
+
+      // Sincronizar barra móvil
+      updateMobileSummary();
+
       if (kCliente && kTel.length >= 7 && kilosSelec > 0) {
-        if(document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.remove("btn-disabled");
-        if(document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.remove("btn-disabled");
+        if (document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.remove("btn-disabled");
+        if (document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.remove("btn-disabled");
       } else {
-        if(document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.add("btn-disabled");
-        if(document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.add("btn-disabled");
+        if (document.getElementById("k-btn-enviar")) document.getElementById("k-btn-enviar").classList.add("btn-disabled");
+        if (document.getElementById("k-btn-guardar")) document.getElementById("k-btn-guardar").classList.add("btn-disabled");
       }
     }
 
     function kCopiar() {
-      const dia = document.getElementById("k-dia").value;
-      if (dia === "mar") { alert("No laboramos los martes."); return; }
+      const fechaVal = document.getElementById("k-fecha").value;
+      // Verificar si es martes
+      if (fechaVal) {
+        const [y, m, d] = fechaVal.split('-').map(Number);
+        if (new Date(y, m - 1, d).getDay() === 2) { alert("No laboramos los martes."); return; }
+      }
       const cliente = document.getElementById("k-cliente").value || "Cliente";
       const hora = document.getElementById("k-hora").value;
-      const dias = { lun: "Lunes", mar: "Martes", mie: "Miércoles", jue: "Jueves", vie: "Viernes", sab: "Sábado", dom: "Domingo" };
+      const fechaDisplay = fechaVal ? fmtFecha(fechaVal) : "";
       let totalPaella = 0, totalKilos = 0, totalExtras = 0, lineas = "";
       kItems.forEach(it => { if (it.cantidad > 0) { const sub = it.cantidad * it.precio; totalPaella += sub; totalKilos += it.cantidad * it.kilos; lineas += `  • ${it.nombre} × ${it.cantidad} = $${sub.toLocaleString("es-MX")}\n`; } });
       kExtras.forEach(ex => { if (ex.nombre && ex.cantidad > 0) { const sub = ex.precio * ex.cantidad; totalExtras += sub; lineas += `  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`; } });
@@ -1122,7 +1352,7 @@
       } else { trasladoStr = "\n*Pick up en local*\n"; }
       const notas = document.getElementById("k-notas").value;
       const total = totalPaella + totalExtras + traslado;
-      const txt = `*Pedido Paella — Para llevar*\n👤 ${cliente}\n📅 ${dias[dia]}${hora ? " a las " + fmtHora(hora) : ""}\n\n*Productos:*\n${lineas}${bolillosStr}${trasladoStr}${notas ? "\n*Notas:* " + notas + "\n" : ""}\n*Total: $${Math.round(total).toLocaleString("es-MX")}*`;
+      const txt = `*Pedido Paella — Para llevar*\n👤 ${cliente}\n📅 ${fechaDisplay}${hora ? " a las " + fmtHora(hora) : ""}\n\n*Productos:*\n${lineas}${bolillosStr}${trasladoStr}${notas ? "\n*Notas:* " + notas + "\n" : ""}\n*Total: $${Math.round(total).toLocaleString("es-MX")}*`;
       navigator.clipboard.writeText(txt).then(() => { const btn = document.querySelectorAll("#panel-kilo .copy-btn")[0]; btn.textContent = "Copiado!"; setTimeout(() => btn.textContent = "Copiar texto", 2000); });
     }
 
@@ -1187,16 +1417,19 @@
       document.getElementById("e-qlineas").innerHTML = lineas || '<div class="qline"><span style="color:var(--text2)">Sin platillos</span></div>';
       document.getElementById("e-qtotal").textContent = "$" + Math.round(total).toLocaleString("es-MX");
 
+      // Sincronizar barra móvil
+      updateMobileSummary();
+
       // Validar botones
       const eCliente = document.getElementById("e-cliente").value.trim();
       const eTel = document.getElementById("e-telefono").value.trim();
       const paxSelec = eItems.reduce((acc, curr) => acc + curr.personas, 0);
       if (eCliente && eTel.length >= 7 && paxSelec > 0) {
-        if(document.getElementById("e-btn-enviar")) document.getElementById("e-btn-enviar").classList.remove("btn-disabled");
-        if(document.getElementById("e-btn-guardar")) document.getElementById("e-btn-guardar").classList.remove("btn-disabled");
+        if (document.getElementById("e-btn-enviar")) document.getElementById("e-btn-enviar").classList.remove("btn-disabled");
+        if (document.getElementById("e-btn-guardar")) document.getElementById("e-btn-guardar").classList.remove("btn-disabled");
       } else {
-        if(document.getElementById("e-btn-enviar")) document.getElementById("e-btn-enviar").classList.add("btn-disabled");
-        if(document.getElementById("e-btn-guardar")) document.getElementById("e-btn-guardar").classList.add("btn-disabled");
+        if (document.getElementById("e-btn-enviar")) document.getElementById("e-btn-enviar").classList.add("btn-disabled");
+        if (document.getElementById("e-btn-guardar")) document.getElementById("e-btn-guardar").classList.add("btn-disabled");
       }
     }
     function eCopiar() {
@@ -1230,15 +1463,15 @@
         const checkT = document.getElementById("k-telefono").value.trim();
         const checkK = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
         if (!checkC || checkT.length < 7 || checkK === 0) {
-           alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
-           return;
+          alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
+          return;
         }
 
         data.cliente = document.getElementById("k-cliente").value;
         const codK = document.getElementById("k-pais").value;
         const numK = document.getElementById("k-telefono").value;
         data.telefono = numK ? (codK + " " + numK) : "";
-        data.dia = document.getElementById("k-dia").value;
+        data.fecha = document.getElementById("k-fecha").value;
         data.hora = document.getElementById("k-hora").value;
         data.entrega = kEntrega;
         data.items = kItems.map(i => ({ ...i }));
@@ -1262,8 +1495,8 @@
         const checkT = document.getElementById("e-telefono").value.trim();
         const checkP = eItems.reduce((acc, curr) => acc + curr.personas, 0);
         if (!checkC || checkT.length < 7 || checkP === 0) {
-           alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
-           return;
+          alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
+          return;
         }
 
         data.cliente = document.getElementById("e-cliente").value;
@@ -1303,33 +1536,33 @@
 
       // Notificación visual (Ticket/PDF) debe ir ANTES de limpiar
       if (confirm("Pedido guardado correctamente. \n\n¿Deseas imprimir o generar PDF del ticket ahora?")) {
-         let pedidoAImprimir = {
-            id: data.folio,
-            ...data,
-            nombre: data.cliente,
-            itemsDetalle: data.items,
-            total: data.total,
-            tipo: tipo === 'k' ? 'kilo' : 'evento'
-         };
-         generarTicketPDF(pedidoAImprimir);
+        let pedidoAImprimir = {
+          id: data.folio,
+          ...data,
+          nombre: data.cliente,
+          itemsDetalle: data.items,
+          total: data.total,
+          tipo: tipo === 'k' ? 'kilo' : 'evento'
+        };
+        generarTicketPDF(pedidoAImprimir);
       }
-      
+
       // Limpiar formulario y reiniciar estado visual
       if (tipo === 'k') {
-         document.getElementById("k-cliente").value = '';
-         document.getElementById("k-telefono").value = '';
-         document.getElementById("k-notas").value = '';
-         document.getElementById("k-direccion").value = '';
-         kExtras = [];
-         kInit();
+        document.getElementById("k-cliente").value = '';
+        document.getElementById("k-telefono").value = '';
+        document.getElementById("k-notas").value = '';
+        document.getElementById("k-direccion").value = '';
+        kExtras = [];
+        kInit();
       } else {
-         document.getElementById("e-cliente").value = '';
-         document.getElementById("e-telefono").value = '';
-         document.getElementById("e-notas").value = '';
-         document.getElementById("e-direccion").value = '';
-         eExtras = [];
-         eItems = [{ nombre: "Paella mar y tierra", precio: 180, personas: 10 }];
-         eInit();
+        document.getElementById("e-cliente").value = '';
+        document.getElementById("e-telefono").value = '';
+        document.getElementById("e-notas").value = '';
+        document.getElementById("e-direccion").value = '';
+        eExtras = [];
+        eItems = [{ nombre: "Paella mar y tierra", precio: 180, personas: 10 }];
+        eInit();
       }
     }
 
@@ -1373,12 +1606,8 @@
       }
 
       // Determinar fecha de entrega real
-      let fechaEntregaReal;
-      if (data.tipo === 'k') {
-        fechaEntregaReal = convertirDiaAFecha(data.dia);
-      } else {
-        fechaEntregaReal = data.fecha; // evento ya tiene fecha en formato YYYY-MM-DD
-      }
+      // Tanto kilo como evento ahora usan fecha directa en formato YYYY-MM-DD
+      let fechaEntregaReal = data.fecha;
 
       const pedido = {
         folio: data.folio,
@@ -1452,9 +1681,9 @@
         } else {
           document.getElementById("k-telefono").value = data.telefono || "";
         }
-        document.getElementById("k-dia").value = data.dia || "lun";
+        document.getElementById("k-fecha").value = data.fecha || new Date().toISOString().split('T')[0];
         document.getElementById("k-hora").value = data.hora || "13:00";
-        kCambiarDia(); // actualiza items según día
+        kCambiarFecha(); // actualiza items según fecha
         kSetEntrega(data.entrega);
         if (data.entrega === 'domicilio') {
           document.getElementById("k-direccion").value = data.direccion || "";
@@ -1636,10 +1865,10 @@
         setTimeout(() => {
           btn.innerHTML = oldText;
           btn.style.background = ''; // vuelve a CSS original
-          
+
           if (confirm("Venta registrada. ¿Deseas imprimir el Ticket/PDF ahora?")) {
-             nuevoPedido.id = new Date().getTime().toString().slice(-6);
-             generarTicketPDF(nuevoPedido);
+            nuevoPedido.id = new Date().getTime().toString().slice(-6);
+            generarTicketPDF(nuevoPedido);
           }
         }, 1500);
       } catch (e) {
@@ -1708,7 +1937,7 @@
       let itemsDetalle = [];
       if (tipo === 'k') {
         const checkK = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
-        if(checkK === 0) { alert("Debes agregar al menos 1 producto para generar el PDF."); return; }
+        if (checkK === 0) { alert("Debes agregar al menos 1 producto para generar el PDF."); return; }
         data.nombre = document.getElementById("k-cliente").value || "Cliente";
         data.entrega = kEntrega;
         data.extras = kExtras;
@@ -1722,7 +1951,7 @@
         itemsDetalle = kItems;
       } else {
         const checkP = eItems.reduce((acc, curr) => acc + curr.personas, 0);
-        if(checkP === 0) { alert("Debes agregar al menos 1 producto para generar el PDF."); return; }
+        if (checkP === 0) { alert("Debes agregar al menos 1 producto para generar el PDF."); return; }
         data.nombre = document.getElementById("e-cliente").value || "Cliente";
         data.entrega = eEntrega;
         data.extras = eExtras;
@@ -1736,11 +1965,11 @@
         itemsDetalle = eItems;
       }
       let pedidoAImprimir = {
-          id: new Date().getTime().toString().slice(-6),
-          ...data,
-          tipoEntrega: data.entrega,
-          itemsDetalle: itemsDetalle,
-          tipo: tipo === 'k' ? 'kilo' : 'evento'
+        id: new Date().getTime().toString().slice(-6),
+        ...data,
+        tipoEntrega: data.entrega,
+        itemsDetalle: itemsDetalle,
+        tipo: tipo === 'k' ? 'kilo' : 'evento'
       };
       generarTicketPDF(pedidoAImprimir);
     }
@@ -1755,10 +1984,13 @@
         cliente = document.getElementById("k-cliente").value.trim();
         const checkK = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
         if (!cliente || numK.trim().length < 7 || checkK === 0) { alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto)."); return; }
-        const dia = document.getElementById("k-dia").value;
-        if (dia === "mar") { alert("No laboramos los martes."); return; }
+        const fechaVal = document.getElementById("k-fecha").value;
+        if (fechaVal) {
+          const [y, m, d] = fechaVal.split('-').map(Number);
+          if (new Date(y, m - 1, d).getDay() === 2) { alert("No laboramos los martes."); return; }
+        }
         const hora = document.getElementById("k-hora").value;
-        const dias = { lun: "Lunes", mar: "Martes", mie: "Miércoles", jue: "Jueves", vie: "Viernes", sab: "Sábado", dom: "Domingo" };
+        const fechaDisplay = fechaVal ? fmtFecha(fechaVal) : "";
         let totalPaella = 0, totalKilos = 0, totalExtras = 0, lineas = "";
         kItems.forEach(it => { if (it.cantidad > 0) { const sub = it.cantidad * it.precio; totalPaella += sub; totalKilos += it.cantidad * it.kilos; lineas += `  • ${it.nombre} × ${it.cantidad} = $${sub.toLocaleString("es-MX")}\n`; } });
         kExtras.forEach(ex => { if (ex.nombre && ex.cantidad > 0) { const sub = ex.precio * ex.cantidad; totalExtras += sub; lineas += `  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`; } });
@@ -1776,7 +2008,7 @@
         } else { trasladoStr = "\n*Pick up en local*\n"; }
         const notas = document.getElementById("k-notas").value;
         const total = totalPaella + totalExtras + traslado;
-        mensaje = `*PEDIDO CONFIRMADO - PAELLA*\n👤 ${cliente}\n📅 ${dias[dia]}${hora ? " a las " + fmtHora(hora) : ""}\n\n*Productos:*\n${lineas}${bolillosStr}${trasladoStr}${notas ? "\n*Notas:* " + notas + "\n" : ""}\n*Total a pagar: $${Math.round(total).toLocaleString("es-MX")}*\n\nGracias por tu preferencia.`;
+        mensaje = `*PEDIDO CONFIRMADO - PAELLA*\n👤 ${cliente}\n📅 ${fechaDisplay}${hora ? " a las " + fmtHora(hora) : ""}\n\n*Productos:*\n${lineas}${bolillosStr}${trasladoStr}${notas ? "\n*Notas:* " + notas + "\n" : ""}\n*Total a pagar: $${Math.round(total).toLocaleString("es-MX")}*\n\nGracias por tu preferencia.`;
       } else {
         const codE = document.getElementById("e-pais").value;
         const numE = document.getElementById("e-telefono").value;
@@ -1823,8 +2055,10 @@
   </script>
 
   <!-- Modal: Método de Pago para Venta Directa -->
-  <div id="modalPagoVD" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); justify-content:center; align-items:center; z-index:3000;">
-    <div style="background:white; border-radius:24px; padding:28px; max-width:380px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+  <div id="modalPagoVD"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); justify-content:center; align-items:center; z-index:3000;">
+    <div
+      style="background:white; border-radius:24px; padding:28px; max-width:380px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
       <div style="font-size:2rem; margin-bottom:8px;">💳</div>
       <h3 style="margin:0 0 6px 0; font-size:1.3rem; color:#1e293b;">Método de Pago</h3>
       <p style="color:#6b7280; margin-bottom:22px; font-size:0.9rem;">¿Cómo pagó el cliente?</p>
@@ -1839,9 +2073,36 @@
           style="background:#8b5cf6; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer; transition:opacity 0.2s;"
           onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🏦 Transferencia</button>
         <button onclick="guardarVentaDirecta(null)"
-          style="background:#f3f4f6; color:#4b5563; border:none; padding:10px; border-radius:14px; font-size:0.9rem; cursor:pointer;">Registrar sin método de pago</button>
+          style="background:#f3f4f6; color:#4b5563; border:none; padding:10px; border-radius:14px; font-size:0.9rem; cursor:pointer;">Registrar
+          sin método de pago</button>
         <button onclick="document.getElementById('modalPagoVD').style.display='none'"
-          style="background:none; border:1px solid #e2e8f0; color:#94a3b8; padding:8px; border-radius:14px; font-size:0.85rem; cursor:pointer; margin-top:4px;">✕ Cancelar</button>
+          style="background:none; border:1px solid #e2e8f0; color:#94a3b8; padding:8px; border-radius:14px; font-size:0.85rem; cursor:pointer; margin-top:4px;">✕
+          Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor para la Barra de Acción Móvil y Bottom Sheet -->
+  <div id="mobile-total-bar" class="mobile-only" onclick="toggleBottomSheet()">
+    <div class="bar-header">
+      <div class="total-info">
+        <span class="label">Total Pedido</span>
+        <span id="m-total-display">$0.00</span>
+      </div>
+      <div class="expand-indicator">
+        <span id="expand-arrow">▲</span>
+        <span class="indicator-text">Ver detalle</span>
+      </div>
+      <button class="btn-confirm-mobile" onclick="event.stopPropagation(); window.confirmarPedidoActual()">
+        Confirmar
+      </button>
+    </div>
+    
+    <div id="bottom-sheet-content">
+      <div class="sheet-handle"></div>
+      <h3>Resumen del Pedido</h3>
+      <div id="m-resumen-detalle">
+        <!-- Se llena dinámicamente -->
       </div>
     </div>
   </div>

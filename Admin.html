@@ -588,44 +588,224 @@
       margin-top: 8px;
     }
 
+    /* ===== ALERTAS INTELIGENTES & TOASTS ===== */
+    #alertas-panel {
+      background: white;
+      border-radius: 24px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      display: none;
+    }
+
+    #alertas-panel h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .alertas-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .alerta-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      border-left: 4px solid #e2e8f0;
+      animation: slideInAlerta 0.4s ease forwards;
+      opacity: 0;
+    }
+
+    @keyframes slideInAlerta {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .alerta-item.rojo {
+      background: #fef2f2;
+      border-left-color: #ef4444;
+    }
+
+    .alerta-item.naranja {
+      background: #fff7ed;
+      border-left-color: #f59e0b;
+    }
+
+    .alerta-item.azul {
+      background: #eff6ff;
+      border-left-color: #3b82f6;
+    }
+
+    .alerta-item.verde {
+      background: #f0fdf4;
+      border-left-color: #10b981;
+    }
+
+    .alerta-icon {
+      font-size: 1.6rem;
+      min-width: 32px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .alerta-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .alerta-body strong {
+      display: block;
+      font-size: 0.9rem;
+      color: #1e293b;
+      margin-bottom: 3px;
+    }
+
+    .alerta-body span {
+      font-size: 0.82rem;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    /* Estilos Toast Notifications */
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      padding: 16px 20px;
+      min-width: 300px;
+      max-width: 450px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-left: 6px solid #D85A30;
+      animation: toastIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards, toastOut 0.5s 4.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+      transform: translateX(120%);
+    }
+
+    @keyframes toastIn {
+      to {
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes toastOut {
+      to {
+        transform: translateX(120%);
+        opacity: 0;
+      }
+    }
+
+    .toast.success {
+      border-left-color: #10b981;
+    }
+
+    .toast.error {
+      border-left-color: #ef4444;
+    }
+
+    .toast.info {
+      border-left-color: #3b82f6;
+    }
+
+    .toast-icon {
+      font-size: 1.8rem;
+    }
+
+    .toast-content {
+      flex: 1;
+    }
+
+    .toast-title {
+      display: block;
+      font-weight: 800;
+      color: #1e293b;
+      font-size: 0.95rem;
+    }
+
+    .toast-msg {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
     @media (max-width: 768px) {
       .sidebar-nav {
         width: 100%;
-        height: 70px;
+        height: calc(70px + var(--safe-area-bottom));
         flex-direction: row;
         justify-content: space-around;
-        align-items: center;
-        padding: 0;
+        align-items: flex-start;
+        padding: 10px 10px var(--safe-area-bottom) 10px;
         bottom: 0;
         top: auto;
         border-right: none;
-        border-top: 1px solid var(--border-light);
-        box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
+        border-radius: 20px 20px 0 0;
+        z-index: 5000;
       }
 
       .sidebar-nav:hover {
         width: 100%;
-        padding: 0;
-        align-items: center;
+        padding: 10px 10px var(--safe-area-bottom) 10px;
       }
 
       .sidebar-nav a {
         margin-bottom: 0;
-        padding: 10px;
+        padding: 12px;
         justify-content: center;
+        flex-direction: column;
+        gap: 4px;
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
-      .sidebar-nav:hover a {
-        justify-content: center;
-      }
-
-      .sidebar-nav a:hover,
       .sidebar-nav a.active {
+        background: var(--brand-red-light);
+        color: var(--brand-red);
         transform: translateY(-5px);
       }
 
       .nav-label {
-        display: none !important;
+        display: block !important;
+        font-size: 0.65rem !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
 
       .main-wrapper {
@@ -643,12 +823,96 @@
         align-items: stretch;
       }
 
-      .botones-filtro {
-        flex-direction: column !important;
-      }
-
       .btn-excel {
         margin-left: 0 !important;
+      }
+
+      .mobile-only {
+        display: block;
+      }
+
+      .filtros {
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        border: 1px solid var(--border-light);
+      }
+
+      .filtros.expanded {
+        display: flex;
+      }
+
+      .filtros-mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+        padding: 14px 20px;
+        border-radius: 12px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        border: 1px solid var(--border-light);
+      }
+
+      .tabs {
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 10px;
+        gap: 10px;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .tab-btn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        scroll-snap-align: start;
+        padding: 10px 20px;
+        font-size: 0.9rem;
+      }
+
+      /* Card de pedido optimizada para móvil */
+      .pedido {
+        padding: 12px;
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        background: white;
+        margin-bottom: 12px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .pedido>div:first-child {
+        font-size: 1rem;
+        margin-bottom: 6px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .pedido .badge {
+        font-size: 0.65rem;
+        padding: 2px 8px;
+      }
+
+      .pedido .detalle-lista {
+        font-size: 0.8rem;
+        padding: 6px 10px;
+        border-radius: 8px;
+        margin-top: 8px;
+      }
+
+      .pedido button {
+        width: auto !important;
+        padding: 8px 12px !important;
+        font-size: 0.75rem !important;
+        margin-top: 10px !important;
       }
     }
   </style>
@@ -663,6 +927,7 @@
     <a href="/admin" class="active" title="Administración">📊<span class="nav-label">Historial</span></a>
     <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
     <a href="/finanzas" title="Finanzas">💸<span class="nav-label">Finanzas</span></a>
+    <a href="/produccion" title="Producción">🏭<span class="nav-label">Producción</span></a>
   </nav>
 
   <script>
@@ -673,24 +938,79 @@
         window.location.href = '/';
       }
     }
+
+    async function enviarResumenWhatsapp() {
+      const btn = document.getElementById('btnTestWhatsapp');
+      btn.disabled = true;
+      btn.textContent = '⏳ Enviando...';
+      try {
+        const token = localStorage.getItem('auth_token');
+        const res = await fetch('/whatsapp/test', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.ok) {
+          btn.textContent = '✅ ¡Enviado!';
+          btn.style.background = '#16a34a';
+          showToast('Resumen WhatsApp enviado correctamente 📲', 'success');
+        } else {
+          throw new Error(data.error || 'Error desconocido');
+        }
+      } catch (err) {
+        btn.textContent = '❌ Error';
+        btn.style.background = '#dc2626';
+        showToast('Error al enviar WhatsApp: ' + err.message, 'error');
+      } finally {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = '📲 Enviar pedidos de mañana a WhatsApp';
+          btn.style.background = '#25D366';
+        }, 3000);
+      }
+    }
   </script>
 
   <div class="main-wrapper">
     <div class="header" style="justify-content: space-between;">
-      <div>
+      <div class="mobile-hide">
         <h1>Panel de Administración</h1>
         <p>Control de pedidos, ventas en sitio y gestión operativa</p>
       </div>
-      <div id="user-profile"
-        style="text-align:right; font-size:14px; color:var(--text-muted); background: white; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
-        <span id="user-name-display" style="font-weight:600; color:var(--brand-red); font-size:16px;"></span><br>
-        <a href="#" onclick="cerrarSesion()"
-          style="color:#94a3b8; text-decoration:none; font-size:12px; transition: color 0.2s;"
-          onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'">Cerrar sesión</a>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button id="btnTestWhatsapp" onclick="enviarResumenWhatsapp()" style="display:flex; align-items:center; gap:8px; background:#25D366; color:white; border:none;
+                 padding:10px 18px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer;
+                 box-shadow: 0 4px 6px -1px rgba(37,211,102,0.3); transition: all 0.2s;"
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+          📲 Enviar resumen WhatsApp
+        </button>
+        <div id="user-profile"
+          style="text-align:right; font-size:14px; color:var(--text-muted); background: white; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
+          <span id="user-name-display" style="font-weight:600; color:var(--brand-red); font-size:16px;"></span><br>
+          <a href="#" onclick="cerrarSesion()"
+            style="color:#94a3b8; text-decoration:none; font-size:12px; transition: color 0.2s;"
+            onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'">Cerrar sesión</a>
+        </div>
       </div>
     </div>
 
+    <!-- ===== PANEL ALERTAS INTELIGENTES (solo admin) ===== -->
+    <div id="alertas-panel">
+      <h2>🔔 Alertas Inteligentes</h2>
+      <div class="alertas-grid" id="alertas-lista">
+        <div style="color:#9ca3af; font-size:0.85rem; padding: 10px;">Cargando alertas...</div>
+      </div>
+    </div>
+
+    <!-- Contenedor para notificaciones emergentes -->
+    <div id="toast-container"></div>
+
     <!-- Filtros -->
+    <div class="filtros-mobile-header mobile-only"
+      onclick="document.querySelector('.filtros').classList.toggle('expanded')">
+      <span>🔍 Filtrar y Buscar</span>
+      <span class="indicator">▼</span>
+    </div>
     <div class="filtros">
       <div class="filtro-group"><label>🔍 Cliente / Teléfono</label><input type="text" id="filtroTexto"
           placeholder="Nombre o teléfono..."></div>
@@ -783,11 +1103,16 @@
     </div>
 
     <div id="tab-clientes" class="tab-content" style="display:none;">
+      <div id="clientes-kpis"
+        style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:24px;">
+      </div>
       <div id="listaClientes"></div>
     </div>
 
     <div id="tab-paelleras" class="tab-content" style="display:none;">
-      <div id="paelleras-kpis" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:24px;"></div>
+      <div id="paelleras-kpis"
+        style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:24px;">
+      </div>
       <div id="listaPaelleras"></div>
     </div>
 
@@ -930,15 +1255,22 @@
     <div class="modal-content" style="max-width:380px; text-align:center;">
       <div style="font-size:2.5rem; margin-bottom:8px;">🫕</div>
       <h3 style="margin:0 0 6px 0; color:#1e293b;">¿Cuántas paelleras se entregan?</h3>
-      <p style="color:#6b7280; font-size:0.88rem; margin-bottom:20px;">Registra las paelleras que salen con este pedido para llevar control de devoluciones.</p>
+      <p style="color:#6b7280; font-size:0.88rem; margin-bottom:20px;">Registra las paelleras que salen con este pedido
+        para llevar control de devoluciones.</p>
       <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:24px;">
-        <button onclick="ajustarPaelleras(-1)" style="background:#f1f5f9; border:none; width:44px; height:44px; border-radius:50%; font-size:1.6rem; cursor:pointer; line-height:1;">−</button>
+        <button onclick="ajustarPaelleras(-1)"
+          style="background:#f1f5f9; border:none; width:44px; height:44px; border-radius:50%; font-size:1.6rem; cursor:pointer; line-height:1;">−</button>
         <span id="paellerasCantidad" style="font-size:2.2rem; font-weight:800; color:#D85A30; min-width:50px;">1</span>
-        <button onclick="ajustarPaelleras(1)" style="background:#f1f5f9; border:none; width:44px; height:44px; border-radius:50%; font-size:1.6rem; cursor:pointer; line-height:1;">+</button>
+        <button onclick="ajustarPaelleras(1)"
+          style="background:#f1f5f9; border:none; width:44px; height:44px; border-radius:50%; font-size:1.6rem; cursor:pointer; line-height:1;">+</button>
       </div>
       <div style="display:flex; flex-direction:column; gap:10px;">
-        <button onclick="confirmarPaelleras()" style="background:#D85A30; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer;">✅ Confirmar entrega</button>
-        <button onclick="confirmarPaelleras(0)" style="background:#f3f4f6; color:#4b5563; border:none; padding:10px; border-radius:14px; font-size:0.9rem; cursor:pointer;">Continuar sin registrar paelleras</button>
+        <button onclick="confirmarPaelleras()"
+          style="background:#D85A30; color:white; border:none; padding:14px; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer;">✅
+          Confirmar entrega</button>
+        <button onclick="confirmarPaelleras(0)"
+          style="background:#f3f4f6; color:#4b5563; border:none; padding:10px; border-radius:14px; font-size:0.9rem; cursor:pointer;">Continuar
+          sin registrar paelleras</button>
       </div>
     </div>
   </div>
@@ -972,6 +1304,8 @@
       if (linkEstadisticas) linkEstadisticas.style.display = 'none';
       const linkFinanzas = document.querySelector('a[href="/finanzas"]');
       if (linkFinanzas) linkFinanzas.style.display = 'none';
+      const linkProduccion = document.querySelector('a[href="/produccion"]');
+      if (linkProduccion) linkProduccion.style.display = 'none';
 
       // Ocultar las pestañas internas que el empleado no debería ver en Admin
       const style = document.createElement('style');
@@ -1267,8 +1601,13 @@
       let pedidosFiltrados = aplicarFiltrosAPedidos(todosPedidos);
       let entregadosFiltrados = pedidosFiltrados.filter(p => p.status === 'Entregado');
       let contenedor = document.getElementById('listaClientes');
+      let contenedorKpis = document.getElementById('clientes-kpis');
       if (!contenedor) return;
-      if (entregadosFiltrados.length === 0) { contenedor.innerHTML = '<div class="empty-message">No hay clientes con los filtros actuales.</div>'; return; }
+      if (entregadosFiltrados.length === 0) {
+        if (contenedorKpis) contenedorKpis.innerHTML = '';
+        contenedor.innerHTML = '<div class="empty-message">No hay clientes con los filtros actuales.</div>';
+        return;
+      }
       let clientesMap = new Map();
       entregadosFiltrados.forEach(p => {
         let nombre = p.nombre || 'Anónimo';
@@ -1280,13 +1619,60 @@
         }
 
         let key = `${nombre}|${telefono}`;
-        if (!clientesMap.has(key)) clientesMap.set(key, { nombre, telefono, pedidos: [], totalGastado: 0, totalPedidos: 0 });
+        if (!clientesMap.has(key)) clientesMap.set(key, { nombre, telefono, pedidos: [], totalGastado: 0, totalPedidos: 0, ultimaCompra: new Date(0) });
         let cliente = clientesMap.get(key);
         cliente.pedidos.push(p);
         cliente.totalGastado += (p.total || 0);
         cliente.totalPedidos += 1;
+
+        let fechaPedido = new Date(p.fechaEntrega);
+        if (!isNaN(fechaPedido) && fechaPedido > cliente.ultimaCompra) {
+          cliente.ultimaCompra = fechaPedido;
+        }
       });
-      let clientesArray = Array.from(clientesMap.values()).sort((a, b) => b.totalGastado - a.totalGastado);
+      let clientesArray = Array.from(clientesMap.values()).sort((a, b) => {
+        if (b.totalPedidos !== a.totalPedidos) return b.totalPedidos - a.totalPedidos;
+        return b.totalGastado - a.totalGastado;
+      });
+
+      if (contenedorKpis && clientesArray.length > 0) {
+        let clienteMasValioso = clientesArray[0];
+        let hoy = new Date();
+        let enRiesgo = 0;
+        let totalGeneralGastado = 0;
+
+        clientesArray.forEach(c => {
+          totalGeneralGastado += c.totalGastado;
+          let diffTime = Math.abs(hoy - c.ultimaCompra);
+          let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays > 30) {
+            enRiesgo++;
+          }
+        });
+
+        let ltv = clientesArray.length > 0 ? totalGeneralGastado / clientesArray.length : 0;
+
+        contenedorKpis.innerHTML = `
+          <div class="card">
+            <h3>💎 Más Valioso</h3>
+            <div class="value" style="color:#D85A30; font-size:1.4rem; font-weight:800; margin-top:5px;">${escapeHtml(clienteMasValioso.nombre)}</div>
+            <div style="color:#64748b; font-size:0.85rem; margin-top:4px;">${clienteMasValioso.totalPedidos} pedidos acumulados</div>
+          </div>
+          <div class="card">
+            <h3>⚠️ +30 días inactivos</h3>
+            <div class="value" style="color:#f59e0b; font-size:2rem; font-weight:800;">${enRiesgo}</div>
+            <div style="color:#64748b; font-size:0.85rem; margin-top:4px;">clientes a recuperar</div>
+          </div>
+          <div class="card">
+            <h3>📈 LTV (Global)</h3>
+            <div class="value" style="color:#10b981; font-size:2rem; font-weight:800;">$${Math.round(ltv).toLocaleString()}</div>
+            <div style="color:#64748b; font-size:0.85rem; margin-top:4px;">vida prom. por cliente</div>
+          </div>
+        `;
+      } else if (contenedorKpis) {
+        contenedorKpis.innerHTML = '';
+      }
+
       contenedor.innerHTML = '';
       clientesArray.forEach(cliente => {
         let pedidosRecientes = [...cliente.pedidos].sort((a, b) => new Date(b.fechaEntrega) - new Date(a.fechaEntrega)).slice(0, 3);
@@ -1345,28 +1731,48 @@
       if (!contenedor) return;
       if (ventas.length === 0) { contenedor.innerHTML = '<div class="empty-message">No hay ventas directas registradas.</div>'; return; }
       ventas.sort((a, b) => new Date(b.fechaEntrega) - new Date(a.fechaEntrega));
-      let pagoColors = { 'Efectivo': { bg: '#dcfce7', color: '#166534', icon: '💵' }, 'Tarjeta': { bg: '#dbeafe', color: '#1e3a8a', icon: '💳' }, 'Transferencia': { bg: '#ede9fe', color: '#5b21b6', icon: '🏦' } };
-      let html = `<div class="fecha"><h2>📅 Todas las ventas directas</h2></div>`;
+
+      // Agrupar por fecha de entrega
+      let grupos = {};
       ventas.forEach(v => {
-        let items = v.itemsDetalle ? v.itemsDetalle.map(i => `${i.nombre} × ${i.cantidad}`).join(', ') : '';
-        let pagoHtml = '';
-        if (v.metodoPago && pagoColors[v.metodoPago]) {
-          let pc = pagoColors[v.metodoPago];
-          pagoHtml = `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:8px; background:${pc.bg}; color:${pc.color}">${pc.icon} ${v.metodoPago}</span>`;
-        }
-        html += `<div class="pedido">
-        <div><strong>${v.nombre || 'Cliente anónimo'}</strong> <span class="badge entregado">Entregado</span>${pagoHtml}</div>
-        <div>📞 ${v.telefono || 'Sin teléfono'}</div>
-        <div>💰 $${Math.round(v.total || 0).toLocaleString()}</div>
-        <div>📅 ${formatearFechaLocal(v.fechaEntrega)}</div>
-        <div>🚀 ${v.notas || 'Sin notas'}</div>
-        <div>🛒 ${items || 'Sin productos'}</div>
-        <div>
-           <button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId(${v.id})">🖨️ Ticket</button>
-           <button class="btn-eliminar" onclick="eliminarPedido(${v.id})">🗑 Eliminar</button>
-        </div>
-      </div>`;
+        let fecha = v.fechaEntrega ? v.fechaEntrega.split('T')[0] : 'sin-fecha';
+        if (!grupos[fecha]) grupos[fecha] = [];
+        grupos[fecha].push(v);
       });
+
+      let pagoColors = { 'Efectivo': { bg: '#dcfce7', color: '#166534', icon: '💵' }, 'Tarjeta': { bg: '#dbeafe', color: '#1e3a8a', icon: '💳' }, 'Transferencia': { bg: '#ede9fe', color: '#5b21b6', icon: '🏦' } };
+      let html = '';
+
+      Object.keys(grupos).sort((a, b) => b.localeCompare(a)).forEach(fecha => {
+        let ventasDia = grupos[fecha];
+        let totalDia = ventasDia.reduce((acc, v) => acc + (v.total || 0), 0);
+        let fechaLabel = fecha === 'sin-fecha' ? 'Sin fecha' : formatearFechaLocal(fecha);
+        html += `<div class="fecha" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+          <h2 style="margin:0;">📅 ${fechaLabel}</h2>
+          <span style="font-size:0.88rem; color:#6b7280;">💰 Total: <strong>$${Math.round(totalDia).toLocaleString()}</strong> &nbsp;·&nbsp; ${ventasDia.length} venta${ventasDia.length !== 1 ? 's' : ''}</span>
+        </div>`;
+
+        ventasDia.forEach(v => {
+          let items = v.itemsDetalle ? v.itemsDetalle.map(i => `${i.nombre} × ${i.cantidad}`).join(', ') : '';
+          let pagoHtml = '';
+          if (v.metodoPago && pagoColors[v.metodoPago]) {
+            let pc = pagoColors[v.metodoPago];
+            pagoHtml = `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:8px; background:${pc.bg}; color:${pc.color}">${pc.icon} ${v.metodoPago}</span>`;
+          }
+          html += `<div class="pedido">
+          <div><strong>${v.nombre || 'Cliente anónimo'}</strong> <span class="badge entregado">Entregado</span>${pagoHtml}</div>
+          <div>📞 ${v.telefono || 'Sin teléfono'}</div>
+          <div>💰 $${Math.round(v.total || 0).toLocaleString()}</div>
+          <div>🚀 ${v.notas || 'Sin notas'}</div>
+          <div>🛒 ${items || 'Sin productos'}</div>
+          <div>
+             <button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId(${v.id})">🖨️ Ticket</button>
+             <button class="btn-eliminar" onclick="eliminarPedido(${v.id})">🗑 Eliminar</button>
+          </div>
+        </div>`;
+        });
+      });
+
       contenedor.innerHTML = html;
     }
     // Las ventas directas se crean ahora desde el cotizador. En Admin solo se visualiza su historial.
@@ -1457,7 +1863,7 @@
       );
       const pendientes = eventos.filter(p => (p.paelleras || 0) > (p.paellerasDevueltas || 0));
       const totalEntregadas = eventos.reduce((s, p) => s + (p.paelleras || 0), 0);
-      const totalDevueltas  = eventos.reduce((s, p) => s + (p.paellerasDevueltas || 0), 0);
+      const totalDevueltas = eventos.reduce((s, p) => s + (p.paellerasDevueltas || 0), 0);
       const totalPendientes = totalEntregadas - totalDevueltas;
 
       // KPIs
@@ -1551,6 +1957,7 @@
         }
         todosPedidos = await res.json();
         refrescarListas();
+        calcularAlertas();
       } catch (e) {
         console.error(e);
         document.getElementById('listaActivos').innerHTML = '<div class="empty-message">❌ Error de conexión con el backend.</div>';
@@ -1558,7 +1965,7 @@
     }
 
     async function cargarPedidosEnTiempoReal() {
-      // Si hay un modal abierto o el usuario está editando, no actualizamos detrás para no espantarlo o romper su sesión
+      // Si hay un modal abierto o el usuario está editando, no actualizamos detrás para no espantarlo
       if (document.getElementById('modalDetalle').style.display === 'flex' ||
         document.getElementById('modalHistorialCliente').style.display === 'flex' ||
         document.getElementById('modalEditarPedido').style.display === 'flex') {
@@ -1570,12 +1977,79 @@
           let nuevosPedidos = await res.json();
           // Comparar si hubo verdaderos cambios
           if (JSON.stringify(nuevosPedidos) !== JSON.stringify(todosPedidos)) {
+            // Detectar nuevos pedidos para notificar
+            if (todosPedidos.length > 0) {
+              const idsViejos = new Set(todosPedidos.map(p => String(p._id || p.id)));
+              const nuevosDetectados = nuevosPedidos.filter(p => !idsViejos.has(String(p._id || p.id)));
+
+              if (nuevosDetectados.length > 0) {
+                nuevosDetectados.forEach(p => {
+                  showToast(`📦 ¡Nuevo pedido de ${p.nombre || 'Cliente'}!`, 'info');
+                  playNotificationSound();
+                });
+              }
+            }
+
             todosPedidos = nuevosPedidos;
             refrescarListas();
+            // IMPORTANTE: Recalcular alertas cuando cambian los datos
+            calcularAlertas();
           }
         }
       } catch (e) {
         // Fallo silencioso en recargas de fondo
+      }
+    }
+
+    // ===================== SISTEMA DE NOTIFICACIONES (TOASTS) =====================
+    function showToast(mensaje, tipo = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${tipo}`;
+
+      let icon = '🔔';
+      if (tipo === 'success') icon = '✅';
+      if (tipo === 'error') icon = '❌';
+      if (tipo === 'info') icon = '📦';
+
+      toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">
+          <span class="toast-title">${tipo === 'info' ? 'Nuevo Pedido' : 'Notificación'}</span>
+          <span class="toast-msg">${mensaje}</span>
+        </div>
+      `;
+
+      container.appendChild(toast);
+
+      // Eliminar del DOM después de que termine la animación (5s total)
+      setTimeout(() => {
+        toast.remove();
+      }, 5000);
+    }
+
+    function playNotificationSound() {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+        oscillator.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.5); // A4
+
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.5);
+      } catch (e) {
+        console.warn('No se pudo reproducir el sonido (posible bloqueo del navegador):', e);
       }
     }
 
@@ -1889,6 +2363,157 @@
         alert("Hubo un error al actualizar el pedido.");
       }
     };
+    // ==============================================================
+
+    // ===================== ALERTAS INTELIGENTES =====================
+    function calcularAlertas() {
+      if (userRole !== 'admin') return;
+      const panel = document.getElementById('alertas-panel');
+      const lista = document.getElementById('alertas-lista');
+      if (!panel || !lista) return;
+
+      const alertas = [];
+      const hoy = new Date();
+      const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+      const entregados = todosPedidos.filter(p => p.status === 'Entregado');
+      const diaSemanaHoy = hoy.getDay(); // 0=Dom
+      const diasNombre = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+      // --- 1. Ventas por día de semana (promedios históricos) ---
+      const ventasPorDiaSemana = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+      entregados.forEach(p => {
+        if (!p.fechaEntrega) return;
+        const d = new Date(p.fechaEntrega + 'T12:00:00');
+        if (isNaN(d)) return;
+        const dow = d.getDay();
+        ventasPorDiaSemana[dow].push(p.total || 0);
+      });
+
+      const promedios = {};
+      for (let i = 0; i < 7; i++) {
+        const arr = ventasPorDiaSemana[i];
+        // Agrupar por fecha para sumar ventas del mismo día
+        const porFecha = {};
+        entregados.forEach(p => {
+          if (!p.fechaEntrega) return;
+          const d = new Date(p.fechaEntrega + 'T12:00:00');
+          if (isNaN(d) || d.getDay() !== i) return;
+          porFecha[p.fechaEntrega] = (porFecha[p.fechaEntrega] || 0) + (p.total || 0);
+        });
+        const vals = Object.values(porFecha);
+        promedios[i] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+      }
+
+      // --- 2. Alerta: Caída de ventas hoy ---
+      const ventasHoy = entregados.filter(p => p.fechaEntrega === hoyStr).reduce((s, p) => s + (p.total || 0), 0);
+      const promedioHoy = promedios[diaSemanaHoy];
+      if (promedioHoy > 0 && ventasHoy < promedioHoy * 0.80) {
+        const caida = Math.round(((promedioHoy - ventasHoy) / promedioHoy) * 100);
+        alertas.push({
+          tipo: 'rojo', icon: '📉',
+          titulo: `Ventas bajas hoy (${diasNombre[diaSemanaHoy]})`,
+          detalle: `$${Math.round(ventasHoy).toLocaleString()} vendidos — ${caida}% por debajo de tu promedio de $${Math.round(promedioHoy).toLocaleString()} para ${diasNombre[diaSemanaHoy].toLowerCase()}s.`
+        });
+      }
+
+      // --- 3. Alerta: Día de alta demanda mañana ---
+      const manana = new Date(hoy); manana.setDate(hoy.getDate() + 1);
+      const diaManana = manana.getDay();
+      const promedioManana = promedios[diaManana];
+      const promedioGlobal = Object.values(promedios).filter(v => v > 0);
+      const promGlobal = promedioGlobal.length > 0 ? promedioGlobal.reduce((a, b) => a + b, 0) / promedioGlobal.length : 0;
+      if (promedioManana > promGlobal * 1.30 && promGlobal > 0) {
+        const porcArriba = Math.round(((promedioManana - promGlobal) / promGlobal) * 100);
+        alertas.push({
+          tipo: 'azul', icon: '📈',
+          titulo: `Mañana (${diasNombre[diaManana]}) — Día de alta demanda`,
+          detalle: `Históricamente vendes ${porcArriba}% más que el promedio general. Demanda estimada: ~$${Math.round(promedioManana).toLocaleString()}. Prepárate con inventario extra.`
+        });
+      }
+
+      // --- 4. Pedidos pendientes para mañana ---
+      const mananStr = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
+      const pedidosManana = todosPedidos.filter(p => p.fechaEntrega === mananStr && p.status !== 'Entregado');
+      if (pedidosManana.length > 0) {
+        const totalManana = pedidosManana.reduce((s, p) => s + (p.total || 0), 0);
+        alertas.push({
+          tipo: 'naranja', icon: '📦',
+          titulo: `${pedidosManana.length} pedido${pedidosManana.length > 1 ? 's' : ''} pendiente${pedidosManana.length > 1 ? 's' : ''} para mañana`,
+          detalle: `Total comprometido: $${Math.round(totalManana).toLocaleString()}. Revisa que tengas stock suficiente.`
+        });
+      }
+
+      // --- 5. Clientes inactivos (top 3) ---
+      const clientesMap = new Map();
+      entregados.forEach(p => {
+        const nombre = p.nombre || 'Anónimo';
+        if (nombre.toLowerCase() === 'venta en mostrador' || nombre.toLowerCase() === 'venta en local') return;
+        if (p.tipo === 'venta_directa' && nombre === 'Anónimo') return;
+        const key = `${nombre}|${p.telefono || ''}`;
+        if (!clientesMap.has(key)) clientesMap.set(key, { nombre, telefono: p.telefono, ultimaCompra: new Date(0), pedidos: 0 });
+        const c = clientesMap.get(key);
+        c.pedidos++;
+        const fp = new Date(p.fechaEntrega);
+        if (!isNaN(fp) && fp > c.ultimaCompra) c.ultimaCompra = fp;
+      });
+      const inactivos = Array.from(clientesMap.values())
+        .filter(c => c.pedidos >= 2)
+        .map(c => ({ ...c, dias: Math.ceil((hoy - c.ultimaCompra) / 86400000) }))
+        .filter(c => c.dias > 30)
+        .sort((a, b) => a.dias - b.dias)
+        .slice(0, 3);
+      if (inactivos.length > 0) {
+        const nombres = inactivos.map(c => `<strong>${escapeHtml(c.nombre)}</strong> (${c.dias} días, ${c.pedidos} pedidos)`).join(', ');
+        alertas.push({
+          tipo: 'naranja', icon: '👤',
+          titulo: `${inactivos.length} cliente${inactivos.length > 1 ? 's' : ''} inactivo${inactivos.length > 1 ? 's' : ''}`,
+          detalle: `Clientes recurrentes que no compran hace +30 días: ${nombres}. Considera contactarlos.`
+        });
+      }
+
+      // --- 6. Margen bajo del mes actual ---
+      const inicioMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`;
+      const ingresosMes = entregados.filter(p => p.fechaEntrega && p.fechaEntrega >= inicioMes && p.fechaEntrega <= hoyStr).reduce((s, p) => s + (p.total || 0), 0);
+      if (ingresosMes > 0) {
+        // Intenta obtener gastos del mes
+        authFetch(`/gastos?desde=${inicioMes}&hasta=${hoyStr}`).then(r => r.json()).then(gastos => {
+          const totalGastos = gastos.reduce((s, g) => s + (g.monto || 0), 0);
+          const margen = ((ingresosMes - totalGastos) / ingresosMes) * 100;
+          if (margen < 20 && totalGastos > 0) {
+            alertas.unshift({
+              tipo: 'rojo', icon: '💸',
+              titulo: `Margen del mes en ${margen.toFixed(1)}%`,
+              detalle: `Ingresos: $${Math.round(ingresosMes).toLocaleString()} — Gastos: $${Math.round(totalGastos).toLocaleString()} — Utilidad: $${Math.round(ingresosMes - totalGastos).toLocaleString()}. Objetivo: mantener margen >20%.`
+            });
+            renderAlertasUI(alertas, panel, lista);
+          }
+        }).catch(() => { });
+      }
+
+      // --- Render inmediato (sin la alerta de margen que es async) ---
+      renderAlertasUI(alertas, panel, lista);
+    }
+
+    function renderAlertasUI(alertas, panel, lista) {
+      if (alertas.length === 0) {
+        panel.style.display = 'block';
+        lista.innerHTML = `<div class="alerta-item verde"><span class="alerta-icon">✅</span><div class="alerta-body"><strong>Todo en orden</strong><span>No hay alertas por el momento. ¡Buen trabajo!</span></div></div>`;
+        return;
+      }
+      panel.style.display = 'block';
+      let html = '';
+      alertas.forEach((a, i) => {
+        html += `
+        <div class="alerta-item ${a.tipo}" style="animation-delay: ${i * 0.1}s">
+          <span class="alerta-icon">${a.icon}</span>
+          <div class="alerta-body">
+            <strong>${a.titulo}</strong>
+            <span>${a.detalle}</span>
+          </div>
+        </div>`;
+      });
+      lista.innerHTML = html;
+    }
     // ==============================================================
 
     cargarPedidos();
