@@ -89,11 +89,19 @@ function authMiddleware(req, res, next) {
   const tokenHeader = req.headers['authorization'];
   if (!tokenHeader) return res.status(401).json({ error: 'No autorizado' });
 
+  // Admin: contraseña directa o alias Jorgito06
   if (tokenHeader === `Bearer ${ADMIN_PASSWORD}` || tokenHeader === 'Bearer Jorgito06') {
     req.userRole = 'admin';
     return next();
   }
 
+  // Empleado: contraseña directa (resistente a reinicios del servidor)
+  if (tokenHeader === `Bearer ${EMPLEADO_PASSWORD}`) {
+    req.userRole = 'empleado';
+    return next();
+  }
+
+  // Compatibilidad con tokens de sesión legacy
   const token = tokenHeader.replace('Bearer ', '');
   const session = activeSessions.get(token);
   if (!session) return res.status(401).json({ error: 'Sesión expirada o inválida' });
@@ -105,14 +113,12 @@ function authMiddleware(req, res, next) {
 // ================= LOGIN =================
 app.post('/api/login', (req, res) => {
   const { code } = req.body;
+  // Devolver la contraseña como token — el middleware la acepta siempre,
+  // incluso tras reinicios del servidor en Render.
   if (code === ADMIN_PASSWORD) {
-    const token = generateToken('admin');
-    activeSessions.set(token, { role: 'admin' });
-    return res.json({ success: true, token, role: 'admin' });
+    return res.json({ success: true, token: ADMIN_PASSWORD, role: 'admin' });
   } else if (code === EMPLEADO_PASSWORD) {
-    const token = generateToken('empleado');
-    activeSessions.set(token, { role: 'empleado' });
-    return res.json({ success: true, token, role: 'empleado' });
+    return res.json({ success: true, token: EMPLEADO_PASSWORD, role: 'empleado' });
   } else {
     return res.status(401).json({ success: false, error: 'Contraseña incorrecta' });
   }

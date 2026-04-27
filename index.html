@@ -2,8 +2,26 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Portal - La Paella Mérida</title>
+
+    <!-- ── PWA Manifest ── -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- ── PWA: iOS / Safari ── -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Paelland">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+    <!-- ── PWA: Android / Chrome ── -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#E32D34">
+    <meta name="application-name" content="Paelland">
+
+    <!-- ── Favicon ── -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+
     <link rel="stylesheet" href="style.css">
     <style>
         body {
@@ -215,6 +233,15 @@
                 window.location.href = '/cotizador';
             }
         };
+
+        // ── Registro del Service Worker (PWA) ──────────────────────
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('[PWA] SW registrado:', reg.scope))
+                    .catch(err => console.warn('[PWA] Error registrando SW:', err));
+            });
+        }
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();

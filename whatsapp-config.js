@@ -21,9 +21,24 @@
 module.exports = {
   destinatarios: [
     {
-      nombre: 'Administrador',
+      nombre: 'Administrador Jorge',
       telefono: '+5219991211200',
       apikey: '1911736'
+    },
+    {
+      nombre: 'Admin Luis',
+      telefono: '+5219991106815',
+      apikey: '7358212'
+    },
+    {
+      nombre: 'Admin Amir',
+      telefono: '+5219993904135',
+      apikey: '8328121'
+    },
+    {
+      nombre: 'Admin Abraham',
+      telefono: '+5215219993868915',
+      apikey: '8547496'
     },
     // ── Agrega más destinatarios copiando el bloque de abajo ──
     // {

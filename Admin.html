@@ -2456,71 +2456,56 @@
         const fp = new Date(p.fechaEntrega);
         if (!isNaN(fp) && fp > c.ultimaCompra) c.ultimaCompra = fp;
       });
+
+
       const inactivos = Array.from(clientesMap.values())
         .filter(c => c.pedidos >= 2)
-        .map(c => ({ ...c, dias: Math.ceil((hoy - c.ultimaCompra) / 86400000) }))
-        .filter(c => c.dias > 30)
-        .sort((a, b) => a.dias - b.dias)
+        .sort((a, b) => a.ultimaCompra - b.ultimaCompra)
         .slice(0, 3);
-      if (inactivos.length > 0) {
-        const nombres = inactivos.map(c => `<strong>${escapeHtml(c.nombre)}</strong> (${c.dias} días, ${c.pedidos} pedidos)`).join(', ');
-        alertas.push({
-          tipo: 'naranja', icon: '👤',
-          titulo: `${inactivos.length} cliente${inactivos.length > 1 ? 's' : ''} inactivo${inactivos.length > 1 ? 's' : ''}`,
-          detalle: `Clientes recurrentes que no compran hace +30 días: ${nombres}. Considera contactarlos.`
-        });
-      }
 
-      // --- 6. Margen bajo del mes actual ---
-      const inicioMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`;
-      const ingresosMes = entregados.filter(p => p.fechaEntrega && p.fechaEntrega >= inicioMes && p.fechaEntrega <= hoyStr).reduce((s, p) => s + (p.total || 0), 0);
-      if (ingresosMes > 0) {
-        // Intenta obtener gastos del mes
-        authFetch(`/gastos?desde=${inicioMes}&hasta=${hoyStr}`).then(r => r.json()).then(gastos => {
-          const totalGastos = gastos.reduce((s, g) => s + (g.monto || 0), 0);
-          const margen = ((ingresosMes - totalGastos) / ingresosMes) * 100;
-          if (margen < 20 && totalGastos > 0) {
-            alertas.unshift({
-              tipo: 'rojo', icon: '💸',
-              titulo: `Margen del mes en ${margen.toFixed(1)}%`,
-              detalle: `Ingresos: $${Math.round(ingresosMes).toLocaleString()} — Gastos: $${Math.round(totalGastos).toLocaleString()} — Utilidad: $${Math.round(ingresosMes - totalGastos).toLocaleString()}. Objetivo: mantener margen >20%.`
-            });
-            renderAlertasUI(alertas, panel, lista);
-          }
-        }).catch(() => { });
-      }
-
-      // --- Render inmediato (sin la alerta de margen que es async) ---
-      renderAlertasUI(alertas, panel, lista);
-    }
-
-    function renderAlertasUI(alertas, panel, lista) {
-      if (alertas.length === 0) {
-        panel.style.display = 'block';
-        lista.innerHTML = `<div class="alerta-item verde"><span class="alerta-icon">✅</span><div class="alerta-body"><strong>Todo en orden</strong><span>No hay alertas por el momento. ¡Buen trabajo!</span></div></div>`;
-        return;
-      }
-      panel.style.display = 'block';
-      let html = '';
-      alertas.forEach((a, i) => {
-        html += `
-        <div class="alerta-item ${a.tipo}" style="animation-delay: ${i * 0.1}s">
-          <span class="alerta-icon">${a.icon}</span>
-          <div class="alerta-body">
-            <strong>${a.titulo}</strong>
-            <span>${a.detalle}</span>
-          </div>
-        </div>`;
+      inactivos.forEach(c => {
+        const diffDays = Math.ceil(Math.abs(new Date() - c.ultimaCompra) / (1000 * 60 * 60 * 24));
+        if (diffDays > 30) {
+          alertas.push({
+            tipo: 'naranja', icon: '😴',
+            titulo: `Cliente inactivo: ${c.nombre}`,
+            detalle: `No ha pedido nada en ${diffDays} días. ¡Llamalo para que regrese!`
+          });
+        }
       });
-      lista.innerHTML = html;
+
+      if (alertas.length > 0) {
+        panel.style.display = 'block';
+        lista.innerHTML = alertas.map(a => `
+          <div class="alerta-item ${a.tipo}">
+            <div class="alerta-icon">${a.icon}</div>
+            <div class="alerta-body">
+              <strong>${a.titulo} </strong>
+              <span>${a.detalle}</span>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        panel.style.display = 'none';
+      }
     }
-    // ==============================================================
 
-    cargarPedidos();
-    cambiarPestana('ventasdirectas');
+    // ===================== INICIALIZACIÓN =====================
+    async function inicializar() {
+      console.log("🚀 Inicializando Panel Admin...");
+      await cargarPedidos();
 
-    // Revisar la base de datos automáticamente cada 5 segundos
-    setInterval(cargarPedidosEnTiempoReal, 5000);
+      // Iniciar recarga en tiempo real cada 30 segundos
+      setInterval(cargarPedidosEnTiempoReal, 30000);
+
+      if (userRole === 'admin') {
+        calcularAlertas();
+      }
+      console.log("✅ Panel Admin listo.");
+    }
+
+    // Ejecutar al cargar la ventana
+    window.addEventListener('load', inicializar);
   </script>
 </body>
 

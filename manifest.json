@@ -1,0 +1,59 @@
+{
+  "name": "La Paella Mérida",
+  "short_name": "Paelland",
+  "description": "Sistema operativo y toma de pedidos centralizada para La Paella Mérida.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#E32D34",
+  "theme_color": "#E32D34",
+  "lang": "es-MX",
+  "icons": [
+    {
+      "src": "/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Cotizador",
+      "short_name": "Cotizador",
+      "description": "Nueva cotización y pedido",
+      "url": "/cotizador",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Producción",
+      "short_name": "Producción",
+      "description": "Vista de producción del día",
+      "url": "/produccion",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Administración",
+      "short_name": "Admin",
+      "description": "Panel de administración",
+      "url": "/admin",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
