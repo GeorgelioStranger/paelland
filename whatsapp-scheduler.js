@@ -228,6 +228,15 @@ async function iniciarScheduler(app, Pedido) {
       puppeteerConfig.defaultViewport = chromium.defaultViewport;
     }
 
+    // Limpiar carpeta temporal corrupta de RemoteAuth
+    try {
+      const authPath = require('path').join(process.cwd(), '.wwebjs_auth', 'wwebjs_temp_session_paelland-session-v3');
+      if (fs.existsSync(authPath)) {
+        fs.rmSync(authPath, { recursive: true, force: true });
+        console.log('🧹 [WhatsApp] Carpeta temporal de sesión limpiada.');
+      }
+    } catch (e) {}
+
     whatsappClient = new Client({
       authStrategy: new RemoteAuth({
         clientId: 'paelland-session-v3',
