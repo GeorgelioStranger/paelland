@@ -230,7 +230,7 @@ async function iniciarScheduler(app, Pedido) {
 
     // Limpiar carpeta temporal corrupta de RemoteAuth
     try {
-      const authPath = require('path').join(process.cwd(), '.wwebjs_auth', 'wwebjs_temp_session_paelland-session-v3');
+      const authPath = require('path').join(process.cwd(), '.wwebjs_auth', 'wwebjs_temp_session_paelland-session-v4');
       if (fs.existsSync(authPath)) {
         fs.rmSync(authPath, { recursive: true, force: true });
         console.log('🧹 [WhatsApp] Carpeta temporal de sesión limpiada.');
@@ -239,7 +239,7 @@ async function iniciarScheduler(app, Pedido) {
 
     whatsappClient = new Client({
       authStrategy: new RemoteAuth({
-        clientId: 'paelland-session-v3',
+        clientId: 'paelland-session-v4',
         store: store,
         backupSyncIntervalMs: 600000
       }),
