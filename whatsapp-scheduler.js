@@ -175,95 +175,103 @@ async function ejecutarResumenDiario(Pedido) {
 
 // ── Iniciar el cron job y cliente de WhatsApp ──
 async function iniciarScheduler(app, Pedido) {
-  console.log('📱 [WhatsApp] Inicializando cliente con MongoStore...');
-
-  // Esperar a que mongoose esté conectado si no lo está
-  if (mongoose.connection.readyState !== 1) {
-    console.log('⏳ [WhatsApp] Esperando conexión a MongoDB para RemoteAuth...');
-    await new Promise(resolve => mongoose.connection.once('open', resolve));
-  }
-
-  // Buscar ruta de Chrome/Edge (ya que saltamos la descarga de Puppeteer por el error de red)
-  const fs = require('fs');
-  const chromePaths = [
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
-  ];
-  let localExecutablePath = undefined;
-  for (const p of chromePaths) {
-    if (fs.existsSync(p)) {
-      localExecutablePath = p;
-      console.log(`🔎 [WhatsApp] Navegador local encontrado en: ${p}`);
-      break;
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      console.log('⏳ [WhatsApp] Esperando conexión a MongoDB para RemoteAuth...');
+      await new Promise(resolve => mongoose.connection.once('open', resolve));
     }
+
+    const fs = require('fs');
+    const chromePaths = [
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+    ];
+    let localExecutablePath = undefined;
+    if (process.platform === 'win32') {
+      for (const p of chromePaths) {
+        if (fs.existsSync(p)) {
+          localExecutablePath = p;
+          console.log(`🔎 [WhatsApp] Navegador local encontrado en: ${p}`);
+          break;
+        }
+      }
+    }
+
+    const store = new MongoStore({ mongoose: mongoose });
+    
+    let puppeteerConfig = {
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    };
+
+    if (process.platform === 'win32' && localExecutablePath) {
+      puppeteerConfig.executablePath = localExecutablePath;
+    } else {
+      console.log('☁️ [WhatsApp] Entorno de nube detectado. Preparando Chromium con Sparticuz...');
+      const chromium = require('@sparticuz/chromium');
+      puppeteerConfig.executablePath = await chromium.executablePath();
+      puppeteerConfig.headless = chromium.headless;
+      puppeteerConfig.args = [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'];
+      puppeteerConfig.defaultViewport = chromium.defaultViewport;
+    }
+
+    whatsappClient = new Client({
+      authStrategy: new RemoteAuth({
+        clientId: 'paelland-session',
+        store: store,
+        backupSyncIntervalMs: 300000
+      }),
+      puppeteer: puppeteerConfig
+    });
+
+    whatsappClient.on('qr', (qr) => {
+      isWaitingForQR = true;
+      lastError = null;
+      console.log('\n======================================================');
+      console.log('📸 ¡ATENCIÓN! ESCANEA EL SIGUIENTE CÓDIGO QR CON WHATSAPP:');
+      console.log('======================================================\n');
+      qrcode.generate(qr, { small: true });
+      console.log('\n======================================================');
+    });
+
+    whatsappClient.on('ready', () => {
+      isWaitingForQR = false;
+      isWhatsAppReady = true;
+      lastError = null;
+      console.log('\n✅ [WhatsApp] ¡Cliente listo y conectado!');
+    });
+
+    whatsappClient.on('authenticated', () => {
+      isWaitingForQR = false;
+      console.log('🔐 [WhatsApp] Autenticado correctamente.');
+    });
+
+    whatsappClient.on('auth_failure', msg => {
+      isWaitingForQR = false;
+      lastError = 'Fallo en autenticación: ' + msg;
+      console.error('❌ [WhatsApp] Fallo en la autenticación:', msg);
+    });
+    
+    whatsappClient.on('disconnected', (reason) => {
+      isWhatsAppReady = false;
+      lastError = 'Desconectado: ' + reason;
+      console.log('❌ [WhatsApp] Cliente desconectado:', reason);
+    });
+    
+    whatsappClient.on('remote_session_saved', () => {
+      console.log('💾 [WhatsApp] Sesión guardada en MongoDB correctamente.');
+    });
+
+    try {
+      await whatsappClient.initialize();
+    } catch (err) {
+      lastError = 'Crash al inicializar: ' + err.message;
+      console.error('❌ [WhatsApp] Crash fatal en initialize:', err);
+    }
+  } catch (globalErr) {
+    lastError = 'Error fatal iniciando: ' + globalErr.message;
+    console.error('❌ [WhatsApp] Error global en iniciarScheduler:', globalErr);
   }
-
-  const store = new MongoStore({ mongoose: mongoose });
-  
-  let puppeteerConfig = {
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  };
-
-  if (process.platform === 'win32' && localExecutablePath) {
-    puppeteerConfig.executablePath = localExecutablePath;
-  } else {
-    console.log('☁️ [WhatsApp] Entorno de nube detectado. Preparando Chromium...');
-    const chromium = require('@sparticuz/chromium');
-    puppeteerConfig.executablePath = await chromium.executablePath();
-    puppeteerConfig.headless = chromium.headless;
-    puppeteerConfig.args = [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'];
-    puppeteerConfig.defaultViewport = chromium.defaultViewport;
-  }
-
-  whatsappClient = new Client({
-    authStrategy: new RemoteAuth({
-      clientId: 'paelland-session',
-      store: store,
-      backupSyncIntervalMs: 300000
-    }),
-    puppeteer: puppeteerConfig
-  });
-
-  whatsappClient.on('qr', (qr) => {
-    isWaitingForQR = true;
-    lastError = null;
-    console.log('\n======================================================');
-    console.log('📸 ¡ATENCIÓN! ESCANEA EL SIGUIENTE CÓDIGO QR CON WHATSAPP:');
-    console.log('======================================================\n');
-    qrcode.generate(qr, { small: true });
-    console.log('\n======================================================');
-  });
-
-  whatsappClient.on('ready', () => {
-    isWaitingForQR = false;
-    isWhatsAppReady = true;
-    lastError = null;
-    console.log('\n✅ [WhatsApp] ¡Cliente listo y conectado!');
-  });
-
-  whatsappClient.on('authenticated', () => {
-    isWaitingForQR = false;
-    console.log('🔐 [WhatsApp] Autenticado correctamente.');
-  });
-
-  whatsappClient.on('auth_failure', msg => {
-    isWaitingForQR = false;
-    lastError = 'Fallo en autenticación: ' + msg;
-    console.error('❌ [WhatsApp] Fallo en la autenticación:', msg);
-  });
-  
-  whatsappClient.on('disconnected', (reason) => {
-    isWhatsAppReady = false;
-    lastError = 'Desconectado: ' + reason;
-    console.log('❌ [WhatsApp] Cliente desconectado:', reason);
-  });
-  
-  whatsappClient.on('remote_session_saved', () => {
-    console.log('💾 [WhatsApp] Sesión guardada en MongoDB correctamente.');
-  });
-
-  whatsappClient.initialize();
 
   // Cron: todos los días a las 14:00 (2:00 PM) y 19:00 (7:00 PM), zona horaria de México
   cron.schedule('0 14,19 * * *', () => {
