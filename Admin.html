@@ -786,10 +786,11 @@
 
       .sidebar-nav a {
         margin-bottom: 0;
-        padding: 12px;
+        padding: 10px;
         justify-content: center;
-        flex-direction: column;
-        gap: 4px;
+        flex: 1;
+        width: auto;
+        min-width: 0;
         border-radius: 12px;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
@@ -801,11 +802,7 @@
       }
 
       .nav-label {
-        display: block !important;
-        font-size: 0.65rem !important;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        display: none !important;
       }
 
       .main-wrapper {
