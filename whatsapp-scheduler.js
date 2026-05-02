@@ -230,9 +230,9 @@ async function iniciarScheduler(app, Pedido) {
 
     whatsappClient = new Client({
       authStrategy: new RemoteAuth({
-        clientId: 'paelland-session-v2',
+        clientId: 'paelland-session-v3',
         store: store,
-        backupSyncIntervalMs: 300000
+        backupSyncIntervalMs: 600000
       }),
       puppeteer: puppeteerConfig,
       webVersionCache: { type: 'none' },
