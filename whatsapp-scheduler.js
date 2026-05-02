@@ -207,11 +207,25 @@ async function iniciarScheduler(app, Pedido) {
     if (process.platform === 'win32' && localExecutablePath) {
       puppeteerConfig.executablePath = localExecutablePath;
     } else {
-      console.log('☁️ [WhatsApp] Entorno de nube detectado. Preparando Chromium con Sparticuz...');
+      console.log('☁️ [WhatsApp] Entorno de nube detectado. Preparando Chromium con Sparticuz (Modo Bajo Consumo)...');
       const chromium = require('@sparticuz/chromium');
+      
+      // Limpiar cachés viejos de chromium para ahorrar espacio en disco
+      chromium.setGraphicsMode = false;
+      
       puppeteerConfig.executablePath = await chromium.executablePath();
       puppeteerConfig.headless = chromium.headless;
-      puppeteerConfig.args = [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'];
+      puppeteerConfig.args = [
+        ...chromium.args,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process', // Ahorra muchísima RAM
+        '--disable-gpu'
+      ];
       puppeteerConfig.defaultViewport = chromium.defaultViewport;
     }
 
