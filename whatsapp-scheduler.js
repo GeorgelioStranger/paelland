@@ -217,7 +217,7 @@ async function iniciarScheduler(app, Pedido) {
 
     whatsappClient = new Client({
       authStrategy: new RemoteAuth({
-        clientId: 'paelland-session',
+        clientId: 'paelland-session-v2',
         store: store,
         backupSyncIntervalMs: 300000
       }),
