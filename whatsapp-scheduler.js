@@ -223,7 +223,6 @@ async function iniciarScheduler(app, Pedido) {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
-        '--single-process', // Ahorra muchísima RAM
         '--disable-gpu'
       ];
       puppeteerConfig.defaultViewport = chromium.defaultViewport;
