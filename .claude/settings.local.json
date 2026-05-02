@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 /tmp/replace_func.py)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(python replace_func.py)",
+      "Bash(Remove-Item \"c:/Users/jorge/Documents/paelland/replace_func.py\")"
+    ]
+  }
+}

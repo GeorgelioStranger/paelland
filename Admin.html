@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Paella - Autenticado</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="style.css">
   <style>
     /* Estilos Dashboard Sidebar */
@@ -1034,7 +1035,7 @@
       <div class="filtro-group botones-filtro">
         <button class="btn-filtro" id="btnAplicarFiltros">Aplicar filtros</button>
         <button class="btn-filtro btn-limpiar" id="btnLimpiarFiltros">Limpiar</button>
-        <button class="btn-filtro btn-excel" id="btnExportarCSV" style="margin-left: auto;">📎 Exportar CSV</button>
+        <button class="btn-filtro btn-excel" id="btnExportarCSV" style="margin-left: auto;">📊 Exportar Excel</button>
       </div>
     </div>
 
@@ -2066,7 +2067,21 @@
     function exportarCSV() {
       let pedidosExportar = aplicarFiltrosAPedidos(todosPedidos);
       if (pedidosExportar.length === 0) { alert('No hay pedidos para exportar'); return; }
-      const headers = ['ID', 'Cliente', 'Teléfono', 'Tipo', 'Fecha Entrega', 'Hora', 'Entrega', 'Dirección', 'Total', 'Estado', 'Productos/Detalle'];
+
+      const ROJO      = { rgb: 'D85A30' };
+      const BLANCO    = { rgb: 'FFFFFF' };
+      const GRIS      = { rgb: 'F1F5F9' };
+      const TOTAL_BG  = { rgb: 'FFF7ED' };
+
+      const sHeader = () => ({ font: { bold: true, color: BLANCO, sz: 11 }, fill: { fgColor: ROJO }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: { bottom: { style: 'thin', color: { rgb: 'B04010' } } } });
+      const sTitulo = () => ({ font: { bold: true, color: BLANCO, sz: 14 }, fill: { fgColor: ROJO }, alignment: { horizontal: 'center', vertical: 'center' } });
+      const sSub    = () => ({ font: { italic: true, color: { rgb: '64748B' }, sz: 10 }, fill: { fgColor: GRIS }, alignment: { horizontal: 'center' } });
+      const sTotal  = () => ({ font: { bold: true, sz: 11 }, fill: { fgColor: TOTAL_BG }, alignment: { horizontal: 'right' }, border: { top: { style: 'thin', color: { rgb: 'D85A30' } } } });
+
+      const fechaExport = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+      const NCOLS = 11;
+
+      // Hoja 1: Pedidos
       const filas = pedidosExportar.map(p => {
         let detalle = '';
         if (p.itemsDetalle) {
@@ -2077,7 +2092,7 @@
           }).join('; ');
         }
         return [
-          p.id,
+          p.id || '',
           p.nombre || '',
           p.telefono || '',
           p.tipo === 'kilo' ? 'Kilo' : (p.tipo === 'evento' ? 'Evento' : 'Venta directa'),
@@ -2090,16 +2105,85 @@
           detalle
         ];
       });
-      const csvContent = [headers, ...filas].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.href = url;
-      link.setAttribute('download', `pedidos_${new Date().toISOString().slice(0, 19)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+
+      const totalGeneral = filas.reduce((s, r) => s + (r[8] || 0), 0);
+      const blankRow = Array(NCOLS).fill('');
+
+      const aoa1 = [
+        ['HISTORIAL DE PEDIDOS — LA PAELLA', ...Array(NCOLS - 1).fill('')],
+        [`Exportado: ${fechaExport}  ·  ${pedidosExportar.length} pedidos`, ...Array(NCOLS - 1).fill('')],
+        blankRow,
+        ['ID', 'Cliente', 'Teléfono', 'Tipo', 'Fecha Entrega', 'Hora', 'Entrega', 'Dirección', 'Total ($)', 'Estado', 'Detalle del Pedido'],
+        ...filas,
+        ['TOTAL GENERAL', ...Array(7).fill(''), totalGeneral, '', '']
+      ];
+
+      const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
+      ws1['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: NCOLS - 1 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: NCOLS - 1 } }
+      ];
+      ws1['!freeze'] = { xSplit: 0, ySplit: 4 };
+      ws1['!cols'] = [{ wch: 28 }, { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 32 }, { wch: 14 }, { wch: 14 }, { wch: 45 }];
+      ws1['!rows'] = [{ hpt: 28 }, { hpt: 18 }, { hpt: 6 }, { hpt: 22 }];
+
+      if (ws1['A1']) ws1['A1'].s = sTitulo();
+      if (ws1['A2']) ws1['A2'].s = sSub();
+      ['A','B','C','D','E','F','G','H','I','J','K'].forEach(c => { if (ws1[`${c}4`]) ws1[`${c}4`].s = sHeader(); });
+
+      for (let i = 0; i < filas.length; i++) {
+        const ref = `I${i + 5}`;
+        if (ws1[ref]) { ws1[ref].z = '"$"#,##0'; ws1[ref].t = 'n'; }
+      }
+
+      const totalRow = filas.length + 5;
+      const totalRef = `I${totalRow}`;
+      const labelRef = `A${totalRow}`;
+      if (ws1[totalRef]) { ws1[totalRef].z = '"$"#,##0'; ws1[totalRef].t = 'n'; ws1[totalRef].s = sTotal(); }
+      if (ws1[labelRef]) ws1[labelRef].s = { font: { bold: true, sz: 11 }, fill: { fgColor: TOTAL_BG }, border: { top: { style: 'thin', color: { rgb: 'D85A30' } } } };
+
+      // Hoja 2: Resumen
+      const porEstado = {}, porTipo = {};
+      pedidosExportar.forEach(p => {
+        const st = p.status || 'Sin estado';
+        const ti = p.tipo === 'kilo' ? 'Kilo' : (p.tipo === 'evento' ? 'Evento' : 'Venta directa');
+        porEstado[st] = (porEstado[st] || 0) + 1;
+        porTipo[ti]   = (porTipo[ti]   || 0) + 1;
+      });
+      const entregados = pedidosExportar.filter(p => p.status === 'Entregado');
+      const ingresos   = entregados.reduce((s, p) => s + (p.total || 0), 0);
+      const promedio   = entregados.length > 0 ? Math.round(ingresos / entregados.length) : 0;
+
+      const aoa2 = [
+        ['RESUMEN DE PEDIDOS — LA PAELLA', ''],
+        [`Exportado: ${fechaExport}`, ''],
+        ['', ''],
+        ['METRICAS GENERALES', ''],
+        ['Total pedidos exportados', pedidosExportar.length],
+        ['Pedidos entregados', entregados.length],
+        ['Ingresos totales ($)', ingresos],
+        ['Ticket promedio ($)', promedio],
+        ['', ''],
+        ['PEDIDOS POR ESTADO', 'CANTIDAD'],
+        ...Object.entries(porEstado).map(([k, v]) => [k, v]),
+        ['', ''],
+        ['PEDIDOS POR TIPO', 'CANTIDAD'],
+        ...Object.entries(porTipo).map(([k, v]) => [k, v])
+      ];
+
+      const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+      ws2['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 1 } }];
+      ws2['!cols'] = [{ wch: 32 }, { wch: 20 }];
+      ws2['!rows'] = [{ hpt: 28 }, { hpt: 16 }];
+      if (ws2['A1']) ws2['A1'].s = sTitulo();
+      if (ws2['A2']) ws2['A2'].s = sSub();
+      ['A4', 'A10', 'B10', 'A13', 'B13'].forEach(ref => { if (ws2[ref]) ws2[ref].s = sHeader(); });
+      ['B7', 'B8'].forEach(ref => { if (ws2[ref] && ws2[ref].t === 'n') ws2[ref].z = '"$"#,##0'; });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws1, 'Pedidos');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Resumen');
+      XLSX.writeFile(wb, `Pedidos_LaP_${new Date().toISOString().slice(0, 10)}.xlsx`);
     }
 
     document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => cambiarPestana(btn.getAttribute('data-tab'))));

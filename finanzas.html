@@ -909,85 +909,205 @@
         const utilidad = ingresos - totalGastos;
         const margen = ingresos > 0 ? ((utilidad / ingresos) * 100).toFixed(1) : 0;
 
+        // Helpers de estilo
+        const ROJO     = { rgb: 'D85A30' };
+        const BLANCO   = { rgb: 'FFFFFF' };
+        const GRIS     = { rgb: 'F1F5F9' };
+        const VERDE_BG = { rgb: 'D1FAE5' };
+        const VERDE_FG = { rgb: '065F46' };
+        const ROJO_BG  = { rgb: 'FEE2E2' };
+        const ROJO_FG  = { rgb: '991B1B' };
+        const AZUL_BG  = { rgb: 'DBEAFE' };
+        const AZUL_FG  = { rgb: '1E40AF' };
+        const TOTAL_BG = { rgb: 'FFF7ED' };
+
+        const sTitulo  = () => ({ font: { bold: true, color: BLANCO, sz: 14 }, fill: { fgColor: ROJO }, alignment: { horizontal: 'center', vertical: 'center' } });
+        const sSub     = () => ({ font: { italic: true, color: { rgb: '64748B' }, sz: 10 }, fill: { fgColor: GRIS }, alignment: { horizontal: 'center' } });
+        const sHeader  = () => ({ font: { bold: true, color: BLANCO, sz: 11 }, fill: { fgColor: ROJO }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } });
+        const sSeccion = (bg, fg) => ({ font: { bold: true, color: { rgb: fg }, sz: 11 }, fill: { fgColor: { rgb: bg } }, alignment: { horizontal: 'left' } });
+        const sTotal   = () => ({ font: { bold: true, sz: 11 }, fill: { fgColor: TOTAL_BG }, alignment: { horizontal: 'right' }, border: { top: { style: 'thin', color: { rgb: 'D85A30' } } } });
+        const sMoneda  = (bgRgb, fgRgb) => {
+          const s = { alignment: { horizontal: 'right' } };
+          if (bgRgb) { s.fill = { fgColor: { rgb: bgRgb } }; s.font = { color: { rgb: fgRgb } }; }
+          return s;
+        };
+
+        // ── Hoja 1: Resumen Global ──────────────────────────────────
         const aoaResumen = [
-           ["REPORTE FINANCIERO - LA PAELLA"],
-           [`Período: ${desde} al ${hasta}`],
-           [],
-           ["MÉTRICA FINAL", "MONTO"],
-           ["Ingresos Brutos ($)", ingresos],
-           ["Total Gastos ($)", totalGastos],
-           ["Utilidad Neta ($)", utilidad],
-           ["Margen de Utilidad (%)", margen + "%"],
-           [],
-           ["GASTOS POR CATEGORÍA", "MONTO"]
+          ['REPORTE FINANCIERO — LA PAELLA', ''],
+          [`Periodo: ${desde} al ${hasta}`, ''],
+          ['', ''],
+          ['RESULTADO DEL PERIODO', ''],
+          ['Ingresos Brutos ($)', ingresos],
+          ['Total Gastos ($)', totalGastos],
+          ['Utilidad Neta ($)', utilidad],
+          ['Margen de Utilidad', parseFloat(margen) / 100],
+          ['', ''],
+          ['GASTOS POR CATEGORIA', 'MONTO ($)']
         ];
         const cats = {};
         gastos.forEach(g => { cats[g.categoria] = (cats[g.categoria] || 0) + (g.monto || 0); });
-        Object.keys(cats).forEach(c => {
-           aoaResumen.push([c, cats[c]]);
-        });
-        const wsResumen = XLSX.utils.aoa_to_sheet(aoaResumen);
-        wsResumen['!cols'] = [{wch: 30}, {wch: 20}];
+        const catEntries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+        catEntries.forEach(([c, v]) => aoaResumen.push([c, v]));
+        aoaResumen.push(['', '']);
+        aoaResumen.push(['TOTAL GASTOS', totalGastos]);
 
+        const wsResumen = XLSX.utils.aoa_to_sheet(aoaResumen);
+        wsResumen['!merges'] = [
+          { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+          { s: { r: 1, c: 0 }, e: { r: 1, c: 1 } }
+        ];
+        wsResumen['!cols'] = [{ wch: 32 }, { wch: 22 }];
+        wsResumen['!rows'] = [{ hpt: 28 }, { hpt: 16 }];
+
+        if (wsResumen['A1']) wsResumen['A1'].s = sTitulo();
+        if (wsResumen['A2']) wsResumen['A2'].s = sSub();
+        if (wsResumen['A4']) wsResumen['A4'].s = sSeccion('1E293B', 'FFFFFF');
+        if (wsResumen['B4']) wsResumen['B4'].s = sSeccion('1E293B', 'FFFFFF');
+
+        // KPI rows
+        const kpiRows = [
+          { ref: 'B5', bg: 'D1FAE5', fg: '065F46' },  // ingresos verde
+          { ref: 'B6', bg: 'FEE2E2', fg: '991B1B' },  // gastos rojo
+          { ref: 'B7', bg: 'DBEAFE', fg: '1E40AF' },  // utilidad azul
+        ];
+        kpiRows.forEach(({ ref, bg, fg }) => {
+          if (wsResumen[ref]) {
+            wsResumen[ref].s = { font: { bold: true, sz: 12, color: { rgb: fg } }, fill: { fgColor: { rgb: bg } }, alignment: { horizontal: 'right' } };
+            wsResumen[ref].z = '"$"#,##0';
+          }
+        });
+        if (wsResumen['B8']) { wsResumen['B8'].z = '0.0%'; wsResumen['B8'].s = { font: { bold: true, sz: 12, color: AZUL_FG }, fill: { fgColor: AZUL_BG }, alignment: { horizontal: 'right' } }; }
+        ['A5','A6','A7','A8'].forEach(ref => { if (wsResumen[ref]) wsResumen[ref].s = { font: { bold: true, sz: 11 } }; });
+
+        if (wsResumen['A10']) wsResumen['A10'].s = sHeader();
+        if (wsResumen['B10']) wsResumen['B10'].s = sHeader();
+        for (let i = 0; i < catEntries.length; i++) {
+          const ref = `B${11 + i}`;
+          if (wsResumen[ref]) { wsResumen[ref].z = '"$"#,##0'; }
+        }
+        const totalCatRow = 12 + catEntries.length;
+        if (wsResumen[`A${totalCatRow}`]) wsResumen[`A${totalCatRow}`].s = sTotal();
+        if (wsResumen[`B${totalCatRow}`]) { wsResumen[`B${totalCatRow}`].s = sTotal(); wsResumen[`B${totalCatRow}`].z = '"$"#,##0'; }
+
+        // ── Hoja 2: Ingresos ────────────────────────────────────────
         const aoaIngresos = [
-           ["FECHA", "CLIENTE/PEDIDO", "TIPO", "MÉTODO PAGO", "MONTO INGRESADO ($)"]
+          ['INGRESOS DEL PERIODO — LA PAELLA', '', '', '', ''],
+          [`Periodo: ${desde} al ${hasta}`, '', '', '', ''],
+          ['', '', '', '', ''],
+          ['FECHA', 'CLIENTE / PEDIDO', 'TIPO', 'METODO PAGO', 'MONTO ($)']
         ];
         pedidosPeriodo.forEach(p => {
-           aoaIngresos.push([p.fechaEntrega || '', p.nombre || 'Sin nombre', p.tipo || 'N/A', p.metodoPago || 'N/A', p.total || 0]);
+          const tipo = p.tipo === 'kilo' ? 'Kilo' : (p.tipo === 'evento' ? 'Evento' : 'Venta directa');
+          aoaIngresos.push([p.fechaEntrega || '', p.nombre || 'Sin nombre', tipo, p.metodoPago || 'N/A', p.total || 0]);
         });
-        const wsIngresos = XLSX.utils.aoa_to_sheet(aoaIngresos);
-        wsIngresos['!cols'] = [{wch: 15}, {wch: 35}, {wch: 15}, {wch: 20}, {wch: 20}];
+        const totalIngresos = pedidosPeriodo.reduce((s, p) => s + (p.total || 0), 0);
+        aoaIngresos.push(['TOTAL', '', '', '', totalIngresos]);
 
+        const wsIngresos = XLSX.utils.aoa_to_sheet(aoaIngresos);
+        wsIngresos['!merges'] = [
+          { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
+          { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } }
+        ];
+        wsIngresos['!freeze'] = { xSplit: 0, ySplit: 4 };
+        wsIngresos['!cols'] = [{ wch: 14 }, { wch: 35 }, { wch: 16 }, { wch: 18 }, { wch: 18 }];
+        wsIngresos['!rows'] = [{ hpt: 28 }, { hpt: 16 }];
+        if (wsIngresos['A1']) wsIngresos['A1'].s = sTitulo();
+        if (wsIngresos['A2']) wsIngresos['A2'].s = sSub();
+        ['A','B','C','D','E'].forEach(c => { if (wsIngresos[`${c}4`]) wsIngresos[`${c}4`].s = sHeader(); });
+        for (let i = 0; i < pedidosPeriodo.length; i++) {
+          const ref = `E${i + 5}`;
+          if (wsIngresos[ref]) { wsIngresos[ref].z = '"$"#,##0'; wsIngresos[ref].s = sMoneda('D1FAE5', '065F46'); }
+        }
+        const totIngRow = pedidosPeriodo.length + 5;
+        if (wsIngresos[`E${totIngRow}`]) { wsIngresos[`E${totIngRow}`].z = '"$"#,##0'; wsIngresos[`E${totIngRow}`].s = sTotal(); }
+        if (wsIngresos[`A${totIngRow}`]) wsIngresos[`A${totIngRow}`].s = { font: { bold: true, sz: 11 }, fill: { fgColor: TOTAL_BG } };
+
+        // ── Hoja 3: Gastos ──────────────────────────────────────────
         const aoaGastos = [
-           ["FECHA", "CATEGORÍA", "DESCRIPCIÓN", "MONTO GASTADO ($)"]
+          ['GASTOS DEL PERIODO — LA PAELLA', '', '', ''],
+          [`Periodo: ${desde} al ${hasta}`, '', '', ''],
+          ['', '', '', ''],
+          ['FECHA', 'CATEGORIA', 'DESCRIPCION', 'MONTO ($)']
         ];
         gastos.forEach(g => {
-           aoaGastos.push([g.fecha || '', g.categoria || '', g.descripcion || '', g.monto || 0]);
+          aoaGastos.push([g.fecha || '', g.categoria || '', g.descripcion || '', g.monto || 0]);
         });
-        const wsGastos = XLSX.utils.aoa_to_sheet(aoaGastos);
-        wsGastos['!cols'] = [{wch: 15}, {wch: 20}, {wch: 40}, {wch: 20}];
+        aoaGastos.push(['TOTAL', '', '', totalGastos]);
 
-        // DESGLOSE ESPECÍFICO POR CATEGORÍA
-        const aoaDesglose = [
-           ["DESGLOSE DETALLADO POR CATEGORÍA"],
-           [`Período: ${desde} al ${hasta}`],
-           []
+        const wsGastos = XLSX.utils.aoa_to_sheet(aoaGastos);
+        wsGastos['!merges'] = [
+          { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+          { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } }
         ];
-        
+        wsGastos['!freeze'] = { xSplit: 0, ySplit: 4 };
+        wsGastos['!cols'] = [{ wch: 14 }, { wch: 22 }, { wch: 42 }, { wch: 18 }];
+        wsGastos['!rows'] = [{ hpt: 28 }, { hpt: 16 }];
+        if (wsGastos['A1']) wsGastos['A1'].s = sTitulo();
+        if (wsGastos['A2']) wsGastos['A2'].s = sSub();
+        ['A','B','C','D'].forEach(c => { if (wsGastos[`${c}4`]) wsGastos[`${c}4`].s = sHeader(); });
+        for (let i = 0; i < gastos.length; i++) {
+          const ref = `D${i + 5}`;
+          if (wsGastos[ref]) { wsGastos[ref].z = '"$"#,##0'; wsGastos[ref].s = sMoneda('FEE2E2', '991B1B'); }
+        }
+        const totGasRow = gastos.length + 5;
+        if (wsGastos[`D${totGasRow}`]) { wsGastos[`D${totGasRow}`].z = '"$"#,##0'; wsGastos[`D${totGasRow}`].s = sTotal(); }
+        if (wsGastos[`A${totGasRow}`]) wsGastos[`A${totGasRow}`].s = { font: { bold: true, sz: 11 }, fill: { fgColor: TOTAL_BG } };
+
+        // ── Hoja 4: Desglose por Categoría ──────────────────────────
+        const aoaDesglose = [
+          ['DESGLOSE POR CATEGORIA — LA PAELLA', '', ''],
+          [`Periodo: ${desde} al ${hasta}`, '', ''],
+          ['', '', '']
+        ];
         const gastosPorCat = {};
         gastos.forEach(g => {
-            const cat = g.categoria || "Sin categoría";
-            if (!gastosPorCat[cat]) gastosPorCat[cat] = [];
-            gastosPorCat[cat].push(g);
+          const cat = g.categoria || 'Sin categoria';
+          if (!gastosPorCat[cat]) gastosPorCat[cat] = [];
+          gastosPorCat[cat].push(g);
         });
 
+        const desgloseHeaderRows = [];
+        const desgloseSubtotalRows = [];
         Object.keys(gastosPorCat).sort().forEach(cat => {
-            const arr = gastosPorCat[cat];
-            const sum = arr.reduce((s, g) => s + (g.monto || 0), 0);
-            
-            aoaDesglose.push([`CATEGORÍA: ${cat.toUpperCase()}`, "", ""]);
-            aoaDesglose.push([`Total Gastado: $${sum.toLocaleString()}`, "", ""]);
-            aoaDesglose.push(["FECHA", "DESCRIPCIÓN", "MONTO ($)"]);
-            
-            arr.forEach(g => {
-                aoaDesglose.push([g.fecha || '', g.descripcion || '', g.monto || 0]);
-            });
-            aoaDesglose.push([]);
-            aoaDesglose.push([]);
+          const arr = gastosPorCat[cat];
+          const sum = arr.reduce((s, g) => s + (g.monto || 0), 0);
+          desgloseHeaderRows.push(aoaDesglose.length);
+          aoaDesglose.push([`${cat.toUpperCase()}`, '', '']);
+          desgloseSubtotalRows.push(aoaDesglose.length);
+          aoaDesglose.push([`Subtotal: $${sum.toLocaleString('es-MX')}`, '', sum]);
+          aoaDesglose.push(['FECHA', 'DESCRIPCION', 'MONTO ($)']);
+          arr.forEach(g => aoaDesglose.push([g.fecha || '', g.descripcion || '', g.monto || 0]));
+          aoaDesglose.push(['', '', '']);
         });
+
         const wsDesglose = XLSX.utils.aoa_to_sheet(aoaDesglose);
-        wsDesglose['!cols'] = [{wch: 20}, {wch: 50}, {wch: 15}];
+        wsDesglose['!merges'] = [
+          { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
+          { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } }
+        ];
+        wsDesglose['!cols'] = [{ wch: 22 }, { wch: 50 }, { wch: 18 }];
+        wsDesglose['!rows'] = [{ hpt: 28 }, { hpt: 16 }];
+        if (wsDesglose['A1']) wsDesglose['A1'].s = sTitulo();
+        if (wsDesglose['A2']) wsDesglose['A2'].s = sSub();
+        desgloseHeaderRows.forEach(r => {
+          ['A','B','C'].forEach(c => { if (wsDesglose[`${c}${r + 1}`]) wsDesglose[`${c}${r + 1}`].s = sSeccion('1E293B', 'FFFFFF'); });
+        });
+        desgloseSubtotalRows.forEach(r => {
+          if (wsDesglose[`A${r + 1}`]) wsDesglose[`A${r + 1}`].s = { font: { bold: true, sz: 11 }, fill: { fgColor: TOTAL_BG } };
+          if (wsDesglose[`C${r + 1}`]) { wsDesglose[`C${r + 1}`].z = '"$"#,##0'; wsDesglose[`C${r + 1}`].s = sTotal(); }
+        });
 
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen Global");
-        XLSX.utils.book_append_sheet(wb, wsIngresos, "Ingresos");
-        XLSX.utils.book_append_sheet(wb, wsDesglose, "Desglose Categorías");
-        XLSX.utils.book_append_sheet(wb, wsGastos, "Todos los Gastos");
-        
+        XLSX.utils.book_append_sheet(wb, wsResumen,  'Resumen Global');
+        XLSX.utils.book_append_sheet(wb, wsIngresos, 'Ingresos');
+        XLSX.utils.book_append_sheet(wb, wsGastos,   'Gastos');
+        XLSX.utils.book_append_sheet(wb, wsDesglose, 'Desglose por Categoria');
+
         XLSX.writeFile(wb, `Finanzas_${desde}_al_${hasta}.xlsx`);
       } catch (e) {
         console.error("Error al exportar:", e);
-        alert("Ocurrió un error al generar el Excel. Revisa la cónsola.");
+        alert("Ocurrio un error al generar el Excel. Revisa la consola.");
       }
     }
 

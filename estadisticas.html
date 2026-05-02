@@ -600,48 +600,84 @@
     function exportarEstadisticasExcel() {
        let inicio = document.getElementById('fechaInicio').value;
        let fin = document.getElementById('fechaFin').value;
-       
+
        const fechasRango = generarRangoFechas(inicio, fin);
        const pedidosEnRango = todosPedidos.filter(p => p.fechaEntrega && p.fechaEntrega >= inicio && p.fechaEntrega <= fin);
        const entregadosEnRango = pedidosEnRango.filter(p => p.status === 'Entregado');
-       
-       const totalVentas = entregadosEnRango.reduce((sum, p) => sum + (p.total || 0), 0);
-       const totalPedidos = entregadosEnRango.length;
-       const promedio = totalPedidos > 0 ? totalVentas / totalPedidos : 0;
-       const kilosTotal = entregadosEnRango.reduce((s, p) => s + calcularKilosPedido(p), 0);
+
+       const totalVentas   = entregadosEnRango.reduce((s, p) => s + (p.total || 0), 0);
+       const totalPedidos  = entregadosEnRango.length;
+       const promedio      = totalPedidos > 0 ? Math.round(totalVentas / totalPedidos) : 0;
+       const kilosTotal    = entregadosEnRango.reduce((s, p) => s + calcularKilosPedido(p), 0);
        const personasServidas = entregadosEnRango.filter(p => p.tipo === 'evento').reduce((s, p) => s + calcularPersonasEvento(p), 0);
+       const pickupCount   = entregadosEnRango.filter(p => p.tipoEntrega === 'pickup' || !p.tipoEntrega).length;
+       const domicilioCount= entregadosEnRango.filter(p => p.tipoEntrega === 'domicilio').length;
+       const kiloCount     = entregadosEnRango.filter(p => p.tipo === 'kilo').length;
+       const eventoCount   = entregadosEnRango.filter(p => p.tipo === 'evento').length;
+       const directaCount  = entregadosEnRango.filter(p => p.tipo === 'venta_directa').length;
 
-       const pickupCount = entregadosEnRango.filter(p => p.tipoEntrega === 'pickup' || !p.tipoEntrega).length;
-       const domicilioCount = entregadosEnRango.filter(p => p.tipoEntrega === 'domicilio').length;
-       const kiloCount = entregadosEnRango.filter(p => p.tipo === 'kilo').length;
-       const eventoCount = entregadosEnRango.filter(p => p.tipo === 'evento').length;
-       const directaCount = entregadosEnRango.filter(p => p.tipo === 'venta_directa').length;
-       
+       // Estilos
+       const ROJO     = { rgb: 'D85A30' };
+       const BLANCO   = { rgb: 'FFFFFF' };
+       const GRIS     = { rgb: 'F1F5F9' };
+       const VERDE_BG = { rgb: 'D1FAE5' };
+       const VERDE_FG = { rgb: '065F46' };
+       const TOTAL_BG = { rgb: 'FFF7ED' };
+
+       const sTitulo  = () => ({ font: { bold: true, color: BLANCO, sz: 14 }, fill: { fgColor: ROJO }, alignment: { horizontal: 'center', vertical: 'center' } });
+       const sSub     = () => ({ font: { italic: true, color: { rgb: '64748B' }, sz: 10 }, fill: { fgColor: GRIS }, alignment: { horizontal: 'center' } });
+       const sHeader  = () => ({ font: { bold: true, color: BLANCO, sz: 11 }, fill: { fgColor: ROJO }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } });
+       const sSeccion = () => ({ font: { bold: true, color: BLANCO, sz: 11 }, fill: { fgColor: { rgb: '1E293B' } }, alignment: { horizontal: 'left' } });
+       const sKpi     = (bg, fg) => ({ font: { bold: true, sz: 12, color: { rgb: fg } }, fill: { fgColor: { rgb: bg } }, alignment: { horizontal: 'right' } });
+       const sTotal   = () => ({ font: { bold: true, sz: 11 }, fill: { fgColor: TOTAL_BG }, alignment: { horizontal: 'right' }, border: { top: { style: 'thin', color: { rgb: 'D85A30' } } } });
+
+       // ── Hoja 1: Resumen General ─────────────────────────────────
        const aoaResumen = [
-         ["REPORTE DE ESTADÍSTICAS - LA PAELLA"],
-         [`Período: ${inicio} al ${fin}`],
-         [],
-         ["MÉTRICA GENERAL", "VALOR"],
-         ["Ventas Totales ($)", totalVentas],
-         ["Total Pedidos", totalPedidos],
-         ["Ticket Promedio ($)", promedio],
-         ["Kilos Vendidos", kilosTotal],
-         ["Personas Servidas (Eventos)", personasServidas],
-         [],
-         ["TIPO DE ENTREGA", "CANTIDAD DE PEDIDOS"],
-         ["Pick Up / Mostrador", pickupCount],
-         ["A Domicilio", domicilioCount],
-         [],
-         ["TIPO DE SERVICIO", "CANTIDAD DE PEDIDOS"],
-         ["Pedidos por Kilo", kiloCount],
-         ["Eventos", eventoCount],
-         ["Venta Directa", directaCount]
+         ['REPORTE DE ESTADISTICAS — LA PAELLA', ''],
+         [`Periodo: ${inicio} al ${fin}`, ''],
+         ['', ''],
+         ['METRICAS GENERALES', ''],
+         ['Ventas Totales ($)', totalVentas],
+         ['Total Pedidos', totalPedidos],
+         ['Ticket Promedio ($)', promedio],
+         ['Kilos Vendidos (kg)', kilosTotal],
+         ['Personas Servidas (Eventos)', personasServidas],
+         ['', ''],
+         ['TIPO DE ENTREGA', 'CANTIDAD'],
+         ['Pick Up / Mostrador', pickupCount],
+         ['A Domicilio', domicilioCount],
+         ['', ''],
+         ['TIPO DE SERVICIO', 'CANTIDAD'],
+         ['Pedidos por Kilo', kiloCount],
+         ['Eventos', eventoCount],
+         ['Venta Directa', directaCount]
        ];
-       const wsResumen = XLSX.utils.aoa_to_sheet(aoaResumen);
-       wsResumen['!cols'] = [{wch: 32}, {wch: 25}];
 
-       const ventasPorDia = {};
-       const pedidosPorDia = {};
+       const wsResumen = XLSX.utils.aoa_to_sheet(aoaResumen);
+       wsResumen['!merges'] = [
+         { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+         { s: { r: 1, c: 0 }, e: { r: 1, c: 1 } }
+       ];
+       wsResumen['!cols'] = [{ wch: 32 }, { wch: 22 }];
+       wsResumen['!rows'] = [{ hpt: 28 }, { hpt: 16 }];
+
+       if (wsResumen['A1']) wsResumen['A1'].s = sTitulo();
+       if (wsResumen['A2']) wsResumen['A2'].s = sSub();
+
+       // Sección headers oscuros
+       ['A4','B4','A11','B11','A15','B15'].forEach(ref => { if (wsResumen[ref]) wsResumen[ref].s = sSeccion(); });
+
+       // KPI coloreados
+       const kpiStyle = [
+         ['B5', 'D1FAE5', '065F46'],
+         ['B7', 'DBEAFE', '1E40AF'],
+       ];
+       kpiStyle.forEach(([ref, bg, fg]) => { if (wsResumen[ref]) { wsResumen[ref].s = sKpi(bg, fg); wsResumen[ref].z = '"$"#,##0'; } });
+       if (wsResumen['B5']) { wsResumen['B5'].z = '"$"#,##0'; }
+       if (wsResumen['B7']) { wsResumen['B7'].z = '"$"#,##0'; }
+
+       // ── Hoja 2: Detalle por Día ─────────────────────────────────
+       const ventasPorDia = {}, pedidosPorDia = {};
        fechasRango.forEach(f => { ventasPorDia[f] = 0; pedidosPorDia[f] = 0; });
        entregadosEnRango.forEach(p => {
          if (ventasPorDia[p.fechaEntrega] !== undefined) {
@@ -649,20 +685,49 @@
            pedidosPorDia[p.fechaEntrega] += 1;
          }
        });
-       
+
+       const totalVentasDia = fechasRango.reduce((s, f) => s + ventasPorDia[f], 0);
+       const totalPedDia    = fechasRango.reduce((s, f) => s + pedidosPorDia[f], 0);
+
        const aoaDias = [
-         ["FECHA", "CANTIDAD DE PEDIDOS", "INGRESOS DEL DÍA ($)"]
+         ['DETALLE POR DIA — LA PAELLA', '', ''],
+         [`Periodo: ${inicio} al ${fin}`, '', ''],
+         ['', '', ''],
+         ['FECHA', 'PEDIDOS', 'INGRESOS ($)']
        ];
-       fechasRango.forEach(f => {
-         aoaDias.push([f, pedidosPorDia[f], ventasPorDia[f]]);
-       });
+       fechasRango.forEach(f => aoaDias.push([f, pedidosPorDia[f], ventasPorDia[f]]));
+       aoaDias.push(['TOTAL', totalPedDia, totalVentasDia]);
+
        const wsDias = XLSX.utils.aoa_to_sheet(aoaDias);
-       wsDias['!cols'] = [{wch: 15}, {wch: 25}, {wch: 25}];
+       wsDias['!merges'] = [
+         { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
+         { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } }
+       ];
+       wsDias['!freeze'] = { xSplit: 0, ySplit: 4 };
+       wsDias['!cols'] = [{ wch: 16 }, { wch: 18 }, { wch: 22 }];
+       wsDias['!rows'] = [{ hpt: 28 }, { hpt: 16 }];
+
+       if (wsDias['A1']) wsDias['A1'].s = sTitulo();
+       if (wsDias['A2']) wsDias['A2'].s = sSub();
+       ['A','B','C'].forEach(c => { if (wsDias[`${c}4`]) wsDias[`${c}4`].s = sHeader(); });
+
+       for (let i = 0; i < fechasRango.length; i++) {
+         const ref = `C${i + 5}`;
+         if (wsDias[ref]) {
+           wsDias[ref].z = '"$"#,##0';
+           if (wsDias[ref].v > 0) wsDias[ref].s = { font: { color: VERDE_FG }, fill: { fgColor: VERDE_BG }, alignment: { horizontal: 'right' } };
+         }
+       }
+
+       const totDiaRow = fechasRango.length + 5;
+       if (wsDias[`C${totDiaRow}`]) { wsDias[`C${totDiaRow}`].z = '"$"#,##0'; wsDias[`C${totDiaRow}`].s = sTotal(); }
+       if (wsDias[`B${totDiaRow}`]) wsDias[`B${totDiaRow}`].s = sTotal();
+       if (wsDias[`A${totDiaRow}`]) wsDias[`A${totDiaRow}`].s = { font: { bold: true, sz: 11 }, fill: { fgColor: TOTAL_BG }, border: { top: { style: 'thin', color: { rgb: 'D85A30' } } } };
 
        const wb = XLSX.utils.book_new();
-       XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen General");
-       XLSX.utils.book_append_sheet(wb, wsDias, "Detalle por Día");
-       
+       XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen General');
+       XLSX.utils.book_append_sheet(wb, wsDias,    'Detalle por Dia');
+
        XLSX.writeFile(wb, `Estadisticas_${inicio}_al_${fin}.xlsx`);
     }
 
