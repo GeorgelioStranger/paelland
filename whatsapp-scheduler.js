@@ -5,9 +5,11 @@
 // =====================================================
 
 const cron = require('node-cron');
-const https = require('https');
-const { destinatarios } = require('./whatsapp-config');
-
+const { Client, RemoteAuth } = require('whatsapp-web.js');
+const { MongoStore } = require('wwebjs-mongo');
+const mongoose = require('mongoose');
+const qrcode = require('qrcode-terminal');
+const { grupos } = require('./whatsapp-config');
 // ── Nombres de meses en español ──
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -118,36 +120,18 @@ function construirMensaje(pedidos, fechaMañana) {
   return lineas.join('\n');
 }
 
-// ── Enviar un mensaje vía CallMeBot ──
-function enviarWhatsApp(telefono, apikey, mensaje) {
-  return new Promise((resolve, reject) => {
-    const textoEncoded = encodeURIComponent(mensaje);
-    const telefonoLimpio = encodeURIComponent(telefono.trim());
-    const url = `https://api.callmebot.com/whatsapp.php?phone=${telefonoLimpio}&text=${textoEncoded}&apikey=${apikey}`;
-
-    https.get(url, (res) => {
-      let data = '';
-      res.on('data', chunk => { data += chunk; });
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          console.log(`✅ [WhatsApp] Mensaje enviado a ${telefono}`);
-          resolve(data);
-        } else {
-          console.error(`❌ [WhatsApp] Error HTTP ${res.statusCode} para ${telefono}: ${data}`);
-          reject(new Error(`HTTP ${res.statusCode}`));
-        }
-      });
-    }).on('error', (err) => {
-      console.error(`❌ [WhatsApp] Error de red para ${telefono}:`, err.message);
-      reject(err);
-    });
-  });
-}
+let whatsappClient = null;
+let isWhatsAppReady = false;
 
 // ── Función principal: consultar BD y enviar resumen ──
 async function ejecutarResumenDiario(Pedido) {
   const fechaMañana = getFechaMañana();
   console.log(`\n📱 [WhatsApp Scheduler] Iniciando resumen para ${fechaMañana}...`);
+
+  if (!isWhatsAppReady || !whatsappClient) {
+    console.error('❌ [WhatsApp] El cliente de WhatsApp no está listo. No se puede enviar el resumen.');
+    return;
+  }
 
   try {
     // Solo eventos y kilos (excluye venta_directa)
@@ -164,22 +148,20 @@ async function ejecutarResumenDiario(Pedido) {
     console.log(mensaje);
     console.log('──────────────────────────────────\n');
 
-    // Enviar a cada destinatario configurado
-    for (const dest of destinatarios) {
-      const esTelefonoPlaceholder = !dest.telefono || dest.telefono.includes('XXXXXXXXXX');
-      const esApikeyPlaceholder = !dest.apikey || dest.apikey.includes('API_KEY');
-
-      if (esTelefonoPlaceholder || esApikeyPlaceholder) {
-        console.warn(`⚠️  [WhatsApp] Destinatario "${dest.nombre}" sin configurar. Edita whatsapp-config.js`);
+    // Enviar a cada grupo configurado
+    for (const grupo of grupos) {
+      if (!grupo.activo || !grupo.id || grupo.id.includes('XXXXXXXXX')) {
+        console.warn(`⚠️  [WhatsApp] Grupo "${grupo.nombre}" sin configurar o inactivo. Edita whatsapp-config.js`);
         continue;
       }
 
       try {
-        await enviarWhatsApp(dest.telefono, dest.apikey, mensaje);
-        // Pausa de 2 s entre envíos para no saturar la API
+        await whatsappClient.sendMessage(grupo.id, mensaje);
+        console.log(`✅ [WhatsApp] Mensaje enviado al grupo: ${grupo.nombre}`);
+        // Pausa de 2 s entre envíos
         await new Promise(r => setTimeout(r, 2000));
       } catch (err) {
-        console.error(`❌ [WhatsApp] Falló el envío a "${dest.nombre}": ${err.message}`);
+        console.error(`❌ [WhatsApp] Falló el envío al grupo "${grupo.nombre}": ${err.message}`);
       }
     }
 
@@ -189,27 +171,106 @@ async function ejecutarResumenDiario(Pedido) {
   }
 }
 
-// ── Iniciar el cron job y registrar el endpoint de prueba ──
-function iniciarScheduler(app, Pedido) {
-  // Cron: todos los días a las 15:30 (3:30 PM), zona horaria de México
-  cron.schedule('30 15 * * *', () => {
+// ── Iniciar el cron job y cliente de WhatsApp ──
+async function iniciarScheduler(app, Pedido) {
+  console.log('📱 [WhatsApp] Inicializando cliente con MongoStore...');
+
+  // Esperar a que mongoose esté conectado si no lo está
+  if (mongoose.connection.readyState !== 1) {
+    console.log('⏳ [WhatsApp] Esperando conexión a MongoDB para RemoteAuth...');
+    await new Promise(resolve => mongoose.connection.once('open', resolve));
+  }
+
+  // Buscar ruta de Chrome/Edge (ya que saltamos la descarga de Puppeteer por el error de red)
+  const fs = require('fs');
+  const chromePaths = [
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+  ];
+  let localExecutablePath = undefined;
+  for (const p of chromePaths) {
+    if (fs.existsSync(p)) {
+      localExecutablePath = p;
+      console.log(`🔎 [WhatsApp] Navegador local encontrado en: ${p}`);
+      break;
+    }
+  }
+
+  const store = new MongoStore({ mongoose: mongoose });
+  
+  whatsappClient = new Client({
+    authStrategy: new RemoteAuth({
+      clientId: 'paelland-session',
+      store: store,
+      backupSyncIntervalMs: 300000
+    }),
+    puppeteer: {
+      executablePath: localExecutablePath,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    }
+  });
+
+  whatsappClient.on('qr', (qr) => {
+    console.log('\n======================================================');
+    console.log('📸 ¡ATENCIÓN! ESCANEA EL SIGUIENTE CÓDIGO QR CON WHATSAPP:');
+    console.log('======================================================\n');
+    qrcode.generate(qr, { small: true });
+  });
+
+  whatsappClient.on('ready', () => {
+    console.log('\n✅ [WhatsApp] ¡Cliente listo y conectado!');
+    isWhatsAppReady = true;
+  });
+
+  whatsappClient.on('authenticated', () => {
+    console.log('🔐 [WhatsApp] Autenticado correctamente.');
+  });
+
+  whatsappClient.on('auth_failure', msg => {
+    console.error('❌ [WhatsApp] Fallo en la autenticación:', msg);
+  });
+  
+  whatsappClient.on('remote_session_saved', () => {
+    console.log('💾 [WhatsApp] Sesión guardada en MongoDB correctamente.');
+  });
+
+  whatsappClient.initialize();
+
+  // Cron: todos los días a las 14:00 (2:00 PM) y 19:00 (7:00 PM), zona horaria de México
+  cron.schedule('0 14,19 * * *', () => {
     ejecutarResumenDiario(Pedido);
   }, {
     timezone: 'America/Mexico_City'
   });
 
-  console.log('⏰ [WhatsApp Scheduler] Activo → envío automático todos los días a las 3:30 PM (CDMX)');
+  console.log('⏰ [WhatsApp Scheduler] Activo → envío automático todos los días a las 2:00 PM y 7:00 PM (CDMX)');
 
-  // ── Endpoint de prueba: POST /whatsapp/test ──
-  // Permite disparar el resumen manualmente desde el navegador o Postman
-  // para verificar la configuración sin esperar las 3:30 PM
-  app.post('/whatsapp/test', async (req, res) => {
+  // ── Endpoint de prueba: POST o GET /whatsapp/test ──
+  app.all('/whatsapp/test', async (req, res) => {
     console.log('🧪 [WhatsApp Test] Envío de prueba solicitado...');
     try {
       await ejecutarResumenDiario(Pedido);
-      res.json({ ok: true, mensaje: 'Resumen de prueba enviado. Revisa la consola del servidor para más detalles.' });
+      res.json({ ok: true, mensaje: 'Resumen de prueba enviado. Revisa la consola.' });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // ── Endpoint para listar chats ──
+  app.get('/whatsapp/chats', async (req, res) => {
+    if (!isWhatsAppReady || !whatsappClient) {
+      return res.status(503).json({ error: 'WhatsApp aún no está listo. Revisa la consola del servidor y escanea el código QR primero.' });
+    }
+    try {
+      const chats = await whatsappClient.getChats();
+      const gruposChats = chats.filter(c => c.isGroup).map(g => ({
+        nombre: g.name,
+        id: g.id._serialized
+      }));
+      res.json({ grupos: gruposChats });
+    } catch (error) {
+      res.status(500).json({ error: 'Error al obtener chats', detalle: error.message });
     }
   });
 }

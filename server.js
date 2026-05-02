@@ -3,6 +3,15 @@ const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
 
+// ── PROTECCIÓN ANTI-CHOQUES (Ignorar errores de RemoteAuth en Windows) ──
+process.on('uncaughtException', (err) => {
+  if (err.message && err.message.includes('ENOENT: no such file or directory, open') && err.message.includes('RemoteAuth')) {
+    console.warn('\n⚠️ [Sistema] Se ignoró un error de lectura de archivo en RemoteAuth (Bug de Windows). El servidor sigue funcionando.');
+  } else {
+    console.error('\n❌ [Sistema] Error global no capturado:', err);
+  }
+});
+
 const app = express();
 app.use(cors());
 app.use(express.json());
