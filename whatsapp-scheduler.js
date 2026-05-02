@@ -122,6 +122,8 @@ function construirMensaje(pedidos, fechaMañana) {
 
 let whatsappClient = null;
 let isWhatsAppReady = false;
+let isWaitingForQR = false;
+let lastError = null;
 
 // ── Función principal: consultar BD y enviar resumen ──
 async function ejecutarResumenDiario(Pedido) {
@@ -224,23 +226,37 @@ async function iniciarScheduler(app, Pedido) {
   });
 
   whatsappClient.on('qr', (qr) => {
+    isWaitingForQR = true;
+    lastError = null;
     console.log('\n======================================================');
     console.log('📸 ¡ATENCIÓN! ESCANEA EL SIGUIENTE CÓDIGO QR CON WHATSAPP:');
     console.log('======================================================\n');
     qrcode.generate(qr, { small: true });
+    console.log('\n======================================================');
   });
 
   whatsappClient.on('ready', () => {
-    console.log('\n✅ [WhatsApp] ¡Cliente listo y conectado!');
+    isWaitingForQR = false;
     isWhatsAppReady = true;
+    lastError = null;
+    console.log('\n✅ [WhatsApp] ¡Cliente listo y conectado!');
   });
 
   whatsappClient.on('authenticated', () => {
+    isWaitingForQR = false;
     console.log('🔐 [WhatsApp] Autenticado correctamente.');
   });
 
   whatsappClient.on('auth_failure', msg => {
+    isWaitingForQR = false;
+    lastError = 'Fallo en autenticación: ' + msg;
     console.error('❌ [WhatsApp] Fallo en la autenticación:', msg);
+  });
+  
+  whatsappClient.on('disconnected', (reason) => {
+    isWhatsAppReady = false;
+    lastError = 'Desconectado: ' + reason;
+    console.log('❌ [WhatsApp] Cliente desconectado:', reason);
   });
   
   whatsappClient.on('remote_session_saved', () => {
@@ -262,7 +278,10 @@ async function iniciarScheduler(app, Pedido) {
   app.all('/whatsapp/test', async (req, res) => {
     console.log('🧪 [WhatsApp Test] Envío de prueba solicitado...');
     if (!isWhatsAppReady) {
-      return res.status(503).json({ ok: false, error: 'El servidor en la nube no pudo arrancar WhatsApp. Posible falta de Chromium/librerías.' });
+      if (isWaitingForQR) {
+        return res.status(503).json({ ok: false, error: '⚠️ WhatsApp te pide escanear el QR. Ve a tu Dashboard de Render -> Logs, allí está el código QR esperándote.' });
+      }
+      return res.status(503).json({ ok: false, error: lastError ? `Error de WhatsApp: ${lastError}` : 'El servidor en la nube no pudo arrancar WhatsApp.' });
     }
     try {
       await ejecutarResumenDiario(Pedido);
