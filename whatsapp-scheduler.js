@@ -199,16 +199,28 @@ async function iniciarScheduler(app, Pedido) {
 
   const store = new MongoStore({ mongoose: mongoose });
   
+  let puppeteerConfig = {
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  };
+
+  if (process.platform === 'win32' && localExecutablePath) {
+    puppeteerConfig.executablePath = localExecutablePath;
+  } else {
+    console.log('☁️ [WhatsApp] Entorno de nube detectado. Preparando Chromium...');
+    const chromium = require('@sparticuz/chromium');
+    puppeteerConfig.executablePath = await chromium.executablePath();
+    puppeteerConfig.headless = chromium.headless;
+    puppeteerConfig.args = [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'];
+    puppeteerConfig.defaultViewport = chromium.defaultViewport;
+  }
+
   whatsappClient = new Client({
     authStrategy: new RemoteAuth({
       clientId: 'paelland-session',
       store: store,
       backupSyncIntervalMs: 300000
     }),
-    puppeteer: {
-      executablePath: localExecutablePath,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
+    puppeteer: puppeteerConfig
   });
 
   whatsappClient.on('qr', (qr) => {
@@ -249,6 +261,9 @@ async function iniciarScheduler(app, Pedido) {
   // ── Endpoint de prueba: POST o GET /whatsapp/test ──
   app.all('/whatsapp/test', async (req, res) => {
     console.log('🧪 [WhatsApp Test] Envío de prueba solicitado...');
+    if (!isWhatsAppReady) {
+      return res.status(503).json({ ok: false, error: 'El servidor en la nube no pudo arrancar WhatsApp. Posible falta de Chromium/librerías.' });
+    }
     try {
       await ejecutarResumenDiario(Pedido);
       res.json({ ok: true, mensaje: 'Resumen de prueba enviado. Revisa la consola.' });
