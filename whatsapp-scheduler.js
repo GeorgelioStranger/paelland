@@ -5,7 +5,7 @@
 // =====================================================
 
 const cron = require('node-cron');
-const { Client, RemoteAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, RemoteAuth } = require('whatsapp-web.js');
 const { MongoStore } = require('wwebjs-mongo');
 const mongoose = require('mongoose');
 const qrcode = require('qrcode-terminal');
@@ -238,10 +238,8 @@ async function iniciarScheduler(app, Pedido) {
     } catch (e) {}
 
     whatsappClient = new Client({
-      authStrategy: new RemoteAuth({
-        clientId: 'paelland-session-v4',
-        store: store,
-        backupSyncIntervalMs: 600000
+      authStrategy: new LocalAuth({
+        clientId: 'paelland-session-local'
       }),
       puppeteer: puppeteerConfig,
       webVersionCache: { type: 'none' },
