@@ -5,7 +5,7 @@
 // =====================================================
 
 const cron = require('node-cron');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const { grupos } = require('./whatsapp-config');
@@ -161,12 +161,15 @@ async function ejecutarResumenDiario(Pedido) {
 async function iniciarBaileys() {
     try {
         const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
+        const { version, isLatest } = await fetchLatestBaileysVersion();
+        console.log(`[WhatsApp] Usando versión de WhatsApp v${version.join('.')}, isLatest: ${isLatest}`);
         
         sock = makeWASocket({
+            version,
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: 'silent' }),
-            browser: ['Paelland', 'Chrome', '1.0.0'],
+            browser: Browsers.ubuntu('Chrome'),
             syncFullHistory: false
         });
 
