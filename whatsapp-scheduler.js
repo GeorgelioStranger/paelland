@@ -1,15 +1,15 @@
 // =====================================================
 //   SCHEDULER DE WHATSAPP — Sistema PAELLAND
 //   Envío automático diario a las 3:30 PM (México)
-//   Servicio: CallMeBot (gratuito)
+//   Servicio: Baileys
 // =====================================================
 
 const cron = require('node-cron');
-const { Client, LocalAuth, RemoteAuth } = require('whatsapp-web.js');
-const { MongoStore } = require('wwebjs-mongo');
-const mongoose = require('mongoose');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
+const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const { grupos } = require('./whatsapp-config');
+
 // ── Nombres de meses en español ──
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -29,7 +29,6 @@ function formatearHora(horaStr) {
   return `${h}:${mm} ${ampm}`;
 }
 
-// ── Fecha de mañana en formato YYYY-MM-DD ──
 function getFechaMañana() {
   const d = new Date();
   d.setDate(d.getDate() + 1);
@@ -39,13 +38,11 @@ function getFechaMañana() {
   return `${anio}-${mes}-${dia}`;
 }
 
-// ── Fecha legible en español: "25 de abril de 2026" ──
 function formatearFechaEspanol(fechaStr) {
   const [anio, mes, dia] = fechaStr.split('-').map(Number);
   return `${dia} de ${MESES[mes - 1]} de ${anio}`;
 }
 
-// ── Normalizar tipo de entrega ──
 function formatearEntrega(tipoEntrega) {
   if (!tipoEntrega) return 'Sin especificar';
   const t = tipoEntrega.toLowerCase().trim();
@@ -54,15 +51,12 @@ function formatearEntrega(tipoEntrega) {
   return tipoEntrega;
 }
 
-// ── Construir el mensaje completo ──
 function construirMensaje(pedidos, fechaMañana) {
   const fechaTexto = formatearFechaEspanol(fechaMañana);
 
-  // Separar por tipo
   const eventos = pedidos.filter(p => (p.tipo || '').toLowerCase() === 'evento');
   const kilos = pedidos.filter(p => (p.tipo || '').toLowerCase() === 'kilo');
 
-  // Ordenar cada grupo por hora de entrega (ascendente)
   const ordenarPorHora = (a, b) => {
     const ha = a.horaEntrega || '00:00';
     const hb = b.horaEntrega || '00:00';
@@ -74,7 +68,6 @@ function construirMensaje(pedidos, fechaMañana) {
   const lineas = [];
   lineas.push(`Fecha: ${fechaTexto}`);
 
-  // ── Sección Eventos ──
   if (eventos.length > 0) {
     lineas.push('');
     eventos.forEach(p => {
@@ -82,7 +75,6 @@ function construirMensaje(pedidos, fechaMañana) {
       const entrega = formatearEntrega(p.tipoEntrega || p.entrega);
       lineas.push(`${p.nombre} - ${hora} - ${entrega}`);
 
-      // Detalles: solo paellas con personas > 0
       const items = Array.isArray(p.itemsDetalle) ? p.itemsDetalle : [];
       items.filter(i => i.personas > 0).forEach(i => {
         lineas.push(`   • ${i.nombre} - ${i.personas} personas`);
@@ -91,14 +83,12 @@ function construirMensaje(pedidos, fechaMañana) {
     });
   }
 
-  // ── Sección Kilos ──
   if (kilos.length > 0) {
     kilos.forEach(p => {
       const hora    = formatearHora(p.horaEntrega);
       const entrega = formatearEntrega(p.tipoEntrega || p.entrega);
       lineas.push(`${p.nombre} - ${hora} - ${entrega}`);
 
-      // Detalles: tipo de paella y cantidad en kilos
       const items = Array.isArray(p.itemsDetalle) ? p.itemsDetalle : [];
       items.filter(i => (i.kilos > 0 || i.cantidad > 0)).forEach(i => {
         const cantidad = i.kilos > 0 ? `${i.kilos} kg` : `${i.cantidad} kg`;
@@ -108,7 +98,6 @@ function construirMensaje(pedidos, fechaMañana) {
     });
   }
 
-  // ── Sin pedidos ──
   if (eventos.length === 0 && kilos.length === 0) {
     lineas.push('');
     lineas.push('No hay pedidos programados para mañana.');
@@ -120,23 +109,21 @@ function construirMensaje(pedidos, fechaMañana) {
   return lineas.join('\n');
 }
 
-let whatsappClient = null;
+let sock = null;
 let isWhatsAppReady = false;
 let isWaitingForQR = false;
 let lastError = null;
 
-// ── Función principal: consultar BD y enviar resumen ──
 async function ejecutarResumenDiario(Pedido) {
   const fechaMañana = getFechaMañana();
   console.log(`\n📱 [WhatsApp Scheduler] Iniciando resumen para ${fechaMañana}...`);
 
-  if (!isWhatsAppReady || !whatsappClient) {
+  if (!isWhatsAppReady || !sock) {
     console.error('❌ [WhatsApp] El cliente de WhatsApp no está listo. No se puede enviar el resumen.');
     return;
   }
 
   try {
-    // Solo eventos y kilos (excluye venta_directa)
     const pedidos = await Pedido.find({
       fechaEntrega: fechaMañana,
       tipo: { $in: ['evento', 'kilo'] }
@@ -150,7 +137,6 @@ async function ejecutarResumenDiario(Pedido) {
     console.log(mensaje);
     console.log('──────────────────────────────────\n');
 
-    // Enviar a cada grupo configurado
     for (const grupo of grupos) {
       if (!grupo.activo || !grupo.id || grupo.id.includes('XXXXXXXXX')) {
         console.warn(`⚠️  [WhatsApp] Grupo "${grupo.nombre}" sin configurar o inactivo. Edita whatsapp-config.js`);
@@ -158,9 +144,8 @@ async function ejecutarResumenDiario(Pedido) {
       }
 
       try {
-        await whatsappClient.sendMessage(grupo.id, mensaje);
+        await sock.sendMessage(grupo.id, { text: mensaje });
         console.log(`✅ [WhatsApp] Mensaje enviado al grupo: ${grupo.nombre}`);
-        // Pausa de 2 s entre envíos
         await new Promise(r => setTimeout(r, 2000));
       } catch (err) {
         console.error(`❌ [WhatsApp] Falló el envío al grupo "${grupo.nombre}": ${err.message}`);
@@ -173,130 +158,60 @@ async function ejecutarResumenDiario(Pedido) {
   }
 }
 
-// ── Iniciar el cron job y cliente de WhatsApp ──
-async function iniciarScheduler(app, Pedido) {
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      console.log('⏳ [WhatsApp] Esperando conexión a MongoDB para RemoteAuth...');
-      await new Promise(resolve => mongoose.connection.once('open', resolve));
-    }
-
-    const fs = require('fs');
-    const chromePaths = [
-      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
-    ];
-    let localExecutablePath = undefined;
-    if (process.platform === 'win32') {
-      for (const p of chromePaths) {
-        if (fs.existsSync(p)) {
-          localExecutablePath = p;
-          console.log(`🔎 [WhatsApp] Navegador local encontrado en: ${p}`);
-          break;
-        }
-      }
-    }
-
-    const store = new MongoStore({ mongoose: mongoose });
-    
-    let puppeteerConfig = {
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    };
-
-    if (process.platform === 'win32' && localExecutablePath) {
-      puppeteerConfig.executablePath = localExecutablePath;
-    } else {
-      console.log('☁️ [WhatsApp] Entorno de nube detectado. Preparando Chromium con Sparticuz (Modo Bajo Consumo)...');
-      const chromium = require('@sparticuz/chromium');
-      
-      // Limpiar cachés viejos de chromium para ahorrar espacio en disco
-      chromium.setGraphicsMode = false;
-      
-      puppeteerConfig.executablePath = await chromium.executablePath();
-      puppeteerConfig.headless = chromium.headless;
-      puppeteerConfig.args = [
-        ...chromium.args,
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-      ];
-      puppeteerConfig.defaultViewport = chromium.defaultViewport;
-    }
-
-    // Limpiar carpeta temporal corrupta de RemoteAuth
+async function iniciarBaileys() {
     try {
-      const authPath = require('path').join(process.cwd(), '.wwebjs_auth', 'wwebjs_temp_session_paelland-session-v4');
-      if (fs.existsSync(authPath)) {
-        fs.rmSync(authPath, { recursive: true, force: true });
-        console.log('🧹 [WhatsApp] Carpeta temporal de sesión limpiada.');
-      }
-    } catch (e) {}
+        const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
+        
+        sock = makeWASocket({
+            auth: state,
+            printQRInTerminal: false,
+            logger: pino({ level: 'silent' }),
+            browser: Browsers.windows('Desktop'),
+            syncFullHistory: false
+        });
 
-    whatsappClient = new Client({
-      authStrategy: new LocalAuth({
-        clientId: 'paelland-session-local'
-      }),
-      puppeteer: puppeteerConfig,
-      webVersionCache: { type: 'none' },
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-    });
+        sock.ev.on('creds.update', saveCreds);
 
-    whatsappClient.on('qr', (qr) => {
-      isWaitingForQR = true;
-      lastError = null;
-      console.log('\n======================================================');
-      console.log('📸 ¡ATENCIÓN! ESCANEA EL SIGUIENTE CÓDIGO QR CON WHATSAPP:');
-      console.log('======================================================\n');
-      qrcode.generate(qr, { small: true });
-      console.log('\n======================================================');
-    });
+        sock.ev.on('connection.update', (update) => {
+            const { connection, lastDisconnect, qr } = update;
+            
+            if (qr) {
+                isWaitingForQR = true;
+                isWhatsAppReady = false;
+                console.log('\n======================================================');
+                console.log('📸 ¡ATENCIÓN! ESCANEA EL SIGUIENTE CÓDIGO QR CON WHATSAPP:');
+                console.log('======================================================\n');
+                qrcode.generate(qr, { small: true });
+                console.log('\n======================================================');
+            }
 
-    whatsappClient.on('ready', () => {
-      isWaitingForQR = false;
-      isWhatsAppReady = true;
-      lastError = null;
-      console.log('\n✅ [WhatsApp] ¡Cliente listo y conectado!');
-    });
-
-    whatsappClient.on('authenticated', () => {
-      isWaitingForQR = false;
-      console.log('🔐 [WhatsApp] Autenticado correctamente.');
-    });
-
-    whatsappClient.on('auth_failure', msg => {
-      isWaitingForQR = false;
-      lastError = 'Fallo en autenticación: ' + msg;
-      console.error('❌ [WhatsApp] Fallo en la autenticación:', msg);
-    });
-    
-    whatsappClient.on('disconnected', (reason) => {
-      isWhatsAppReady = false;
-      lastError = 'Desconectado: ' + reason;
-      console.log('❌ [WhatsApp] Cliente desconectado:', reason);
-    });
-    
-    whatsappClient.on('remote_session_saved', () => {
-      console.log('💾 [WhatsApp] Sesión guardada en MongoDB correctamente.');
-    });
-
-    try {
-      await whatsappClient.initialize();
+            if (connection === 'close') {
+                isWhatsAppReady = false;
+                isWaitingForQR = false;
+                const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+                console.log('❌ [WhatsApp] Conexión cerrada. Reconectando:', shouldReconnect);
+                if (shouldReconnect) {
+                    iniciarBaileys();
+                } else {
+                    lastError = 'Desconectado permanentemente (LOGOUT). Borra la carpeta baileys_auth_info para escanear de nuevo.';
+                    console.error('❌ [WhatsApp] LOGOUT de Baileys');
+                }
+            } else if (connection === 'open') {
+                isWhatsAppReady = true;
+                isWaitingForQR = false;
+                lastError = null;
+                console.log('\n✅ [WhatsApp] ¡Cliente Baileys listo y conectado!');
+            }
+        });
     } catch (err) {
-      lastError = 'Crash al inicializar: ' + err.message;
-      console.error('❌ [WhatsApp] Crash fatal en initialize:', err);
+        lastError = 'Error fatal iniciando Baileys: ' + err.message;
+        console.error('❌ [WhatsApp] Error global en iniciarBaileys:', err);
     }
-  } catch (globalErr) {
-    lastError = 'Error fatal iniciando: ' + globalErr.message;
-    console.error('❌ [WhatsApp] Error global en iniciarScheduler:', globalErr);
-  }
+}
 
-  // Cron: todos los días a las 14:00 (2:00 PM) y 19:00 (7:00 PM), zona horaria de México
+async function iniciarScheduler(app, Pedido) {
+  iniciarBaileys();
+
   cron.schedule('0 14,19 * * *', () => {
     ejecutarResumenDiario(Pedido);
   }, {
@@ -305,7 +220,6 @@ async function iniciarScheduler(app, Pedido) {
 
   console.log('⏰ [WhatsApp Scheduler] Activo → envío automático todos los días a las 2:00 PM y 7:00 PM (CDMX)');
 
-  // ── Endpoint de prueba: POST o GET /whatsapp/test ──
   app.all('/whatsapp/test', async (req, res) => {
     console.log('🧪 [WhatsApp Test] Envío de prueba solicitado...');
     if (!isWhatsAppReady) {
@@ -322,16 +236,15 @@ async function iniciarScheduler(app, Pedido) {
     }
   });
 
-  // ── Endpoint para listar chats ──
   app.get('/whatsapp/chats', async (req, res) => {
-    if (!isWhatsAppReady || !whatsappClient) {
+    if (!isWhatsAppReady || !sock) {
       return res.status(503).json({ error: 'WhatsApp aún no está listo. Revisa la consola del servidor y escanea el código QR primero.' });
     }
     try {
-      const chats = await whatsappClient.getChats();
-      const gruposChats = chats.filter(c => c.isGroup).map(g => ({
-        nombre: g.name,
-        id: g.id._serialized
+      const groups = await sock.groupFetchAllParticipating();
+      const gruposChats = Object.values(groups).map(g => ({
+        nombre: g.subject,
+        id: g.id
       }));
       res.json({ grupos: gruposChats });
     } catch (error) {

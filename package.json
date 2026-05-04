@@ -5,7 +5,6 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "postinstall": "npx puppeteer browsers install chrome",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -13,14 +12,13 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@sparticuz/chromium": "^122.0.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "mongoose": "^9.4.1",
     "node-cron": "^3.0.3",
-    "qrcode-terminal": "^0.12.0",
-    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#main",
-    "wwebjs-mongo": "^1.1.0"
+    "pino": "^10.3.1",
+    "qrcode-terminal": "^0.12.0"
   },
   "devDependencies": {
     "sharp": "^0.34.5"
