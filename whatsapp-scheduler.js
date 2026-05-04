@@ -166,7 +166,7 @@ async function iniciarBaileys() {
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: 'silent' }),
-            browser: Browsers.windows('Desktop'),
+            browser: ['Paelland', 'Chrome', '1.0.0'],
             syncFullHistory: false
         });
 
@@ -188,10 +188,12 @@ async function iniciarBaileys() {
             if (connection === 'close') {
                 isWhatsAppReady = false;
                 isWaitingForQR = false;
-                const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-                console.log('❌ [WhatsApp] Conexión cerrada. Reconectando:', shouldReconnect);
+                const statusCode = lastDisconnect?.error?.output?.statusCode;
+                const errMsg = lastDisconnect?.error?.message || String(lastDisconnect?.error);
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                console.log(`❌ [WhatsApp] Conexión cerrada. Code: ${statusCode}. Error: ${errMsg}. Reconectando: ${shouldReconnect}`);
                 if (shouldReconnect) {
-                    iniciarBaileys();
+                    setTimeout(() => iniciarBaileys(), 3000); // Wait 3s to prevent spam loops
                 } else {
                     lastError = 'Desconectado permanentemente (LOGOUT). Borra la carpeta baileys_auth_info para escanear de nuevo.';
                     console.error('❌ [WhatsApp] LOGOUT de Baileys');
