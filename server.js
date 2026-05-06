@@ -405,45 +405,74 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
     }
 
     // 1. Generar el PDF en memoria
-    const doc = new PDFDocument({ margin: 30, size: [226.77, 600] }); // Formato ticket (80mm)
+    const doc = new PDFDocument({ margin: 30, size: [226.77, 700], autoFirstPage: true }); // 80mm
     const buffers = [];
     doc.on('data', buffers.push.bind(buffers));
 
-    // Estilos base
-    doc.font('Helvetica-Bold').fontSize(16).text('LA PAELLA', { align: 'center' });
-    doc.font('Helvetica').fontSize(10).text('Mérida, Yucatán', { align: 'center' });
-    doc.moveDown();
-    
-    // Fechas y detalles
-    doc.fontSize(10);
     const tipoTxt = pedido.tipo === 'venta_directa' ? 'VENTA DE MOSTRADOR' : (pedido.tipo === 'evento' ? 'PEDIDO EVENTO' : 'PEDIDO POR KILO');
-    doc.text(`F. Emisión: ${new Date().toLocaleDateString('es-MX')}`);
-    doc.text(`Tipo: ${tipoTxt}`);
-    if (pedido.cliente || pedido.nombre) doc.text(`Cliente: ${pedido.cliente || pedido.nombre}`);
-    
-    doc.moveDown();
-    doc.moveTo(30, doc.y).lineTo(196, doc.y).dash(2, { space: 2 }).stroke();
-    doc.moveDown();
+    const now = new Date();
+    const fechaTxt = now.toLocaleDateString('es-MX') + ' ' + now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    const folioVal = pedido.folio ? pedido.folio.toString().slice(-6).toUpperCase() : now.getTime().toString().slice(-6);
+    const folioStr = '#' + folioVal;
+    const nombreCliente = pedido.cliente || pedido.nombre || '';
+    const totalVenta = pedido.total || 0;
 
-    // Productos
-    doc.font('Helvetica-Bold').text('CANT. / CONCEPTO', 30, doc.y, { continued: true }).text('IMPORTE', { align: 'right' });
-    doc.font('Helvetica');
-    
+    // Logo
+    const logoPath = path.join(__dirname, 'logoPaelland.png');
+    try {
+      doc.image(logoPath, { fit: [130, 65], align: 'center' });
+    } catch (_) {
+      doc.font('Helvetica-Bold').fontSize(16).text('LA PAELLA', { align: 'center' });
+    }
+    doc.moveDown(0.3);
+    doc.font('Helvetica').fontSize(10).text('Mérida, Yucatán', { align: 'center' });
+    doc.moveDown(0.8);
+
+    // Meta info (dos columnas: etiqueta | valor)
+    const metaLeft = 30;
+    const metaLabelW = 72;
+    doc.font('Helvetica').fontSize(9);
+    const drawMeta = (label, value) => {
+      const y = doc.y;
+      doc.text(label, metaLeft, y, { width: metaLabelW });
+      doc.text(value, metaLeft + metaLabelW, y, { width: 166 - metaLabelW - metaLeft });
+      doc.moveDown(0.2);
+    };
+    drawMeta('F. Emisión:', fechaTxt);
+    drawMeta('Folio:', folioStr);
+    drawMeta('Tipo:', tipoTxt);
+    if (nombreCliente) drawMeta('Cliente:', nombreCliente);
+
+    doc.moveDown(0.5);
+    doc.moveTo(30, doc.y).lineTo(196, doc.y).dash(2, { space: 2 }).stroke();
+    doc.moveDown(0.5);
+
+    // Encabezado tabla
+    doc.font('Helvetica-Bold').fontSize(9);
+    doc.text('CANT. / CONCEPTO', 30, doc.y, { continued: true });
+    doc.text('IMPORTE', { align: 'right' });
+    doc.font('Helvetica').fontSize(9);
+
+    // Productos (solo los con cantidad > 0)
     if (pedido.items && Array.isArray(pedido.items)) {
       pedido.items.forEach(item => {
-        const qty = item.cantidad || item.personas || 1;
+        const qty = pedido.tipo === 'evento' ? (item.personas || 0) : (item.cantidad || 0);
+        if (qty <= 0) return;
         const nombre = item.nombre || '';
-        const precio = item.precio || 0;
-        const sub = qty * precio;
-        doc.text(`${qty}x ${nombre}`, 30, doc.y, { width: 110, continued: true }).text(`$${sub.toLocaleString('es-MX')}`, { align: 'right' });
+        const sub = qty * (item.precio || 0);
+        const label = pedido.tipo === 'evento' ? `${qty} pax ${nombre}` : `${qty}x ${nombre}`;
+        doc.text(label, 30, doc.y, { width: 110, continued: true });
+        doc.text(`$${sub.toLocaleString('es-MX')}`, { align: 'right' });
       });
     }
 
+    // Extras
     if (pedido.extras && Array.isArray(pedido.extras)) {
       pedido.extras.forEach(ex => {
         if (ex.nombre && ex.cantidad > 0) {
           const sub = ex.cantidad * (ex.precio || 0);
-          doc.text(`+ ${ex.cantidad}x ${ex.nombre}`, 30, doc.y, { width: 110, continued: true }).text(`$${sub.toLocaleString('es-MX')}`, { align: 'right' });
+          doc.text(`+ ${ex.cantidad}x ${ex.nombre}`, 30, doc.y, { width: 110, continued: true });
+          doc.text(`$${sub.toLocaleString('es-MX')}`, { align: 'right' });
         }
       });
     }
@@ -454,22 +483,25 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
       let costoEnvio = pedido.costoEnvio || 0;
       if (!costoEnvio && pedido.costoFijo != null) costoEnvio = pedido.costoFijo + ((pedido.distancia || 0) * (pedido.costoKm || 0));
       if (costoEnvio > 0) {
-        doc.text(`Envío Domicilio`, 30, doc.y, { width: 110, continued: true }).text(`$${costoEnvio.toLocaleString('es-MX')}`, { align: 'right' });
+        doc.text('Envío Domicilio', 30, doc.y, { width: 110, continued: true });
+        doc.text(`$${costoEnvio.toLocaleString('es-MX')}`, { align: 'right' });
       }
     } else if (pedido.tipo !== 'venta_directa') {
       doc.fontSize(8).text('Recolección en Mostrador (Pick-up)', { align: 'center', oblique: true });
-      doc.fontSize(10);
+      doc.fontSize(9);
     }
 
-    doc.moveDown();
-    doc.moveTo(30, doc.y).lineTo(196, doc.y).undash().stroke();
-    doc.moveDown();
+    doc.moveDown(0.5);
+    doc.moveTo(30, doc.y).lineTo(196, doc.y).undash().lineWidth(1.5).stroke();
+    doc.lineWidth(1);
+    doc.moveDown(0.4);
 
     // Total
-    const totalVenta = pedido.total || 0;
-    doc.font('Helvetica-Bold').fontSize(14).text('TOTAL M.N.', 30, doc.y, { continued: true }).text(`$${totalVenta.toLocaleString('es-MX')}`, { align: 'right' });
-    
-    doc.moveDown();
+    doc.font('Helvetica-Bold').fontSize(13);
+    doc.text('TOTAL M.N.', 30, doc.y, { continued: true });
+    doc.text(`$${totalVenta.toLocaleString('es-MX')}`, { align: 'right' });
+
+    doc.moveDown(1);
     doc.font('Helvetica').fontSize(10).text('¡Gracias por tu preferencia!', { align: 'center' });
 
     doc.end();

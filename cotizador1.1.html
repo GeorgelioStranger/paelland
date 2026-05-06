@@ -1459,7 +1459,7 @@
         data.fecha = document.getElementById("k-fecha").value;
         data.hora = document.getElementById("k-hora").value;
         data.entrega = kEntrega;
-        data.items = kItems.map(i => ({ ...i }));
+        data.items = kItems.filter(i => i.cantidad > 0).map(i => ({ ...i }));
         data.extras = kExtras.map(e => ({ ...e }));
         data.notas = document.getElementById("k-notas").value;
 
@@ -1491,7 +1491,7 @@
         data.fecha = document.getElementById("e-fecha").value;
         data.hora = document.getElementById("e-hora").value;
         data.entrega = eEntrega;
-        data.items = eItems.map(i => ({ ...i }));
+        data.items = eItems.filter(i => i.personas > 0).map(i => ({ ...i }));
         data.extras = eExtras.map(e => ({ ...e }));
         data.notas = document.getElementById("e-notas").value;
 
