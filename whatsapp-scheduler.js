@@ -107,9 +107,10 @@ function construirMensaje(pedidos, fechaMañana) {
         lineas.push(`${p.nombre} - ${hora} - ${entrega}`);
 
         const items = Array.isArray(p.itemsDetalle) ? p.itemsDetalle : [];
-        items.filter(i => (i.kilos > 0 || i.cantidad > 0)).forEach(i => {
-          const cantidad = i.kilos > 0 ? `${i.kilos} kg` : `${i.cantidad} kg`;
-          lineas.push(`   • ${i.nombre} - ${cantidad}`);
+        items.filter(i => i.cantidad > 0).forEach(i => {
+          const totalKg = i.cantidad * (i.kilos || 0);
+          const suffix = totalKg > 0 ? ` (${totalKg} kg)` : '';
+          lineas.push(`   • ${i.nombre} × ${i.cantidad}${suffix}`);
         });
         lineas.push('');
       });

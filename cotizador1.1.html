@@ -1517,6 +1517,7 @@
         document.getElementById("k-notas").value = '';
         document.getElementById("k-direccion").value = '';
         kExtras = [];
+        kRenderExtras();
         kInit();
       } else {
         document.getElementById("e-cliente").value = '';
@@ -1524,7 +1525,7 @@
         document.getElementById("e-notas").value = '';
         document.getElementById("e-direccion").value = '';
         eExtras = [];
-        eItems = [{ nombre: "Paella mar y tierra", precio: 180, personas: 10 }];
+        eItems = E_MENU.map(i => ({ ...i }));
         eInit();
       }
     }
