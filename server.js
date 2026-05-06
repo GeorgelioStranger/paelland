@@ -405,55 +405,83 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
     }
 
     // 1. Generar el PDF en memoria
-    const doc = new PDFDocument({ margin: 30, size: [226.77, 700], autoFirstPage: true }); // 80mm
+    const PAGE_W = 226.77;
+    const L = 30;
+    const R = PAGE_W - 30;
+    const CONTENT_W = R - L;
+
+    const doc = new PDFDocument({ margin: 30, size: [PAGE_W, 700] });
     const buffers = [];
     doc.on('data', buffers.push.bind(buffers));
 
-    const tipoTxt = pedido.tipo === 'venta_directa' ? 'VENTA DE MOSTRADOR' : (pedido.tipo === 'evento' ? 'PEDIDO EVENTO' : 'PEDIDO POR KILO');
+    const tipoTxt = pedido.tipo === 'venta_directa' ? 'VENTA DE MOSTRADOR'
+      : (pedido.tipo === 'evento' ? 'PEDIDO EVENTO' : 'PEDIDO POR KILO');
+
     const now = new Date();
-    const fechaTxt = now.toLocaleDateString('es-MX') + ' ' + now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    const fmtMX = (opts) => new Intl.DateTimeFormat('es-MX', { timeZone: 'America/Merida', ...opts }).format(now);
+    const fDate = fmtMX({ day: 'numeric', month: 'numeric', year: 'numeric' });
+    const fTime = fmtMX({ hour: '2-digit', minute: '2-digit', hour12: true });
+    const fechaTxt = `${fDate} ${fTime}`;
+
     const folioVal = pedido.folio ? pedido.folio.toString().slice(-6).toUpperCase() : now.getTime().toString().slice(-6);
-    const folioStr = '#' + folioVal;
     const nombreCliente = pedido.cliente || pedido.nombre || '';
     const totalVenta = pedido.total || 0;
+    const generadoPor = req.userRole === 'admin' ? 'Admin' : 'Empleado';
 
-    // Logo
+    // Logo centrado con posición X calculada
+    const LOGO_W = 130;
+    const logoX = (PAGE_W - LOGO_W) / 2;
     const logoPath = path.join(__dirname, 'logoPaelland.png');
     try {
-      doc.image(logoPath, { fit: [130, 65], align: 'center' });
+      doc.image(logoPath, logoX, doc.y, { width: LOGO_W });
     } catch (_) {
-      doc.font('Helvetica-Bold').fontSize(16).text('LA PAELLA', { align: 'center' });
+      doc.font('Helvetica-Bold').fontSize(16).text('LA PAELLA', L, doc.y, { width: CONTENT_W, align: 'center' });
     }
-    doc.moveDown(0.3);
-    doc.font('Helvetica').fontSize(10).text('Mérida, Yucatán', { align: 'center' });
+    doc.moveDown(0.4);
+    doc.font('Helvetica').fontSize(10).text('Mérida, Yucatán', L, doc.y, { width: CONTENT_W, align: 'center' });
     doc.moveDown(0.8);
 
-    // Meta info (dos columnas: etiqueta | valor)
-    const metaLeft = 30;
-    const metaLabelW = 72;
+    // Meta info: etiqueta fija + valor con más espacio para no cortar línea
+    const META_LABEL_W = 58;
+    const META_VAL_X = L + META_LABEL_W;
+    const META_VAL_W = CONTENT_W - META_LABEL_W;
     doc.font('Helvetica').fontSize(9);
+
     const drawMeta = (label, value) => {
       const y = doc.y;
-      doc.text(label, metaLeft, y, { width: metaLabelW });
-      doc.text(value, metaLeft + metaLabelW, y, { width: 166 - metaLabelW - metaLeft });
-      doc.moveDown(0.2);
+      doc.text(label, L, y, { width: META_LABEL_W, lineBreak: false });
+      doc.text(value, META_VAL_X, y, { width: META_VAL_W });
+      doc.moveDown(0.15);
     };
     drawMeta('F. Emisión:', fechaTxt);
-    drawMeta('Folio:', folioStr);
+    drawMeta('Folio:', `#${folioVal}`);
     drawMeta('Tipo:', tipoTxt);
     if (nombreCliente) drawMeta('Cliente:', nombreCliente);
 
     doc.moveDown(0.5);
-    doc.moveTo(30, doc.y).lineTo(196, doc.y).dash(2, { space: 2 }).stroke();
+    doc.moveTo(L, doc.y).lineTo(R, doc.y).dash(2, { space: 2 }).stroke();
     doc.moveDown(0.5);
 
-    // Encabezado tabla
+    // Encabezado tabla (dos columnas con posición Y fija)
     doc.font('Helvetica-Bold').fontSize(9);
-    doc.text('CANT. / CONCEPTO', 30, doc.y, { continued: true });
-    doc.text('IMPORTE', { align: 'right' });
+    const yHead = doc.y;
+    doc.text('CANT. / CONCEPTO', L, yHead, { width: 120, lineBreak: false });
+    doc.text('IMPORTE', L, yHead, { width: CONTENT_W, align: 'right' });
+    doc.moveDown(0.4);
     doc.font('Helvetica').fontSize(9);
 
-    // Productos (solo los con cantidad > 0)
+    // Fila con concepto a la izquierda y precio anclado a la derecha en la misma Y
+    const drawRow = (label, priceStr) => {
+      const startY = doc.y;
+      doc.text(label, L, startY, { width: 120 });
+      const afterLabelY = doc.y;
+      doc.text(priceStr, L, startY, { width: CONTENT_W, align: 'right' });
+      if (afterLabelY > doc.y) {
+        doc.moveDown((afterLabelY - doc.y) / doc.currentLineHeight(true));
+      }
+    };
+
+    // Productos (solo con cantidad > 0)
     if (pedido.items && Array.isArray(pedido.items)) {
       pedido.items.forEach(item => {
         const qty = pedido.tipo === 'evento' ? (item.personas || 0) : (item.cantidad || 0);
@@ -461,8 +489,7 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
         const nombre = item.nombre || '';
         const sub = qty * (item.precio || 0);
         const label = pedido.tipo === 'evento' ? `${qty} pax ${nombre}` : `${qty}x ${nombre}`;
-        doc.text(label, 30, doc.y, { width: 110, continued: true });
-        doc.text(`$${sub.toLocaleString('es-MX')}`, { align: 'right' });
+        drawRow(label, `$${sub.toLocaleString('es-MX')}`);
       });
     }
 
@@ -471,38 +498,41 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
       pedido.extras.forEach(ex => {
         if (ex.nombre && ex.cantidad > 0) {
           const sub = ex.cantidad * (ex.precio || 0);
-          doc.text(`+ ${ex.cantidad}x ${ex.nombre}`, 30, doc.y, { width: 110, continued: true });
-          doc.text(`$${sub.toLocaleString('es-MX')}`, { align: 'right' });
+          drawRow(`+ ${ex.cantidad}x ${ex.nombre}`, `$${sub.toLocaleString('es-MX')}`);
         }
       });
     }
 
-    // Costo de envío
+    // Envío
     const tipoEnvioFinal = pedido.tipoEntrega || pedido.entrega;
     if (tipoEnvioFinal === 'domicilio') {
       let costoEnvio = pedido.costoEnvio || 0;
       if (!costoEnvio && pedido.costoFijo != null) costoEnvio = pedido.costoFijo + ((pedido.distancia || 0) * (pedido.costoKm || 0));
-      if (costoEnvio > 0) {
-        doc.text('Envío Domicilio', 30, doc.y, { width: 110, continued: true });
-        doc.text(`$${costoEnvio.toLocaleString('es-MX')}`, { align: 'right' });
-      }
+      if (costoEnvio > 0) drawRow('Envío Domicilio', `$${costoEnvio.toLocaleString('es-MX')}`);
     } else if (pedido.tipo !== 'venta_directa') {
-      doc.fontSize(8).text('Recolección en Mostrador (Pick-up)', { align: 'center', oblique: true });
+      doc.fontSize(8).text('Recolección en Mostrador (Pick-up)', L, doc.y, { width: CONTENT_W, align: 'center', oblique: true });
       doc.fontSize(9);
     }
 
     doc.moveDown(0.5);
-    doc.moveTo(30, doc.y).lineTo(196, doc.y).undash().lineWidth(1.5).stroke();
+    doc.moveTo(L, doc.y).lineTo(R, doc.y).undash().lineWidth(1.5).stroke();
     doc.lineWidth(1);
-    doc.moveDown(0.4);
+    doc.moveDown(0.5);
 
-    // Total
+    // Total (misma técnica de dos columnas)
     doc.font('Helvetica-Bold').fontSize(13);
-    doc.text('TOTAL M.N.', 30, doc.y, { continued: true });
-    doc.text(`$${totalVenta.toLocaleString('es-MX')}`, { align: 'right' });
+    const yTotal = doc.y;
+    doc.text('TOTAL M.N.', L, yTotal, { width: 120, lineBreak: false });
+    doc.text(`$${totalVenta.toLocaleString('es-MX')}`, L, yTotal, { width: CONTENT_W, align: 'right' });
+    doc.moveDown(1.2);
 
-    doc.moveDown(1);
-    doc.font('Helvetica').fontSize(10).text('¡Gracias por tu preferencia!', { align: 'center' });
+    doc.font('Helvetica').fontSize(10).text('¡Gracias por tu preferencia!', L, doc.y, { width: CONTENT_W, align: 'center' });
+    doc.moveDown(0.8);
+
+    // Generado por (discreto, gris, pequeño)
+    doc.fillColor('#999999').font('Helvetica').fontSize(7)
+      .text(`Generado por: ${generadoPor}`, L, doc.y, { width: CONTENT_W, align: 'right' });
+    doc.fillColor('#000000');
 
     doc.end();
 
