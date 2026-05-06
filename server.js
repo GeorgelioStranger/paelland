@@ -430,10 +430,13 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
 
     // Logo centrado con posición X calculada
     const LOGO_W = 130;
+    const LOGO_MAX_H = 65;
     const logoX = (PAGE_W - LOGO_W) / 2;
+    const logoStartY = doc.y;
     const logoPath = path.join(__dirname, 'logoPaelland.png');
     try {
-      doc.image(logoPath, logoX, doc.y, { width: LOGO_W });
+      doc.image(logoPath, logoX, logoStartY, { fit: [LOGO_W, LOGO_MAX_H] });
+      doc.y = logoStartY + LOGO_MAX_H; // avanzar manualmente porque image() no mueve el cursor
     } catch (_) {
       doc.font('Helvetica-Bold').fontSize(16).text('LA PAELLA', L, doc.y, { width: CONTENT_W, align: 'center' });
     }
