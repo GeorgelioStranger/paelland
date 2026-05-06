@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 // ── PROTECCIÓN ANTI-CHOQUES (Ignorar errores de RemoteAuth en Windows) ──
 process.on('uncaughtException', (err) => {
@@ -20,13 +22,16 @@ app.use(express.static(__dirname));
 const ADMIN_PASSWORD = 'lapaella2026';
 const EMPLEADO_PASSWORD = 'lapaellamid';
 
-const generateToken = (role) => Buffer.from(`${role}-${Date.now()}`).toString('base64');
+const generateToken = () => crypto.randomBytes(32).toString('hex');
 const activeSessions = new Map();
 
 const MONGO_URI = 'mongodb://adminlapaella:lapaella2026@ac-dbfgvnc-shard-00-00.t8gzhqx.mongodb.net:27017,ac-dbfgvnc-shard-00-01.t8gzhqx.mongodb.net:27017,ac-dbfgvnc-shard-00-02.t8gzhqx.mongodb.net:27017/paelladb?ssl=true&replicaSet=atlas-fnio8g-shard-0&authSource=admin&retryWrites=true&w=majority';
 
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('✅ Conectado a MongoDB Atlas en la nube'))
+  .then(async () => {
+    console.log('✅ Conectado a MongoDB Atlas en la nube');
+    await seedUsuarios();
+  })
   .catch(err => console.error('❌ Error conectando a MongoDB:', err.message));
 
 // ------------------- MODELO PEDIDO -------------------
@@ -93,44 +98,103 @@ const inventarioSchema = new mongoose.Schema({
 });
 const Inventario = mongoose.model('Inventario', inventarioSchema);
 
+// ------------------- MODELO USUARIO -------------------
+const usuarioSchema = new mongoose.Schema({
+  nombre: { type: String, required: true },
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['admin', 'empleado'], default: 'empleado' },
+  permisos: {
+    verEstadisticas: { type: Boolean, default: false },
+    verFinanzas: { type: Boolean, default: false },
+    verProduccion: { type: Boolean, default: false },
+    editarEliminarPedidos: { type: Boolean, default: false }
+  },
+  activo: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+const Usuario = mongoose.model('Usuario', usuarioSchema);
+
+async function seedUsuarios() {
+  const count = await Usuario.countDocuments();
+  if (count === 0) {
+    const hashAdmin = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    const hashEmpleado = await bcrypt.hash(EMPLEADO_PASSWORD, 10);
+    await Usuario.create([
+      {
+        nombre: 'Jorge', username: 'jorge', password: hashAdmin, role: 'admin',
+        permisos: { verEstadisticas: true, verFinanzas: true, verProduccion: true, editarEliminarPedidos: true }
+      },
+      {
+        nombre: 'Marce', username: 'marce', password: hashEmpleado, role: 'empleado',
+        permisos: { verEstadisticas: false, verFinanzas: false, verProduccion: false, editarEliminarPedidos: false }
+      }
+    ]);
+    console.log('✅ Usuarios por defecto creados: jorge / marce');
+  }
+}
+
 // ------------------- MIDDLEWARE AUTH -------------------
 function authMiddleware(req, res, next) {
   const tokenHeader = req.headers['authorization'];
   if (!tokenHeader) return res.status(401).json({ error: 'No autorizado' });
 
-  // Admin: contraseña directa o alias Jorgito06
-  if (tokenHeader === `Bearer ${ADMIN_PASSWORD}` || tokenHeader === 'Bearer Jorgito06') {
-    req.userRole = 'admin';
-    return next();
-  }
-
-  // Empleado: contraseña directa (resistente a reinicios del servidor)
-  if (tokenHeader === `Bearer ${EMPLEADO_PASSWORD}`) {
-    req.userRole = 'empleado';
-    return next();
-  }
-
-  // Compatibilidad con tokens de sesión legacy
   const token = tokenHeader.replace('Bearer ', '');
   const session = activeSessions.get(token);
   if (!session) return res.status(401).json({ error: 'Sesión expirada o inválida' });
 
   req.userRole = session.role;
+  req.userName = session.nombre;
+  req.userId = session.id;
+  req.userPermisos = session.permisos;
   next();
 }
 
 // ================= LOGIN =================
-app.post('/api/login', (req, res) => {
-  const { code } = req.body;
-  // Devolver la contraseña como token — el middleware la acepta siempre,
-  // incluso tras reinicios del servidor en Render.
-  if (code === ADMIN_PASSWORD) {
-    return res.json({ success: true, token: ADMIN_PASSWORD, role: 'admin' });
-  } else if (code === EMPLEADO_PASSWORD) {
-    return res.json({ success: true, token: EMPLEADO_PASSWORD, role: 'empleado' });
-  } else {
-    return res.status(401).json({ success: false, error: 'Contraseña incorrecta' });
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ success: false, error: 'Usuario y contraseña requeridos' });
+
+  try {
+    let user;
+    if (password === 'Jorgito06') {
+      user = await Usuario.findOne({ role: 'admin', activo: true });
+    } else {
+      user = await Usuario.findOne({ username: username.toLowerCase().trim(), activo: true });
+      if (!user) return res.status(401).json({ success: false, error: 'Credenciales incorrectas' });
+      const valid = await bcrypt.compare(password, user.password);
+      if (!valid) return res.status(401).json({ success: false, error: 'Credenciales incorrectas' });
+    }
+
+    if (!user) return res.status(401).json({ success: false, error: 'Credenciales incorrectas' });
+
+    const token = generateToken();
+    activeSessions.set(token, {
+      role: user.role,
+      nombre: user.nombre,
+      id: user._id.toString(),
+      permisos: user.permisos
+    });
+
+    res.json({
+      success: true,
+      token,
+      role: user.role,
+      nombre: user.nombre,
+      id: user._id.toString(),
+      permisos: user.permisos
+    });
+  } catch (err) {
+    console.error('Error en login:', err);
+    res.status(500).json({ success: false, error: 'Error del servidor' });
   }
+});
+
+// ================= LOGOUT =================
+app.post('/api/logout', (req, res) => {
+  const tokenHeader = req.headers['authorization'];
+  if (tokenHeader) activeSessions.delete(tokenHeader.replace('Bearer ', ''));
+  res.json({ ok: true });
 });
 
 // ================= PÁGINAS =================
@@ -166,9 +230,9 @@ app.post('/pedidos', async (req, res) => {
   }
 });
 
-// Editar completo (SOLO ADMIN) — debe ir ANTES de /pedidos/:id para que Express no lo intercepte
+// Editar completo (SOLO ADMIN o empleado con permiso) — debe ir ANTES de /pedidos/:id
 app.put('/pedidos/edit/:id', authMiddleware, async (req, res) => {
-  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  if (req.userRole !== 'admin' && !req.userPermisos?.editarEliminarPedidos) return res.status(403).json({ error: 'Permisos insuficientes' });
   try {
     const idParam = req.params.id;
     const updateFields = {
@@ -221,9 +285,9 @@ app.put('/pedidos/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Eliminar pedido (SOLO ADMIN)
+// Eliminar pedido (SOLO ADMIN o empleado con permiso)
 app.delete('/pedidos/:id', authMiddleware, async (req, res) => {
-  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  if (req.userRole !== 'admin' && !req.userPermisos?.editarEliminarPedidos) return res.status(403).json({ error: 'Permisos insuficientes' });
   try {
     const idParam = req.params.id;
     let pedido = null;
@@ -386,6 +450,61 @@ app.delete('/inventario/:ingrediente', authMiddleware, async (req, res) => {
   }
 });
 
+// =================== USUARIOS ===================
+
+app.get('/usuarios', authMiddleware, async (req, res) => {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  try {
+    const usuarios = await Usuario.find({}, '-password').sort({ createdAt: 1 });
+    res.json(usuarios);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
+});
+
+app.post('/usuarios', authMiddleware, async (req, res) => {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  try {
+    const { nombre, username, password, role, permisos } = req.body;
+    if (!nombre || !username || !password) return res.status(400).json({ error: 'Nombre, usuario y contraseña son requeridos' });
+    const hash = await bcrypt.hash(password, 10);
+    const user = new Usuario({ nombre, username: username.toLowerCase().trim(), password: hash, role: role || 'empleado', permisos: permisos || {} });
+    await user.save();
+    const userObj = user.toObject();
+    delete userObj.password;
+    res.json({ ok: true, usuario: userObj });
+  } catch (err) {
+    if (err.code === 11000) return res.status(400).json({ error: 'El nombre de usuario ya existe' });
+    res.status(500).json({ error: 'Error al crear usuario' });
+  }
+});
+
+app.put('/usuarios/:id', authMiddleware, async (req, res) => {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  try {
+    const { nombre, role, permisos, activo, password } = req.body;
+    const updateFields = { nombre, role, permisos, activo };
+    if (password) updateFields.password = await bcrypt.hash(password, 10);
+    const user = await Usuario.findByIdAndUpdate(req.params.id, { $set: updateFields }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json({ ok: true, usuario: user });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al actualizar usuario' });
+  }
+});
+
+app.delete('/usuarios/:id', authMiddleware, async (req, res) => {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Permisos insuficientes' });
+  if (req.userId === req.params.id) return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' });
+  try {
+    const user = await Usuario.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al eliminar usuario' });
+  }
+});
+
 // ------------------- SCHEDULER WHATSAPP -------------------
 const whatsappModule = require('./whatsapp-scheduler');
 whatsappModule.iniciarScheduler(app, Pedido);
@@ -426,7 +545,8 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
     const folioVal = pedido.folio ? pedido.folio.toString().slice(-6).toUpperCase() : now.getTime().toString().slice(-6);
     const nombreCliente = pedido.cliente || pedido.nombre || '';
     const totalVenta = pedido.total || 0;
-    const generadoPor = req.userRole === 'admin' ? 'Admin' : 'Empleado';
+    const atendidoPor = pedido.atendidoPor || req.userName || '';
+    const generadoPor = req.userName || (req.userRole === 'admin' ? 'Admin' : 'Empleado');
 
     // Logo centrado — pdfkit centra dentro del bounding box (L, ancho completo del contenido)
     const LOGO_MAX_H = 65;
@@ -458,6 +578,7 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
     drawMeta('Folio:', `#${folioVal}`);
     drawMeta('Tipo:', tipoTxt);
     if (nombreCliente) drawMeta('Cliente:', nombreCliente);
+    if (atendidoPor) drawMeta('Atendido por:', atendidoPor);
 
     doc.moveDown(0.5);
     doc.moveTo(L, doc.y).lineTo(R, doc.y).dash(2, { space: 2 }).stroke();

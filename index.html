@@ -204,16 +204,20 @@
         <div class="login-card">
             <div class="icon-circle">🔐</div>
             <h2>Acceso al Sistema</h2>
-            <p>Ingresa tu clave de Administrador o Empleado para continuar.</p>
+            <p>Ingresa tu usuario y contraseña para continuar.</p>
 
-            <div id="login-error">🚫 Contraseña incorrecta. Intenta de nuevo.</div>
+            <div id="login-error">🚫 Usuario o contraseña incorrectos. Intenta de nuevo.</div>
 
             <form id="loginForm">
                 <div class="input-group">
-                    <label for="password">Contraseña segura</label>
-                    <input type="password" id="password" placeholder="••••••••••••" autofocus required>
+                    <label for="username">Usuario</label>
+                    <input type="text" id="username" placeholder="Tu usuario" autofocus required autocomplete="username">
                 </div>
-                
+                <div class="input-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••••••" required autocomplete="current-password">
+                </div>
+
                 <button type="submit" class="btn-login" id="btn-submit">Entrar</button>
             </form>
         </div>
@@ -245,10 +249,11 @@
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const username = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value;
             const btn = document.getElementById('btn-submit');
             const errorDiv = document.getElementById('login-error');
-            
+
             btn.innerHTML = 'Verificando...';
             btn.style.opacity = '0.8';
             errorDiv.style.display = 'none';
@@ -257,7 +262,7 @@
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: pass })
+                    body: JSON.stringify({ username, password: pass })
                 });
 
                 const data = await response.json();
@@ -265,22 +270,25 @@
                 if (response.ok && data.success) {
                     localStorage.setItem('auth_token', data.token);
                     localStorage.setItem('user_role', data.role);
-                    
+                    localStorage.setItem('user_name', data.nombre);
+                    localStorage.setItem('user_id', data.id);
+                    localStorage.setItem('user_permisos', JSON.stringify(data.permisos || {}));
+
                     btn.innerHTML = '✅ Conectando...';
                     btn.style.background = '#10b981';
-                    
+
                     setTimeout(() => {
                         window.location.href = '/cotizador';
                     }, 500);
                 } else {
-                    throw new Error('Invalido');
+                    throw new Error(data.error || 'Invalido');
                 }
             } catch (error) {
                 btn.innerHTML = 'Entrar';
                 btn.style.opacity = '1';
                 errorDiv.style.display = 'block';
                 document.getElementById('password').value = '';
-                document.getElementById('password').focus();
+                document.getElementById('username').focus();
             }
         });
     </script>

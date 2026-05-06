@@ -665,21 +665,29 @@
       throw new Error('No autenticado');
     }
 
-    if (userRole === 'empleado') {
-      document.addEventListener("DOMContentLoaded", () => {
-        const hideLinks = ['/estadisticas', '/finanzas', '/produccion'];
-        hideLinks.forEach(path => {
-          const link = document.querySelector(`a[href="${path}"]`);
-          if (link) link.style.display = 'none';
-        });
-      });
-    }
+    const userPermisos = JSON.parse(localStorage.getItem('user_permisos') || '{}');
+    const userName = localStorage.getItem('user_name') || '';
 
-    // Configurar menú de usuario
     document.addEventListener("DOMContentLoaded", () => {
+      // Ocultar links según permisos
+      if (!userPermisos.verEstadisticas) {
+        const l = document.querySelector('a[href="/estadisticas"]');
+        if (l) l.style.display = 'none';
+      }
+      if (!userPermisos.verFinanzas) {
+        const l = document.querySelector('a[href="/finanzas"]');
+        if (l) l.style.display = 'none';
+      }
+      if (!userPermisos.verProduccion) {
+        const l = document.querySelector('a[href="/produccion"]');
+        if (l) l.style.display = 'none';
+      }
+
+      // Greeting dinámico con nombre real
       const uName = document.getElementById('user-name-display');
       if (uName) {
-        uName.innerText = userRole === 'admin' ? '👋 Bienvenido, Jorge' : '👋 Bienvenida, Marce';
+        const genero = userRole === 'admin' ? 'o' : 'a';
+        uName.innerText = `👋 Bienvenid${genero}, ${userName}`;
       }
     });
     // =================================================================
@@ -697,8 +705,9 @@
   <script>
     function cerrarSesion() {
       if (confirm('¿Deseas cerrar tu sesión actual?')) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_role');
+        const token = localStorage.getItem('auth_token');
+        fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }).catch(() => {});
+        ['auth_token', 'user_role', 'user_name', 'user_id', 'user_permisos'].forEach(k => localStorage.removeItem(k));
         window.location.href = '/';
       }
     }
@@ -1584,14 +1593,15 @@
           costoEnvio: data.costoEnvio || 0,
           hora: data.hora,
           fecha: data.fecha,
-          total: data.total
+          total: data.total,
+          atendidoPor: localStorage.getItem('user_name') || ''
         };
 
         const res = await fetch('/pedidos/enviar-ticket-whatsapp', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer Jorgito06'
+            'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
           },
           body: JSON.stringify(payload)
         });
@@ -1671,7 +1681,8 @@
         costoEnvio: data.costoEnvio || 0,
         horaEntrega: data.hora,
         fechaEntrega: fechaEntregaReal,
-        total: data.total
+        total: data.total,
+        atendidoPor: localStorage.getItem('user_name') || ''
       };
 
       try {
@@ -1679,7 +1690,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer Jorgito06'   // <-- usa la misma contraseña
+            'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
           },
           body: JSON.stringify(pedido)
         });
@@ -1872,7 +1883,7 @@
         nombre: cliente,
         telefono: telefono,
         tipo: 'venta_directa',
-        status: 'Entregado', // Las ventas directas nacen entregadas
+        status: 'Entregado',
         fechaEntrega: fecha,
         total: total,
         itemsDetalle: itemsDetalle,
@@ -1880,7 +1891,8 @@
         tipoEntrega: 'pickup',
         horaEntrega: new Date().toTimeString().substring(0, 5),
         direccion: '',
-        metodoPago: metodoPago || null
+        metodoPago: metodoPago || null,
+        atendidoPor: localStorage.getItem('user_name') || ''
       };
 
       try {
@@ -1927,7 +1939,7 @@
       if (!container) return;
       try {
         const res = await fetch('/pedidos', {
-          headers: { 'Authorization': 'Bearer lapaella2026' } // Contraseña admin requerida para GET /pedidos
+          headers: { 'Authorization': 'Bearer ' + localStorage.getItem('auth_token') }
         });
         if (!res.ok) throw new Error();
 

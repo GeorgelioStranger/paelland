@@ -926,13 +926,15 @@
     <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
     <a href="/finanzas" title="Finanzas">💸<span class="nav-label">Finanzas</span></a>
     <a href="/produccion" title="Producción">🏭<span class="nav-label">Producción</span></a>
+    <a href="#" id="nav-usuarios" title="Usuarios" onclick="abrirPanelUsuarios(); return false;">👥<span class="nav-label">Usuarios</span></a>
   </nav>
 
   <script>
     function cerrarSesion() {
       if (confirm('¿Deseas cerrar tu sesión actual?')) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_role');
+        const token = localStorage.getItem('auth_token');
+        fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }).catch(() => {});
+        ['auth_token', 'user_role', 'user_name', 'user_id', 'user_permisos'].forEach(k => localStorage.removeItem(k));
         window.location.href = '/';
       }
     }
@@ -1226,6 +1228,63 @@
     </div>
   </div>
 
+  <!-- ===== MODAL: GESTIÓN DE USUARIOS ===== -->
+  <div id="modalUsuarios" class="modal" style="z-index:2200; display:none;">
+    <div class="modal-content" style="max-width:700px; padding:30px;">
+      <span class="close-modal" onclick="cerrarModalUsuarios()">&times;</span>
+      <h2 style="margin-top:0; margin-bottom:4px;">👥 Gestión de Usuarios</h2>
+      <p style="color:#6b7280; font-size:0.9rem; margin-bottom:20px;">Administra quién puede acceder al sistema y qué puede ver.</p>
+
+      <button onclick="abrirFormUsuario(null)"
+        style="background:var(--brand-red); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:600; cursor:pointer; margin-bottom:18px;">
+        + Nuevo usuario
+      </button>
+
+      <div id="tabla-usuarios" style="overflow-x:auto;"></div>
+
+      <!-- Formulario inline para crear/editar -->
+      <div id="form-usuario" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:20px; margin-top:20px;">
+        <h3 id="form-usuario-titulo" style="margin-top:0;">Nuevo usuario</h3>
+        <input type="hidden" id="fu-id">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Nombre</label>
+            <input type="text" id="fu-nombre" placeholder="Ej: María" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-size:0.95rem; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Usuario (para login)</label>
+            <input type="text" id="fu-username" placeholder="Ej: maria" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-size:0.95rem; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Contraseña <span id="fu-pass-hint" style="color:#9ca3af; font-weight:400;">(dejar vacío para no cambiar)</span></label>
+            <input type="password" id="fu-password" placeholder="••••••••" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-size:0.95rem; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Rol</label>
+            <select id="fu-role" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-size:0.95rem; box-sizing:border-box;">
+              <option value="empleado">Empleado</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Permisos</label>
+          <div style="display:flex; flex-wrap:wrap; gap:12px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.9rem; cursor:pointer;"><input type="checkbox" id="fu-p-stats"> Ver Estadísticas</label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.9rem; cursor:pointer;"><input type="checkbox" id="fu-p-finanzas"> Ver Finanzas</label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.9rem; cursor:pointer;"><input type="checkbox" id="fu-p-produccion"> Ver Producción</label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.9rem; cursor:pointer;"><input type="checkbox" id="fu-p-editar"> Editar / Eliminar pedidos</label>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button onclick="guardarUsuario()" style="background:var(--brand-red); color:white; border:none; padding:10px 24px; border-radius:8px; font-weight:600; cursor:pointer;">Guardar</button>
+          <button onclick="cancelarFormUsuario()" style="background:#e5e7eb; color:#374151; border:none; padding:10px 24px; border-radius:8px; font-weight:600; cursor:pointer;">Cancelar</button>
+        </div>
+        <p id="fu-error" style="color:#ef4444; font-size:0.85rem; margin-top:10px; display:none;"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Método de Pago -->
   <div id="modalMetodoPago" class="modal" style="z-index:2100;">
     <div class="modal-content" style="max-width:400px; text-align:center;">
@@ -1287,32 +1346,42 @@
       throw new Error('No autenticado');
     }
 
+    const userPermisos = JSON.parse(localStorage.getItem('user_permisos') || '{}');
+    const userName = localStorage.getItem('user_name') || '';
+
     // Configurar menú de usuario
     window.onload = () => {
       const uName = document.getElementById('user-name-display');
       if (uName) {
-        uName.innerText = userRole === 'admin' ? '👋 Bienvenido, Jorge' : '👋 Bienvenida, Marce';
+        const genero = userRole === 'admin' ? 'o' : 'a';
+        uName.innerText = `👋 Bienvenid${genero}, ${userName}`;
+      }
+
+      // Ocultar links de nav según permisos
+      if (!userPermisos.verEstadisticas) {
+        const l = document.querySelector('a[href="/estadisticas"]'); if (l) l.style.display = 'none';
+      }
+      if (!userPermisos.verFinanzas) {
+        const l = document.querySelector('a[href="/finanzas"]'); if (l) l.style.display = 'none';
+      }
+      if (!userPermisos.verProduccion) {
+        const l = document.querySelector('a[href="/produccion"]'); if (l) l.style.display = 'none';
+      }
+      // Ocultar link de usuarios si no es admin
+      if (userRole !== 'admin') {
+        const lU = document.getElementById('nav-usuarios'); if (lU) lU.style.display = 'none';
+      }
+
+      // Ocultar pestañas internas que empleado no debe ver
+      if (userRole === 'empleado') {
+        const style = document.createElement('style');
+        style.innerHTML = `
+          button[data-tab="estadisticas"], button[data-tab="clientes"], button[data-tab="historial"] { display: none !important; }
+          .btn-editar, .btn-eliminar { display: none !important; }
+        `;
+        document.head.appendChild(style);
       }
     };
-
-    // Configurar interfaz según el rol
-    if (userRole === 'empleado') {
-      // Ocultar botones laterales de Estadísticas y Finanzas
-      const linkEstadisticas = document.querySelector('a[href="/estadisticas"]');
-      if (linkEstadisticas) linkEstadisticas.style.display = 'none';
-      const linkFinanzas = document.querySelector('a[href="/finanzas"]');
-      if (linkFinanzas) linkFinanzas.style.display = 'none';
-      const linkProduccion = document.querySelector('a[href="/produccion"]');
-      if (linkProduccion) linkProduccion.style.display = 'none';
-
-      // Ocultar las pestañas internas que el empleado no debería ver en Admin
-      const style = document.createElement('style');
-      style.innerHTML = `
-        button[data-tab="estadisticas"], button[data-tab="clientes"], button[data-tab="historial"] { display: none !important; }
-        .btn-editar, .btn-eliminar { display: none !important; }
-      `;
-      document.head.appendChild(style);
-    }
 
     // Función para hacer fetch con el token automáticamente
     function authFetch(url, options = {}) {
@@ -1571,6 +1640,7 @@
           ${p.tipo === 'kilo' ? `<div>⚖️ Kilos: ${totalKilos !== null ? totalKilos.toFixed(1) : (p.kilos || 'N/A')}</div>` : p.tipo === 'evento' ? `<div>👥 Personas: ${totalPersonas !== null ? totalPersonas : (p.personas || 'N/A')}</div>` : ''}
           <div>🚚 ${p.tipoEntrega === 'domicilio' ? 'A domicilio' : 'Pick up'} ${p.direccion ? `- ${p.direccion}` : ''}</div>
           <div>⏰ ${p.horaEntrega || 'N/A'}</div>
+          ${p.atendidoPor ? `<div style="font-size:0.82rem; color:#6b7280;">👤 Atendido por: <strong>${escapeHtml(p.atendidoPor)}</strong></div>` : ''}
           ${itemsHtml}
           ${extrasHtml}
           ${notasHtml}
@@ -1948,8 +2018,8 @@
         let res = await authFetch('/pedidos');
         if (!res.ok) {
           if (res.status === 401) {
-            localStorage.removeItem(AUTH_TOKEN_KEY);
-            location.reload();
+            ['auth_token', 'user_role', 'user_name', 'user_id', 'user_permisos'].forEach(k => localStorage.removeItem(k));
+            window.location.href = '/';
           }
           throw new Error('Error de red');
         }
@@ -2568,6 +2638,184 @@
         `).join('');
       } else {
         panel.style.display = 'none';
+      }
+    }
+
+    // ===================== GESTIÓN DE USUARIOS =====================
+    let _usuariosCache = [];
+
+    function abrirPanelUsuarios() {
+      document.getElementById('modalUsuarios').style.display = 'flex';
+      cancelarFormUsuario();
+      cargarUsuarios();
+    }
+
+    function cerrarModalUsuarios() {
+      document.getElementById('modalUsuarios').style.display = 'none';
+    }
+
+    async function cargarUsuarios() {
+      try {
+        const res = await authFetch('/usuarios');
+        _usuariosCache = await res.json();
+        renderizarTablaUsuarios();
+      } catch (e) {
+        document.getElementById('tabla-usuarios').innerHTML = '<p style="color:#ef4444;">Error al cargar usuarios.</p>';
+      }
+    }
+
+    function renderizarTablaUsuarios() {
+      const cont = document.getElementById('tabla-usuarios');
+      if (!_usuariosCache.length) { cont.innerHTML = '<p style="color:#6b7280;">No hay usuarios registrados.</p>'; return; }
+      const permLabel = (v) => v
+        ? '<span style="color:#10b981; font-weight:700;">✓</span>'
+        : '<span style="color:#d1d5db;">—</span>';
+      let rows = _usuariosCache.map(u => `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:10px 8px; font-weight:600;">${escapeHtml(u.nombre)}</td>
+          <td style="padding:10px 8px; color:#6b7280; font-size:0.85rem;">${escapeHtml(u.username)}</td>
+          <td style="padding:10px 8px;">
+            <span style="padding:3px 10px; border-radius:50px; font-size:0.75rem; font-weight:700;
+              background:${u.role === 'admin' ? '#fef3c7' : '#f0f9ff'};
+              color:${u.role === 'admin' ? '#92400e' : '#0369a1'};">${u.role}</span>
+          </td>
+          <td style="padding:10px 8px; text-align:center;">${permLabel(u.permisos?.verEstadisticas)}</td>
+          <td style="padding:10px 8px; text-align:center;">${permLabel(u.permisos?.verFinanzas)}</td>
+          <td style="padding:10px 8px; text-align:center;">${permLabel(u.permisos?.verProduccion)}</td>
+          <td style="padding:10px 8px; text-align:center;">${permLabel(u.permisos?.editarEliminarPedidos)}</td>
+          <td style="padding:10px 8px; text-align:center;">
+            <label style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-size:0.82rem;">
+              <input type="checkbox" ${u.activo ? 'checked' : ''}
+                onchange="toggleActivoUsuario('${u._id}', this.checked)"> Activo
+            </label>
+          </td>
+          <td style="padding:10px 8px; white-space:nowrap;">
+            <button onclick="abrirFormUsuario('${u._id}')"
+              style="background:#8b5cf6; color:white; border:none; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.82rem; margin-right:4px;">✏️ Editar</button>
+            <button onclick="eliminarUsuario('${u._id}', '${escapeHtml(u.nombre)}')"
+              style="background:#ef4444; color:white; border:none; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.82rem;">🗑</button>
+          </td>
+        </tr>`).join('');
+
+      cont.innerHTML = `
+        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+          <thead>
+            <tr style="background:#f8fafc; text-align:left;">
+              <th style="padding:10px 8px; color:#64748b; font-weight:600;">Nombre</th>
+              <th style="padding:10px 8px; color:#64748b; font-weight:600;">Usuario</th>
+              <th style="padding:10px 8px; color:#64748b; font-weight:600;">Rol</th>
+              <th style="padding:10px 8px; color:#64748b; font-weight:600; text-align:center;">Estadíst.</th>
+              <th style="padding:10px 8px; color:#64748b; font-weight:600; text-align:center;">Finanzas</th>
+              <th style="padding:10px 8px; color:#64748b; font-weight:600; text-align:center;">Producc.</th>
+              <th style="padding:10px 8px; color:#64748b; font-weight:600; text-align:center;">Editar/Elim.</th>
+              <th style="padding:10px 8px; color:#64748b; font-weight:600; text-align:center;">Estado</th>
+              <th style="padding:10px 8px; color:#64748b; font-weight:600;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    function abrirFormUsuario(id) {
+      const form = document.getElementById('form-usuario');
+      form.style.display = 'block';
+      document.getElementById('fu-error').style.display = 'none';
+
+      if (!id) {
+        document.getElementById('form-usuario-titulo').innerText = 'Nuevo usuario';
+        document.getElementById('fu-id').value = '';
+        document.getElementById('fu-nombre').value = '';
+        document.getElementById('fu-username').value = '';
+        document.getElementById('fu-password').value = '';
+        document.getElementById('fu-role').value = 'empleado';
+        document.getElementById('fu-p-stats').checked = false;
+        document.getElementById('fu-p-finanzas').checked = false;
+        document.getElementById('fu-p-produccion').checked = false;
+        document.getElementById('fu-p-editar').checked = false;
+        document.getElementById('fu-pass-hint').style.display = 'none';
+        document.getElementById('fu-username').disabled = false;
+      } else {
+        const u = _usuariosCache.find(x => x._id === id);
+        if (!u) return;
+        document.getElementById('form-usuario-titulo').innerText = `Editar: ${u.nombre}`;
+        document.getElementById('fu-id').value = u._id;
+        document.getElementById('fu-nombre').value = u.nombre;
+        document.getElementById('fu-username').value = u.username;
+        document.getElementById('fu-username').disabled = true;
+        document.getElementById('fu-password').value = '';
+        document.getElementById('fu-role').value = u.role;
+        document.getElementById('fu-p-stats').checked = !!u.permisos?.verEstadisticas;
+        document.getElementById('fu-p-finanzas').checked = !!u.permisos?.verFinanzas;
+        document.getElementById('fu-p-produccion').checked = !!u.permisos?.verProduccion;
+        document.getElementById('fu-p-editar').checked = !!u.permisos?.editarEliminarPedidos;
+        document.getElementById('fu-pass-hint').style.display = 'inline';
+      }
+      form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function cancelarFormUsuario() {
+      document.getElementById('form-usuario').style.display = 'none';
+      document.getElementById('fu-username').disabled = false;
+    }
+
+    async function guardarUsuario() {
+      const id = document.getElementById('fu-id').value;
+      const nombre = document.getElementById('fu-nombre').value.trim();
+      const username = document.getElementById('fu-username').value.trim();
+      const password = document.getElementById('fu-password').value;
+      const role = document.getElementById('fu-role').value;
+      const permisos = {
+        verEstadisticas: document.getElementById('fu-p-stats').checked,
+        verFinanzas: document.getElementById('fu-p-finanzas').checked,
+        verProduccion: document.getElementById('fu-p-produccion').checked,
+        editarEliminarPedidos: document.getElementById('fu-p-editar').checked
+      };
+      const errEl = document.getElementById('fu-error');
+      errEl.style.display = 'none';
+
+      if (!nombre) { errEl.innerText = 'El nombre es requerido.'; errEl.style.display = 'block'; return; }
+      if (!id && !username) { errEl.innerText = 'El usuario es requerido.'; errEl.style.display = 'block'; return; }
+      if (!id && !password) { errEl.innerText = 'La contraseña es requerida para un nuevo usuario.'; errEl.style.display = 'block'; return; }
+
+      try {
+        const body = { nombre, role, permisos };
+        if (!id) { body.username = username; body.password = password; }
+        else if (password) { body.password = password; }
+
+        const url = id ? `/usuarios/${id}` : '/usuarios';
+        const method = id ? 'PUT' : 'POST';
+        const res = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error');
+
+        cancelarFormUsuario();
+        await cargarUsuarios();
+        showToast(id ? 'Usuario actualizado ✅' : 'Usuario creado ✅', 'success');
+      } catch (e) {
+        errEl.innerText = e.message;
+        errEl.style.display = 'block';
+      }
+    }
+
+    async function toggleActivoUsuario(id, activo) {
+      try {
+        await authFetch(`/usuarios/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }) });
+        const u = _usuariosCache.find(x => x._id === id);
+        if (u) u.activo = activo;
+        showToast(`Usuario ${activo ? 'activado' : 'desactivado'}`, 'info');
+      } catch (e) { showToast('Error al actualizar', 'error'); }
+    }
+
+    async function eliminarUsuario(id, nombre) {
+      if (!confirm(`¿Eliminar al usuario "${nombre}"? Esta acción no se puede deshacer.`)) return;
+      try {
+        const res = await authFetch(`/usuarios/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error');
+        await cargarUsuarios();
+        showToast(`Usuario "${nombre}" eliminado`, 'info');
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
       }
     }
 

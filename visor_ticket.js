@@ -91,6 +91,9 @@ function generarTicketPDF(pedido) {
     if (nombreCliente) {
         clienteHtml = '<div><span>Cliente:</span> <span>' + escapeHtml(nombreCliente) + '</span></div>';
     }
+    if (pedido.atendidoPor) {
+        clienteHtml += '<div><span>Atendido por:</span> <span>' + escapeHtml(pedido.atendidoPor) + '</span></div>';
+    }
 
     // Generar el bloque HTML
     const htmlTicket = `<!DOCTYPE html>
