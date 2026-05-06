@@ -258,4 +258,36 @@ async function iniciarScheduler(app, Pedido) {
   });
 }
 
-module.exports = { iniciarScheduler, ejecutarResumenDiario };
+async function enviarPDFCliente(telefono, mensajeTexto, pdfBuffer) {
+  if (!isWhatsAppReady || !sock) {
+    throw new Error('WhatsApp no está listo');
+  }
+
+  const numero = telefono.replace(/\D/g, '');
+  if (!numero) {
+    throw new Error('Número de teléfono inválido');
+  }
+  
+  const jid = `${numero}@s.whatsapp.net`;
+
+  try {
+    await sock.sendMessage(jid, { 
+      document: pdfBuffer, 
+      mimetype: 'application/pdf', 
+      fileName: 'Ticket_Paelland.pdf',
+      caption: mensajeTexto
+    });
+    console.log(`✅ [WhatsApp] PDF y mensaje enviados a ${numero}`);
+    return true;
+  } catch (err) {
+    console.error(`❌ [WhatsApp] Error al enviar PDF a ${numero}:`, err);
+    throw err;
+  }
+}
+
+module.exports = { 
+  iniciarScheduler, 
+  ejecutarResumenDiario, 
+  enviarPDFCliente,
+  get isWhatsAppReady() { return isWhatsAppReady; }
+};

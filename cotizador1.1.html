@@ -856,16 +856,10 @@
           </div>
           <div class="qline total"><span>Total</span><span id="k-qtotal">$0</span></div>
           <div class="qbox-actions">
-            <button id="k-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%"
-              onclick="confirmarPedido('k')">✅ Validar y Enviar
-              WhatsApp</button>
             <button id="k-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%"
-              onclick="guardarPedido('k')">💾 Guardar Pedido
-              (Admin)</button>
-            <div style="display:flex; gap:10px;">
-              <button class="btn btn-ghost copy-btn" style="flex:1" onclick="kCopiar()">Copiar texto</button>
-              <button class="btn btn-ghost" style="flex:1" onclick="exportarPDF('k')">PDF</button>
-            </div>
+              onclick="guardarPedido('k')">💾 Guardar Pedido (Admin)</button>
+            <button id="k-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%"
+              onclick="enviarWhatsAppAutomatico('k')">✅ Enviar a WhatsApp</button>
           </div>
         </div>
 
@@ -1000,16 +994,10 @@
           </div>
           <div class="qline total"><span>Total</span><span id="e-qtotal">$0</span></div>
           <div class="qbox-actions">
-            <button id="e-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%"
-              onclick="confirmarPedido('e')">✅ Validar y Enviar
-              WhatsApp</button>
             <button id="e-btn-guardar" class="btn btn-secondary btn-disabled" style="width:100%"
-              onclick="guardarPedido('e')">💾 Guardar Pedido
-              (Admin)</button>
-            <div style="display:flex; gap:10px;">
-              <button class="btn btn-ghost copy-btn" style="flex:1" onclick="eCopiar()">Copiar texto</button>
-              <button class="btn btn-ghost" style="flex:1" onclick="exportarPDF('e')">PDF</button>
-            </div>
+              onclick="guardarPedido('e')">💾 Guardar Pedido (Admin)</button>
+            <button id="e-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%"
+              onclick="enviarWhatsAppAutomatico('e')">✅ Enviar a WhatsApp</button>
           </div>
         </div>
 
@@ -1198,9 +1186,9 @@
 
       vibrate(30);
       if (kiloActive) {
-        confirmarPedido('k');
+        enviarWhatsAppAutomatico('k');
       } else if (eventoActive) {
-        confirmarPedido('e');
+        enviarWhatsAppAutomatico('e');
       } else if (vdActive) {
         abrirModalPagoVD();
       }
@@ -1451,8 +1439,8 @@
       navigator.clipboard.writeText(txt).then(() => { const btn = document.querySelectorAll("#panel-evento .copy-btn")[0]; btn.textContent = "Copiado!"; setTimeout(() => btn.textContent = "Copiar texto", 2000); });
     }
 
-    // ---------- GUARDAR PEDIDO (localStorage + backend) ----------
-    function guardarPedido(tipo) {
+    // ---------- RECOLECTAR DATOS DEL PEDIDO ----------
+    function recolectarDatosPedido(tipo) {
       const folioUnico = new Date().getTime().toString().slice(-6);
       let data = { tipo, fecha: new Date().toISOString(), folio: folioUnico };
       if (tipo === 'k') {
@@ -1461,7 +1449,7 @@
         const checkK = kItems.reduce((acc, curr) => acc + curr.cantidad, 0);
         if (!checkC || checkT.length < 7 || checkK === 0) {
           alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
-          return;
+          return null;
         }
 
         data.cliente = document.getElementById("k-cliente").value;
@@ -1493,7 +1481,7 @@
         const checkP = eItems.reduce((acc, curr) => acc + curr.personas, 0);
         if (!checkC || checkT.length < 7 || checkP === 0) {
           alert("Favor de llenar el pedido correctamente (Nombre, Teléfono válido y al menos 1 producto).");
-          return;
+          return null;
         }
 
         data.cliente = document.getElementById("e-cliente").value;
@@ -1519,32 +1507,10 @@
         }
         data.total = parseFloat(document.getElementById("e-qtotal").textContent.replace('$', '').replace(/\./g, '').replace(',', ''));
       }
+      return data;
+    }
 
-      // Guardar en localStorage
-      let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
-      saved.push(data);
-      localStorage.setItem("Pedidos", JSON.stringify(saved));
-
-      // Enviar al backend
-      enviarAlBackend(data);
-
-      // Actualizar lista de pedidos guardados en la interfaz
-      guardarPedidosGuardados(tipo);
-
-      // Notificación visual (Ticket/PDF) debe ir ANTES de limpiar
-      if (confirm("Pedido guardado correctamente. \n\n¿Deseas imprimir o generar PDF del ticket ahora?")) {
-        let pedidoAImprimir = {
-          id: data.folio,
-          ...data,
-          nombre: data.cliente,
-          itemsDetalle: data.items,
-          total: data.total,
-          tipo: tipo === 'k' ? 'kilo' : 'evento'
-        };
-        generarTicketPDF(pedidoAImprimir);
-      }
-
-      // Limpiar formulario y reiniciar estado visual
+    function limpiarFormulario(tipo) {
       if (tipo === 'k') {
         document.getElementById("k-cliente").value = '';
         document.getElementById("k-telefono").value = '';
@@ -1560,6 +1526,88 @@
         eExtras = [];
         eItems = [{ nombre: "Paella mar y tierra", precio: 180, personas: 10 }];
         eInit();
+      }
+    }
+
+    // ---------- GUARDAR PEDIDO (localStorage + backend) ----------
+    function guardarPedido(tipo) {
+      const data = recolectarDatosPedido(tipo);
+      if (!data) return;
+
+      // Guardar en localStorage
+      let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
+      saved.push(data);
+      localStorage.setItem("Pedidos", JSON.stringify(saved));
+
+      // Enviar al backend
+      enviarAlBackend(data);
+
+      // Actualizar lista de pedidos guardados en la interfaz
+      guardarPedidosGuardados(tipo);
+
+      alert("Pedido guardado en Administración.");
+      limpiarFormulario(tipo);
+    }
+
+    // ---------- ENVIAR A WHATSAPP (Automático) ----------
+    async function enviarWhatsAppAutomatico(tipo) {
+      const data = recolectarDatosPedido(tipo);
+      if (!data) return;
+
+      const btn = document.getElementById(tipo + "-btn-enviar");
+      const originalText = btn.innerHTML;
+      btn.innerHTML = "⏳ Enviando mensaje...";
+      btn.classList.add("btn-disabled");
+
+      // Guardar local y en backend también
+      let saved = JSON.parse(localStorage.getItem("Pedidos") || "[]");
+      saved.push(data);
+      localStorage.setItem("Pedidos", JSON.stringify(saved));
+      enviarAlBackend(data);
+      guardarPedidosGuardados(tipo);
+
+      try {
+        const payload = {
+          folio: data.folio,
+          nombre: data.cliente,
+          telefono: data.telefono,
+          tipo: data.tipo === 'k' ? 'kilo' : 'evento',
+          items: data.items,
+          extras: data.extras || [],
+          notas: data.notas || '',
+          tipoEntrega: data.entrega,
+          direccion: data.direccion || '',
+          distancia: data.distancia || 0,
+          costoKm: data.costoKm || 0,
+          costoFijo: data.costoFijo || 0,
+          costoEnvio: data.costoEnvio || 0,
+          hora: data.hora,
+          fecha: data.fecha,
+          total: data.total
+        };
+
+        const res = await fetch('/pedidos/enviar-ticket-whatsapp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer Jorgito06'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          alert("Mensaje enviado");
+          limpiarFormulario(tipo);
+        } else {
+          alert("Error al enviar WhatsApp: " + (result.error || "Desconocido"));
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Error de conexión al enviar WhatsApp.");
+      } finally {
+        btn.innerHTML = originalText;
+        btn.classList.remove("btn-disabled");
       }
     }
 

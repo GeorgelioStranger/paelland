@@ -387,8 +387,146 @@ app.delete('/inventario/:ingrediente', authMiddleware, async (req, res) => {
 });
 
 // ------------------- SCHEDULER WHATSAPP -------------------
-const { iniciarScheduler } = require('./whatsapp-scheduler');
-iniciarScheduler(app, Pedido);
+const whatsappModule = require('./whatsapp-scheduler');
+whatsappModule.iniciarScheduler(app, Pedido);
+
+// =================== ENVÍO DE PDF POR WHATSAPP ===================
+const PDFDocument = require('pdfkit');
+
+app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => {
+  try {
+    if (!whatsappModule.isWhatsAppReady) {
+      return res.status(503).json({ error: 'WhatsApp no está conectado o listo en el servidor.' });
+    }
+
+    const pedido = req.body;
+    if (!pedido || !pedido.telefono) {
+      return res.status(400).json({ error: 'Faltan datos del pedido o el teléfono.' });
+    }
+
+    // 1. Generar el PDF en memoria
+    const doc = new PDFDocument({ margin: 30, size: [226.77, 600] }); // Formato ticket (80mm)
+    const buffers = [];
+    doc.on('data', buffers.push.bind(buffers));
+
+    // Estilos base
+    doc.font('Helvetica-Bold').fontSize(16).text('LA PAELLA', { align: 'center' });
+    doc.font('Helvetica').fontSize(10).text('Mérida, Yucatán', { align: 'center' });
+    doc.moveDown();
+    
+    // Fechas y detalles
+    doc.fontSize(10);
+    const tipoTxt = pedido.tipo === 'venta_directa' ? 'VENTA DE MOSTRADOR' : (pedido.tipo === 'evento' ? 'PEDIDO EVENTO' : 'PEDIDO POR KILO');
+    doc.text(`F. Emisión: ${new Date().toLocaleDateString('es-MX')}`);
+    doc.text(`Tipo: ${tipoTxt}`);
+    if (pedido.cliente || pedido.nombre) doc.text(`Cliente: ${pedido.cliente || pedido.nombre}`);
+    
+    doc.moveDown();
+    doc.moveTo(30, doc.y).lineTo(196, doc.y).dash(2, { space: 2 }).stroke();
+    doc.moveDown();
+
+    // Productos
+    doc.font('Helvetica-Bold').text('CANT. / CONCEPTO', 30, doc.y, { continued: true }).text('IMPORTE', { align: 'right' });
+    doc.font('Helvetica');
+    
+    if (pedido.items && Array.isArray(pedido.items)) {
+      pedido.items.forEach(item => {
+        const qty = item.cantidad || item.personas || 1;
+        const nombre = item.nombre || '';
+        const precio = item.precio || 0;
+        const sub = qty * precio;
+        doc.text(`${qty}x ${nombre}`, 30, doc.y, { width: 110, continued: true }).text(`$${sub.toLocaleString('es-MX')}`, { align: 'right' });
+      });
+    }
+
+    if (pedido.extras && Array.isArray(pedido.extras)) {
+      pedido.extras.forEach(ex => {
+        if (ex.nombre && ex.cantidad > 0) {
+          const sub = ex.cantidad * (ex.precio || 0);
+          doc.text(`+ ${ex.cantidad}x ${ex.nombre}`, 30, doc.y, { width: 110, continued: true }).text(`$${sub.toLocaleString('es-MX')}`, { align: 'right' });
+        }
+      });
+    }
+
+    // Costo de envío
+    const tipoEnvioFinal = pedido.tipoEntrega || pedido.entrega;
+    if (tipoEnvioFinal === 'domicilio') {
+      let costoEnvio = pedido.costoEnvio || 0;
+      if (!costoEnvio && pedido.costoFijo != null) costoEnvio = pedido.costoFijo + ((pedido.distancia || 0) * (pedido.costoKm || 0));
+      if (costoEnvio > 0) {
+        doc.text(`Envío Domicilio`, 30, doc.y, { width: 110, continued: true }).text(`$${costoEnvio.toLocaleString('es-MX')}`, { align: 'right' });
+      }
+    } else if (pedido.tipo !== 'venta_directa') {
+      doc.fontSize(8).text('Recolección en Mostrador (Pick-up)', { align: 'center', oblique: true });
+      doc.fontSize(10);
+    }
+
+    doc.moveDown();
+    doc.moveTo(30, doc.y).lineTo(196, doc.y).undash().stroke();
+    doc.moveDown();
+
+    // Total
+    const totalVenta = pedido.total || 0;
+    doc.font('Helvetica-Bold').fontSize(14).text('TOTAL M.N.', 30, doc.y, { continued: true }).text(`$${totalVenta.toLocaleString('es-MX')}`, { align: 'right' });
+    
+    doc.moveDown();
+    doc.font('Helvetica').fontSize(10).text('¡Gracias por tu preferencia!', { align: 'center' });
+
+    doc.end();
+
+    // Promesa para esperar que termine el PDF
+    const pdfBuffer = await new Promise((resolve, reject) => {
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', reject);
+    });
+
+    // 2. Generar el mensaje de texto (mismo formato actual)
+    const clienteStr = pedido.cliente || pedido.nombre || "Cliente";
+    const fechaStr = pedido.fecha ? new Date(pedido.fecha + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" }) : "";
+    const horaStr = pedido.hora ? `a las ${pedido.hora}` : "";
+    
+    let lineasText = "";
+    if (pedido.items) {
+      pedido.items.forEach(it => {
+        const qty = it.cantidad || it.personas || 1;
+        const sub = qty * (it.precio || 0);
+        lineasText += `  • ${it.nombre} × ${qty} = $${sub.toLocaleString("es-MX")}\n`;
+      });
+    }
+    if (pedido.extras) {
+      pedido.extras.forEach(ex => {
+        if (ex.nombre && ex.cantidad > 0) {
+          const sub = ex.cantidad * (ex.precio || 0);
+          lineasText += `  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`;
+        }
+      });
+    }
+    
+    let trasladoStr = "";
+    if (tipoEnvioFinal === "domicilio") {
+      const dist = pedido.distancia || 0;
+      let costoEnvio = pedido.costoEnvio || 0;
+      if (!costoEnvio && pedido.costoFijo != null) costoEnvio = pedido.costoFijo + (dist * (pedido.costoKm || 0));
+      trasladoStr = `\n*Entrega a domicilio*\nTraslado: $${Math.round(costoEnvio).toLocaleString("es-MX")}\n`;
+    } else if (pedido.tipo !== 'venta_directa') {
+      trasladoStr = "\n*Pick up en local*\n";
+    }
+
+    const notasStr = pedido.notas ? `\n*Notas:* ${pedido.notas}\n` : "";
+    const tituloMsg = pedido.tipo === 'evento' ? 'Pedido CONFIRMADA - EVENTO' : 'PEDIDO CONFIRMADO - PAELLA';
+
+    const mensajeTexto = `*${tituloMsg}*\n👤 ${clienteStr}\n📅 ${fechaStr} ${horaStr}\n\n*Productos:*\n${lineasText}${trasladoStr}${notasStr}\n*Total a pagar: $${Math.round(totalVenta).toLocaleString("es-MX")}*\n\nGracias por tu preferencia.`;
+
+    // 3. Enviar vía WhatsApp
+    await whatsappModule.enviarPDFCliente(pedido.telefono, mensajeTexto, pdfBuffer);
+
+    res.json({ ok: true, mensaje: 'Mensaje y PDF enviados correctamente.' });
+
+  } catch (error) {
+    console.error('Error al enviar ticket por WhatsApp:', error);
+    res.status(500).json({ error: error.message || 'Error al enviar por WhatsApp' });
+  }
+});
 
 // ------------------- SERVIDOR -------------------
 const PORT = process.env.PORT || 3001;
