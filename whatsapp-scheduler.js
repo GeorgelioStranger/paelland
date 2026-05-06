@@ -38,6 +38,14 @@ function getFechaMañana() {
   return `${anio}-${mes}-${dia}`;
 }
 
+function getFechaHoy() {
+  const d = new Date();
+  const anio = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
+
 function formatearFechaEspanol(fechaStr) {
   const [anio, mes, dia] = fechaStr.split('-').map(Number);
   return `${dia} de ${MESES[mes - 1]} de ${anio}`;
@@ -52,7 +60,8 @@ function formatearEntrega(tipoEntrega) {
 }
 
 function construirMensaje(pedidos, fechaMañana) {
-  const fechaTexto = formatearFechaEspanol(fechaMañana);
+  const fechaTextoHoy = formatearFechaEspanol(getFechaHoy());
+  const fechaTextoManana = formatearFechaEspanol(fechaMañana);
 
   const eventos = pedidos.filter(p => (p.tipo || '').toLowerCase() === 'evento');
   const kilos = pedidos.filter(p => (p.tipo || '').toLowerCase() === 'kilo');
@@ -66,44 +75,47 @@ function construirMensaje(pedidos, fechaMañana) {
   kilos.sort(ordenarPorHora);
 
   const lineas = [];
-  lineas.push(`Fecha: ${fechaTexto}`);
-
-  if (eventos.length > 0) {
-    lineas.push('');
-    eventos.forEach(p => {
-      const hora    = formatearHora(p.horaEntrega);
-      const entrega = formatearEntrega(p.tipoEntrega || p.entrega);
-      lineas.push(`${p.nombre} - ${hora} - ${entrega}`);
-
-      const items = Array.isArray(p.itemsDetalle) ? p.itemsDetalle : [];
-      items.filter(i => i.personas > 0).forEach(i => {
-        lineas.push(`   • ${i.nombre} - ${i.personas} personas`);
-      });
-      lineas.push('');
-    });
-  }
-
-  if (kilos.length > 0) {
-    kilos.forEach(p => {
-      const hora    = formatearHora(p.horaEntrega);
-      const entrega = formatearEntrega(p.tipoEntrega || p.entrega);
-      lineas.push(`${p.nombre} - ${hora} - ${entrega}`);
-
-      const items = Array.isArray(p.itemsDetalle) ? p.itemsDetalle : [];
-      items.filter(i => (i.kilos > 0 || i.cantidad > 0)).forEach(i => {
-        const cantidad = i.kilos > 0 ? `${i.kilos} kg` : `${i.cantidad} kg`;
-        lineas.push(`   • ${i.nombre} - ${cantidad}`);
-      });
-      lineas.push('');
-    });
-  }
+  lineas.push(`Fecha: ${fechaTextoHoy}`);
 
   if (eventos.length === 0 && kilos.length === 0) {
     lineas.push('');
-    lineas.push('No hay pedidos programados para mañana.');
+    lineas.push(`No hay pedidos programados para mañana (${fechaTextoManana}).`);
+  } else {
+    lineas.push('');
+    lineas.push(`Pedidos programados para mañana (${fechaTextoManana}):`);
+
+    if (eventos.length > 0) {
+      lineas.push('');
+      eventos.forEach(p => {
+        const hora    = formatearHora(p.horaEntrega);
+        const entrega = formatearEntrega(p.tipoEntrega || p.entrega);
+        lineas.push(`${p.nombre} - ${hora} - ${entrega}`);
+
+        const items = Array.isArray(p.itemsDetalle) ? p.itemsDetalle : [];
+        items.filter(i => i.personas > 0).forEach(i => {
+          lineas.push(`   • ${i.nombre} - ${i.personas} personas`);
+        });
+        lineas.push('');
+      });
+    }
+
+    if (kilos.length > 0) {
+      if (eventos.length === 0) lineas.push('');
+      kilos.forEach(p => {
+        const hora    = formatearHora(p.horaEntrega);
+        const entrega = formatearEntrega(p.tipoEntrega || p.entrega);
+        lineas.push(`${p.nombre} - ${hora} - ${entrega}`);
+
+        const items = Array.isArray(p.itemsDetalle) ? p.itemsDetalle : [];
+        items.filter(i => (i.kilos > 0 || i.cantidad > 0)).forEach(i => {
+          const cantidad = i.kilos > 0 ? `${i.kilos} kg` : `${i.cantidad} kg`;
+          lineas.push(`   • ${i.nombre} - ${cantidad}`);
+        });
+        lineas.push('');
+      });
+    }
   }
 
-  lineas.push('');
   lineas.push('Buenas tardes, les adjunto los pedidos para el día de mañana, favor de revisar si falta algo, muchas gracias.');
 
   return lineas.join('\n');
@@ -268,16 +280,23 @@ async function enviarPDFCliente(telefono, mensajeTexto, pdfBuffer) {
     throw new Error('Número de teléfono inválido');
   }
   
-  const jid = `${numero}@s.whatsapp.net`;
-
   try {
+    // 1. Validar si el número existe en WhatsApp y obtener el JID correcto (ej. para México con el "1" extra)
+    const [result] = await sock.onWhatsApp(numero);
+    if (!result || !result.exists) {
+      console.log(`⚠️ [WhatsApp] El número ${numero} no parece estar registrado en WhatsApp. Intentando envío de todas formas...`);
+    }
+    
+    // Si onWhatsApp nos dio el JID real, lo usamos, si no, intentamos con la suposición básica
+    const jid = result ? result.jid : `${numero}@s.whatsapp.net`;
+
     await sock.sendMessage(jid, { 
       document: pdfBuffer, 
       mimetype: 'application/pdf', 
       fileName: 'Ticket_Paelland.pdf',
       caption: mensajeTexto
     });
-    console.log(`✅ [WhatsApp] PDF y mensaje enviados a ${numero}`);
+    console.log(`✅ [WhatsApp] PDF y mensaje enviados a ${jid} (Original: ${numero})`);
     return true;
   } catch (err) {
     console.error(`❌ [WhatsApp] Error al enviar PDF a ${numero}:`, err);
