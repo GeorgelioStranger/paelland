@@ -115,6 +115,17 @@ const usuarioSchema = new mongoose.Schema({
 });
 const Usuario = mongoose.model('Usuario', usuarioSchema);
 
+// ------------------- MODELO SESIÓN -------------------
+const sesionSchema = new mongoose.Schema({
+  token:   { type: String, required: true, unique: true, index: true },
+  role:    String,
+  nombre:  String,
+  userId:  String,
+  permisos: Object,
+  creadaEn: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 7 } // auto-expira en 7 días
+});
+const Sesion = mongoose.model('Sesion', sesionSchema);
+
 async function seedUsuarios() {
   const count = await Usuario.countDocuments();
   if (count === 0) {
@@ -135,12 +146,26 @@ async function seedUsuarios() {
 }
 
 // ------------------- MIDDLEWARE AUTH -------------------
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   const tokenHeader = req.headers['authorization'];
   if (!tokenHeader) return res.status(401).json({ error: 'No autorizado' });
 
   const token = tokenHeader.replace('Bearer ', '');
-  const session = activeSessions.get(token);
+
+  // Caché en memoria (rápido)
+  let session = activeSessions.get(token);
+
+  // Si no está en memoria, buscar en MongoDB (sobrevive reinicios)
+  if (!session) {
+    try {
+      const dbSesion = await Sesion.findOne({ token });
+      if (dbSesion) {
+        session = { role: dbSesion.role, nombre: dbSesion.nombre, id: dbSesion.userId, permisos: dbSesion.permisos };
+        activeSessions.set(token, session); // re-cachear
+      }
+    } catch (_) {}
+  }
+
   if (!session) return res.status(401).json({ error: 'Sesión expirada o inválida' });
 
   req.userRole = session.role;
@@ -169,12 +194,9 @@ app.post('/api/login', async (req, res) => {
     if (!user) return res.status(401).json({ success: false, error: 'Credenciales incorrectas' });
 
     const token = generateToken();
-    activeSessions.set(token, {
-      role: user.role,
-      nombre: user.nombre,
-      id: user._id.toString(),
-      permisos: user.permisos
-    });
+    const sessionData = { role: user.role, nombre: user.nombre, id: user._id.toString(), permisos: user.permisos };
+    activeSessions.set(token, sessionData);
+    await Sesion.create({ token, role: user.role, nombre: user.nombre, userId: user._id.toString(), permisos: user.permisos });
 
     res.json({
       success: true,
@@ -191,9 +213,13 @@ app.post('/api/login', async (req, res) => {
 });
 
 // ================= LOGOUT =================
-app.post('/api/logout', (req, res) => {
+app.post('/api/logout', async (req, res) => {
   const tokenHeader = req.headers['authorization'];
-  if (tokenHeader) activeSessions.delete(tokenHeader.replace('Bearer ', ''));
+  if (tokenHeader) {
+    const token = tokenHeader.replace('Bearer ', '');
+    activeSessions.delete(token);
+    await Sesion.deleteOne({ token }).catch(() => {});
+  }
   res.json({ ok: true });
 });
 
