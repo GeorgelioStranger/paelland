@@ -443,17 +443,20 @@
     <a href="/estadisticas" title="Estadísticas">📈<span class="nav-label">Estadísticas</span></a>
     <a href="/finanzas" class="active" title="Finanzas">💸<span class="nav-label">Finanzas</span></a>
     <a href="/produccion" title="Producción">🏭<span class="nav-label">Producción</span></a>
+    <a href="#" id="nav-usuarios" title="Usuarios" onclick="abrirGestionUsuarios(); return false;">👥<span class="nav-label">Usuarios</span></a>
   </nav>
 
   <script>
     function cerrarSesion() {
       if (confirm('¿Deseas cerrar tu sesión actual?')) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_role');
+        const token = localStorage.getItem('auth_token');
+        fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }).catch(() => {});
+        ['auth_token', 'user_role', 'user_name', 'user_id', 'user_permisos'].forEach(k => localStorage.removeItem(k));
         window.location.href = '/';
       }
     }
   </script>
+  <script src="/gestion-usuarios.js"></script>
 
   <div class="main-wrapper">
     <div class="header">
@@ -623,7 +626,7 @@
 
     window.onload = () => {
       const uName = document.getElementById('user-name-display');
-      if (uName) uName.innerText = userRole === 'admin' ? '👋 Bienvenido, Jorge' : '👋 Bienvenida, Marce';
+      if (uName) uName.innerText = `👋 Bienvenid${userRole === 'admin' ? 'o' : 'a'}, ${localStorage.getItem('user_name') || ''}`;
 
       // Mostrar KPIs y gráficas solo al admin
       if (userRole === 'admin') {

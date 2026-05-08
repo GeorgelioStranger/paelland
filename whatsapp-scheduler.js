@@ -29,22 +29,17 @@ function formatearHora(horaStr) {
   return `${h}:${mm} ${ampm}`;
 }
 
-function getFechaMañana() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  const anio = d.getFullYear();
-  const mes = String(d.getMonth() + 1).padStart(2, '0');
-  const dia = String(d.getDate()).padStart(2, '0');
+function getFechaEnMexico(offsetDias = 0) {
+  const ahoraEnMexico = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+  ahoraEnMexico.setDate(ahoraEnMexico.getDate() + offsetDias);
+  const anio = ahoraEnMexico.getFullYear();
+  const mes  = String(ahoraEnMexico.getMonth() + 1).padStart(2, '0');
+  const dia  = String(ahoraEnMexico.getDate()).padStart(2, '0');
   return `${anio}-${mes}-${dia}`;
 }
 
-function getFechaHoy() {
-  const d = new Date();
-  const anio = d.getFullYear();
-  const mes = String(d.getMonth() + 1).padStart(2, '0');
-  const dia = String(d.getDate()).padStart(2, '0');
-  return `${anio}-${mes}-${dia}`;
-}
+function getFechaMañana() { return getFechaEnMexico(1); }
+function getFechaHoy()    { return getFechaEnMexico(0); }
 
 function formatearFechaEspanol(fechaStr) {
   const [anio, mes, dia] = fechaStr.split('-').map(Number);
@@ -271,7 +266,7 @@ async function iniciarScheduler(app, Pedido) {
   });
 }
 
-async function enviarPDFCliente(telefono, mensajeTexto, pdfBuffer) {
+async function enviarPDFCliente(telefono, mensajeTexto, pdfBuffer, nombreCliente) {
   if (!isWhatsAppReady || !sock) {
     throw new Error('WhatsApp no está listo');
   }
@@ -291,10 +286,17 @@ async function enviarPDFCliente(telefono, mensajeTexto, pdfBuffer) {
     // Si onWhatsApp nos dio el JID real, lo usamos, si no, intentamos con la suposición básica
     const jid = result ? result.jid : `${numero}@s.whatsapp.net`;
 
-    await sock.sendMessage(jid, { 
-      document: pdfBuffer, 
-      mimetype: 'application/pdf', 
-      fileName: 'Ticket_Paelland.pdf',
+    const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+    const dd  = String(hoy.getDate()).padStart(2, '0');
+    const mm  = String(hoy.getMonth() + 1).padStart(2, '0');
+    const yy  = hoy.getFullYear();
+    const clienteSlug = (nombreCliente || 'cliente').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_áéíóúÁÉÍÓÚñÑ]/g, '');
+    const fileName = `ticket_lapaella_${clienteSlug}_${dd}${mm}${yy}.pdf`;
+
+    await sock.sendMessage(jid, {
+      document: pdfBuffer,
+      mimetype: 'application/pdf',
+      fileName,
       caption: mensajeTexto
     });
     console.log(`✅ [WhatsApp] PDF y mensaje enviados a ${jid} (Original: ${numero})`);

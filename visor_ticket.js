@@ -86,10 +86,23 @@ function generarTicketPDF(pedido) {
     let fallbackId = valId ? valId.toString().slice(-6).toUpperCase() : new Date().getTime().toString().slice(-6);
     const folioStr = "#" + fallbackId;
     
+    // Fecha de entrega formateada
+    let fEntregaHtml = '';
+    if (pedido.fechaEntrega) {
+        const [y, m, d] = pedido.fechaEntrega.split('-');
+        const fEntregaTxt = `${d}/${m}/${y}${pedido.horaEntrega ? ' ' + pedido.horaEntrega : ''}`;
+        fEntregaHtml = '<div><span>F. Entrega:</span> <span>' + fEntregaTxt + '</span></div>';
+    }
+
     let clienteHtml = '';
     const nombreCliente = pedido.nombre || pedido.cliente;
     if (nombreCliente) {
         clienteHtml = '<div><span>Cliente:</span> <span>' + escapeHtml(nombreCliente) + '</span></div>';
+    }
+    // Dirección solo si es a domicilio
+    const tipoEnvioMeta = pedido.tipoEntrega || pedido.entrega;
+    if (tipoEnvioMeta === 'domicilio' && pedido.direccion) {
+        clienteHtml += '<div><span>Dirección:</span> <span>' + escapeHtml(pedido.direccion) + '</span></div>';
     }
     if (pedido.atendidoPor) {
         clienteHtml += '<div><span>Atendido por:</span> <span>' + escapeHtml(pedido.atendidoPor) + '</span></div>';
@@ -130,6 +143,7 @@ function generarTicketPDF(pedido) {
         </div>
         <div class="meta-info">
             <div><span>F. Emisión:</span> <span>` + fechaTxt + `</span></div>
+            ` + fEntregaHtml + `
             <div><span>Folio:</span> <span>` + folioStr + `</span></div>
             <div><span>Tipo:</span> <span>` + tituloTipo + `</span></div>
             ` + clienteHtml + `

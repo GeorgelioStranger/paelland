@@ -575,9 +575,16 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
       doc.moveDown(0.15);
     };
     drawMeta('F. Emisión:', fechaTxt);
+    if (pedido.fechaEntrega) {
+      const [fy, fm, fd] = pedido.fechaEntrega.split('-');
+      const fEntregaTxt = `${fd}/${fm}/${fy}${pedido.horaEntrega ? ' ' + pedido.horaEntrega : ''}`;
+      drawMeta('F. Entrega:', fEntregaTxt);
+    }
     drawMeta('Folio:', `#${folioVal}`);
     drawMeta('Tipo:', tipoTxt);
     if (nombreCliente) drawMeta('Cliente:', nombreCliente);
+    const tipoEnvioFinalMeta = pedido.tipoEntrega || pedido.entrega;
+    if (tipoEnvioFinalMeta === 'domicilio' && pedido.direccion) drawMeta('Dirección:', pedido.direccion);
     if (atendidoPor) drawMeta('Atendido por:', atendidoPor);
 
     doc.moveDown(0.5);
@@ -702,7 +709,7 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
     const mensajeTexto = `*${tituloMsg}*\n👤 ${clienteStr}\n📅 ${fechaStr} ${horaStr}\n\n*Productos:*\n${lineasText}${trasladoStr}${notasStr}\n*Total a pagar: $${Math.round(totalVenta).toLocaleString("es-MX")}*\n\nGracias por tu preferencia.`;
 
     // 3. Enviar vía WhatsApp
-    await whatsappModule.enviarPDFCliente(pedido.telefono, mensajeTexto, pdfBuffer);
+    await whatsappModule.enviarPDFCliente(pedido.telefono, mensajeTexto, pdfBuffer, nombreCliente);
 
     res.json({ ok: true, mensaje: 'Mensaje y PDF enviados correctamente.' });
 
