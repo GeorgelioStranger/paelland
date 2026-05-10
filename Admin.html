@@ -1285,6 +1285,36 @@
     </div>
   </div>
 
+  <!-- Modal: Anticipo rápido -->
+  <div id="modalAnticipo" class="modal" style="z-index:2100;">
+    <div class="modal-content" style="max-width:380px; text-align:center;">
+      <h3 style="margin-top:0; margin-bottom:5px;">💰 Registrar Anticipo</h3>
+      <p id="modalAnticipo-nombre" style="color:#6b7280; margin-bottom:12px; font-size:0.9rem;"></p>
+      <div style="text-align:left; margin-bottom:12px;">
+        <label style="font-size:12px; color:#92400e; font-weight:600;">Monto del anticipo ($)</label>
+        <input type="number" id="modalAnticipo-monto" min="0" placeholder="0.00"
+          style="width:100%; margin-top:4px; padding:10px; font-size:1.1rem; border:1px solid #fde68a; border-radius:8px; box-sizing:border-box; background:#fffef0;"
+          oninput="actualizarSaldoModalAnticipo()">
+        <div id="modalAnticipo-saldo" style="margin-top:6px; font-size:0.82rem; font-weight:600; min-height:18px;"></div>
+      </div>
+      <div style="text-align:left; margin-bottom:16px;">
+        <label style="font-size:12px; color:#6b7280; font-weight:600;">Método de pago del anticipo</label>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button type="button" onclick="seleccionarMetodoModalAnticipo('Efectivo')" id="ma-modal-Efectivo"
+            style="flex:1; padding:8px 4px; border-radius:8px; border:1.5px solid #d1d5db; background:white; font-size:0.82rem; cursor:pointer;">💵 Efectivo</button>
+          <button type="button" onclick="seleccionarMetodoModalAnticipo('Tarjeta')" id="ma-modal-Tarjeta"
+            style="flex:1; padding:8px 4px; border-radius:8px; border:1.5px solid #d1d5db; background:white; font-size:0.82rem; cursor:pointer;">💳 Tarjeta</button>
+          <button type="button" onclick="seleccionarMetodoModalAnticipo('Transferencia')" id="ma-modal-Transferencia"
+            style="flex:1; padding:8px 4px; border-radius:8px; border:1.5px solid #d1d5db; background:white; font-size:0.82rem; cursor:pointer;">🏦 Transf.</button>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button onclick="cerrarModalAnticipo()" style="flex:1; padding:10px; border-radius:40px; border:1px solid #d1d5db; background:white; cursor:pointer;">Cancelar</button>
+        <button onclick="guardarAnticipo()" style="flex:1; padding:10px; border-radius:40px; border:none; background:#d97706; color:white; font-weight:700; cursor:pointer;">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Método de Pago -->
   <div id="modalMetodoPago" class="modal" style="z-index:2100;">
     <div class="modal-content" style="max-width:400px; text-align:center;">
@@ -1684,12 +1714,12 @@
             if (saldo > 0) {
               pagoHtml += `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:4px; background:#fee2e2; color:#dc2626;">⚠️ Saldo: $${Math.round(saldo).toLocaleString()}</span>`;
             } else {
-              pagoHtml += `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:4px; background:#dcfce7; color:#166534;">✅ Liquidado</span>`;
+              pagoHtml += `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:4px; background:#dcfce7; color:#166534;">✅ Pagado</span>`;
             }
           }
           let botonesHtml = '';
           if (mostrarBotones && p.status !== 'Entregado') {
-            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="descargarTicketPDF('${p._id || p.id}')">📥 PDF</button><button class="btn-proceso" style="background:#25D366;" onclick="enviarTicketWA('${p._id || p.id}',event)">📱 WA</button><button class="btn-proceso" onclick="cambiarStatus('${p._id || p.id}','En proceso')">🟡 En proceso</button><button class="btn-entregado" onclick="cambiarStatus('${p._id || p.id}','Entregado')">✅ Entregado</button><button class="btn-editar" style="background:#8b5cf6;" onclick="abrirEditorPedido('${p._id || p.id}')">✏️ Editar</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
+            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="descargarTicketPDF('${p._id || p.id}')">📥 PDF</button><button class="btn-proceso" style="background:#25D366;" onclick="enviarTicketWA('${p._id || p.id}',event)">📱 WA</button><button class="btn-proceso" style="background:#d97706;" onclick="abrirModalAnticipo('${p._id || p.id}')">💰 Anticipo</button><button class="btn-entregado" onclick="cambiarStatus('${p._id || p.id}','Entregado')">✅ Entregado</button><button class="btn-editar" style="background:#8b5cf6;" onclick="abrirEditorPedido('${p._id || p.id}')">✏️ Editar</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           } else if (mostrarBotones && p.status === 'Entregado') {
             botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="descargarTicketPDF('${p._id || p.id}')">📥 PDF</button><button class="btn-proceso" style="background:#25D366;" onclick="enviarTicketWA('${p._id || p.id}',event)">📱 WA</button>${userRole === 'admin' ? `<button style="background:#f59e0b; color:white; border:none; padding:6px 14px; border-radius:40px; font-weight:500; cursor:pointer; margin-right:8px; margin-top:12px;" onclick="revertirAPendiente('${p._id || p.id}')">↩️ Regresar</button>` : ''}<button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           }
@@ -2529,6 +2559,72 @@
     window.eliminarGasto = eliminarGasto;
     window.filtrarGastosPeriodo = filtrarGastosPeriodo;
 
+    // ===================== MODAL ANTICIPO RÁPIDO =====================
+    let _anticipoModalId = null;
+    let _anticipoMetodoModal = null;
+
+    window.abrirModalAnticipo = function(id) {
+      _anticipoModalId = id;
+      _anticipoMetodoModal = null;
+      const p = todosPedidos.find(x => x._id === id || String(x.id) === String(id));
+      document.getElementById('modalAnticipo-nombre').textContent = p ? `${p.nombre || 'Pedido'} — Total: $${Math.round(p.total || 0).toLocaleString()}` : '';
+      document.getElementById('modalAnticipo-monto').value = p?.anticipo > 0 ? p.anticipo : '';
+      document.getElementById('modalAnticipo-saldo').textContent = '';
+      ['Efectivo','Tarjeta','Transferencia'].forEach(m => {
+        const btn = document.getElementById(`ma-modal-${m}`);
+        if (btn) { btn.style.background = 'white'; btn.style.color = ''; btn.style.borderColor = '#d1d5db'; }
+      });
+      if (p?.metodoPagoAnticipo) seleccionarMetodoModalAnticipo(p.metodoPagoAnticipo);
+      actualizarSaldoModalAnticipo();
+      document.getElementById('modalAnticipo').style.display = 'flex';
+    };
+
+    window.cerrarModalAnticipo = function() {
+      document.getElementById('modalAnticipo').style.display = 'none';
+      _anticipoModalId = null;
+      _anticipoMetodoModal = null;
+    };
+
+    window.seleccionarMetodoModalAnticipo = function(metodo) {
+      _anticipoMetodoModal = metodo;
+      ['Efectivo','Tarjeta','Transferencia'].forEach(m => {
+        const btn = document.getElementById(`ma-modal-${m}`);
+        if (!btn) return;
+        if (m === metodo) { btn.style.background = '#d97706'; btn.style.color = 'white'; btn.style.borderColor = '#d97706'; }
+        else { btn.style.background = 'white'; btn.style.color = ''; btn.style.borderColor = '#d1d5db'; }
+      });
+    };
+
+    window.actualizarSaldoModalAnticipo = function() {
+      const p = todosPedidos.find(x => x._id === _anticipoModalId || String(x.id) === String(_anticipoModalId));
+      const total = p?.total || 0;
+      const monto = parseFloat(document.getElementById('modalAnticipo-monto')?.value) || 0;
+      const saldoDiv = document.getElementById('modalAnticipo-saldo');
+      if (!saldoDiv) return;
+      if (monto > 0) {
+        const saldo = total - monto;
+        saldoDiv.textContent = saldo > 0 ? `⚠️ Saldo pendiente: $${Math.round(saldo).toLocaleString()}` : '✅ Pedido quedará pagado';
+        saldoDiv.style.color = saldo > 0 ? '#dc2626' : '#16a34a';
+      } else {
+        saldoDiv.textContent = '';
+      }
+    };
+
+    window.guardarAnticipo = async function() {
+      const monto = parseFloat(document.getElementById('modalAnticipo-monto')?.value) || 0;
+      if (monto > 0 && !_anticipoMetodoModal) { alert('Selecciona el método de pago del anticipo.'); return; }
+      try {
+        const res = await authFetch(`/pedidos/${_anticipoModalId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anticipo: monto, metodoPagoAnticipo: _anticipoMetodoModal || null })
+        });
+        if (!res.ok) throw new Error();
+        cerrarModalAnticipo();
+        await cargarPedidos();
+      } catch(e) { alert('Error al guardar el anticipo.'); }
+    };
+
     // ===================== EDICIÓN DE PEDIDOS =====================
     let pedidoEditando = null;
 
@@ -2604,15 +2700,15 @@
          </div>
          <div id="edit-saldo-info" style="margin-top:6px; font-size:12px; font-weight:600; color:#dc2626;"></div>
        </div>
-       <div style="max-height: 400px; overflow-y:auto; padding-right:5px; margin-bottom:15px;">
-         <div style="margin-bottom:20px;">
+       <div style="margin-bottom:15px;">
+         <div style="max-height:280px; overflow-y:auto; padding-right:5px; margin-bottom:8px;">
            ${itemsHtml}
-           <button class="btn btn-ghost" style="padding:6px; font-size:12px; border:1px dashed #cbd5e1; width:100%;" onclick="window.addPlatilloEdit()">➕ Agregar Ítem</button>
          </div>
-         <div style="margin-bottom:20px;">
+         <button class="btn btn-ghost" style="padding:8px; font-size:13px; border:1px dashed #cbd5e1; width:100%; margin-bottom:15px;" onclick="window.addPlatilloEdit()">➕ Agregar Ítem</button>
+         <div style="max-height:200px; overflow-y:auto; padding-right:5px; margin-bottom:8px;">
            ${extrasHtml}
-           <button class="btn btn-ghost" style="padding:6px; font-size:12px; border:1px dashed #cbd5e1; width:100%;" onclick="window.addExtraEdit()">➕ Agregar Extra</button>
          </div>
+         <button class="btn btn-ghost" style="padding:8px; font-size:13px; border:1px dashed #cbd5e1; width:100%; margin-bottom:15px;" onclick="window.addExtraEdit()">➕ Agregar Extra</button>
          <div>
            <label style="display:block; margin-bottom:5px; font-size:12px; color:#64748b;">NOTAS U OBSERVACIONES</label>
            <textarea id="edit-notas" rows="3" style="width:100%; resize:none; padding:10px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;">${p.notas || ''}</textarea>
