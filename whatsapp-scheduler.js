@@ -54,9 +54,9 @@ function formatearEntrega(tipoEntrega) {
   return tipoEntrega;
 }
 
-function construirMensaje(pedidos, fechaMañana) {
+function construirMensaje(pedidos, fecha, esHoy = false) {
   const fechaTextoHoy = formatearFechaEspanol(getFechaHoy());
-  const fechaTextoManana = formatearFechaEspanol(fechaMañana);
+  const fechaTextoObjetivo = formatearFechaEspanol(fecha);
 
   const eventos = pedidos.filter(p => (p.tipo || '').toLowerCase() === 'evento');
   const kilos = pedidos.filter(p => (p.tipo || '').toLowerCase() === 'kilo');
@@ -74,10 +74,14 @@ function construirMensaje(pedidos, fechaMañana) {
 
   if (eventos.length === 0 && kilos.length === 0) {
     lineas.push('');
-    lineas.push(`No hay pedidos programados para mañana (${fechaTextoManana}).`);
+    lineas.push(esHoy
+      ? `No hay pedidos programados para hoy (${fechaTextoObjetivo}).`
+      : `No hay pedidos programados para mañana (${fechaTextoObjetivo}).`);
   } else {
     lineas.push('');
-    lineas.push(`Pedidos programados para mañana (${fechaTextoManana}):`);
+    lineas.push(esHoy
+      ? `Pedidos de HOY (${fechaTextoObjetivo}):`
+      : `Pedidos programados para mañana (${fechaTextoObjetivo}):`);
 
     if (eventos.length > 0) {
       lineas.push('');
@@ -112,7 +116,9 @@ function construirMensaje(pedidos, fechaMañana) {
     }
   }
 
-  lineas.push('Buenas tardes, les adjunto los pedidos para el día de mañana, favor de revisar si falta algo, muchas gracias.');
+  lineas.push(esHoy
+    ? 'Buen día, les adjunto los pedidos para el día de hoy, favor de revisar si falta algo, muchas gracias.'
+    : 'Buenas tardes, les adjunto los pedidos para el día de mañana, favor de revisar si falta algo, muchas gracias.');
 
   return lineas.join('\n');
 }
@@ -122,9 +128,9 @@ let isWhatsAppReady = false;
 let isWaitingForQR = false;
 let lastError = null;
 
-async function ejecutarResumenDiario(Pedido) {
-  const fechaMañana = getFechaMañana();
-  console.log(`\n📱 [WhatsApp Scheduler] Iniciando resumen para ${fechaMañana}...`);
+async function ejecutarResumenDiario(Pedido, fechaOverride = null, esHoy = false) {
+  const fechaObjetivo = fechaOverride || getFechaMañana();
+  console.log(`\n📱 [WhatsApp Scheduler] Iniciando resumen para ${fechaObjetivo}...`);
 
   if (!isWhatsAppReady || !sock) {
     console.error('❌ [WhatsApp] El cliente de WhatsApp no está listo. No se puede enviar el resumen.');
@@ -133,13 +139,13 @@ async function ejecutarResumenDiario(Pedido) {
 
   try {
     const pedidos = await Pedido.find({
-      fechaEntrega: fechaMañana,
+      fechaEntrega: fechaObjetivo,
       tipo: { $in: ['evento', 'kilo'] }
     });
 
-    console.log(`📋 [WhatsApp Scheduler] ${pedidos.length} pedido(s) encontrado(s) para mañana.`);
+    console.log(`📋 [WhatsApp Scheduler] ${pedidos.length} pedido(s) encontrado(s).`);
 
-    const mensaje = construirMensaje(pedidos, fechaMañana);
+    const mensaje = construirMensaje(pedidos, fechaObjetivo, esHoy);
 
     console.log('\n──────── MENSAJE A ENVIAR ────────');
     console.log(mensaje);
@@ -242,8 +248,11 @@ async function iniciarScheduler(app, Pedido) {
       return res.status(503).json({ ok: false, error: lastError ? `Error de WhatsApp: ${lastError}` : 'El servidor en la nube no pudo arrancar WhatsApp.' });
     }
     try {
-      await ejecutarResumenDiario(Pedido);
-      res.json({ ok: true, mensaje: 'Resumen de prueba enviado. Revisa la consola.' });
+      const tipo = req.body?.tipo || 'mañana';
+      const esHoy = tipo === 'hoy';
+      const fecha = esHoy ? getFechaHoy() : getFechaMañana();
+      await ejecutarResumenDiario(Pedido, fecha, esHoy);
+      res.json({ ok: true, mensaje: 'Resumen enviado. Revisa la consola.' });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
     }

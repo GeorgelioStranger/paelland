@@ -858,19 +858,22 @@
 
       .tabs {
         display: flex;
+        flex-wrap: nowrap;
         overflow-x: auto;
         padding-bottom: 10px;
-        gap: 10px;
+        gap: 8px;
         scroll-snap-type: x mandatory;
         -webkit-overflow-scrolling: touch;
+        -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        mask-image: linear-gradient(to right, black 85%, transparent 100%);
       }
 
       .tab-btn {
         flex: 0 0 auto;
         white-space: nowrap;
         scroll-snap-align: start;
-        padding: 10px 20px;
-        font-size: 0.9rem;
+        padding: 8px 14px;
+        font-size: 0.85rem;
       }
 
       /* Card de pedido optimizada para móvil */
@@ -939,7 +942,12 @@
       }
     }
 
-    async function enviarResumenWhatsapp() {
+    function abrirModalResumenWA() {
+      document.getElementById('modalResumenWA').style.display = 'flex';
+    }
+
+    async function enviarResumenWhatsapp(tipo) {
+      document.getElementById('modalResumenWA').style.display = 'none';
       const btn = document.getElementById('btnTestWhatsapp');
       btn.disabled = true;
       btn.textContent = '⏳ Enviando...';
@@ -947,13 +955,18 @@
         const token = localStorage.getItem('auth_token');
         const res = await fetch('/whatsapp/test', {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token }
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ tipo })
         });
         const data = await res.json();
         if (data.ok) {
+          const label = tipo === 'hoy' ? 'de hoy' : 'de mañana';
           btn.textContent = '✅ ¡Enviado!';
           btn.style.background = '#16a34a';
-          showToast('Resumen WhatsApp enviado correctamente 📲', 'success');
+          showToast(`Resumen ${label} enviado por WhatsApp 📲`, 'success');
         } else {
           throw new Error(data.error || 'Error desconocido');
         }
@@ -964,7 +977,7 @@
       } finally {
         setTimeout(() => {
           btn.disabled = false;
-          btn.textContent = '📲 Enviar pedidos de mañana a WhatsApp';
+          btn.textContent = '📲 Enviar resumen WhatsApp';
           btn.style.background = '#25D366';
         }, 3000);
       }
@@ -978,7 +991,7 @@
         <p>Control de pedidos, ventas en sitio y gestión operativa</p>
       </div>
       <div style="display:flex; align-items:center; gap:12px;">
-        <button id="btnTestWhatsapp" onclick="enviarResumenWhatsapp()" style="display:flex; align-items:center; gap:8px; background:#25D366; color:white; border:none;
+        <button id="btnTestWhatsapp" onclick="abrirModalResumenWA()" style="display:flex; align-items:center; gap:8px; background:#25D366; color:white; border:none;
                  padding:10px 18px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer;
                  box-shadow: 0 4px 6px -1px rgba(37,211,102,0.3); transition: all 0.2s;"
           onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
@@ -1042,22 +1055,26 @@
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" data-tab="ventasdirectas">🏪 Historial local</button>
-      <button class="tab-btn" data-tab="activos">📋 Pedidos activos</button>
-      <button class="tab-btn" data-tab="historial">📦 Historial entregados</button>
-      <button class="tab-btn" data-tab="estadisticas">📊 Estadísticas</button>
-      <button class="tab-btn" data-tab="clientes">👥 Clientes</button>
-      <button class="tab-btn" data-tab="paelleras">🫕 Paelleras</button>
+      <button class="tab-btn active" data-tab="activos">📋 <span class="tab-label">Activos</span></button>
+      <button class="tab-btn" data-tab="ventasdirectas">🏪 <span class="tab-label">Local</span></button>
+      <button class="tab-btn" data-tab="historial">📦 <span class="tab-label">Entregados</span></button>
+      <button class="tab-btn" data-tab="paelleras">🫕 <span class="tab-label">Paelleras</span></button>
+      <button class="tab-btn" data-tab="estadisticas">📊 <span class="tab-label">Estadísticas</span></button>
+      <button class="tab-btn" data-tab="clientes">👥 <span class="tab-label">Clientes</span></button>
     </div>
 
-    <div id="tab-ventasdirectas" class="tab-content" style="display:block;">
+    <div id="tab-ventasdirectas" class="tab-content" style="display:none;">
       <div>
         <h3>Historial de ventas directas</h3>
         <div id="listaVentasDirectas"></div>
       </div>
     </div>
 
-    <div id="tab-activos" class="tab-content" style="display:none;">
+    <div id="tab-activos" class="tab-content" style="display:block;">
+      <div id="listaActivos"></div>
+    </div>
+
+    <div id="tab-historial" class="tab-content" style="display:none;">
       <div class="dashboard">
         <div class="card">
           <h3>💰 Ventas totales (entregados)</h3>
@@ -1076,10 +1093,6 @@
           <div class="value" id="totalEntregados">0</div>
         </div>
       </div>
-      <div id="listaActivos"></div>
-    </div>
-
-    <div id="tab-historial" class="tab-content" style="display:none;">
       <div id="listaHistorial"></div>
     </div>
 
@@ -1281,6 +1294,28 @@
           <button onclick="cancelarFormUsuario()" style="background:#e5e7eb; color:#374151; border:none; padding:10px 24px; border-radius:8px; font-weight:600; cursor:pointer;">Cancelar</button>
         </div>
         <p id="fu-error" style="color:#ef4444; font-size:0.85rem; margin-top:10px; display:none;"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Selección fecha resumen WhatsApp -->
+  <div id="modalResumenWA" class="modal" style="z-index:2100;">
+    <div class="modal-content" style="max-width:380px; text-align:center;">
+      <h3 style="margin-top:0; margin-bottom:6px;">📲 Enviar Resumen WhatsApp</h3>
+      <p style="color:#6b7280; font-size:0.9rem; margin-bottom:20px;">¿Qué pedidos quieres enviar a los grupos?</p>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button onclick="enviarResumenWhatsapp('mañana')"
+          style="padding:14px; border-radius:12px; border:none; background:#25D366; color:white; font-size:1rem; font-weight:700; cursor:pointer;">
+          📅 Pedidos de mañana
+        </button>
+        <button onclick="enviarResumenWhatsapp('hoy')"
+          style="padding:14px; border-radius:12px; border:2px solid #25D366; background:white; color:#16a34a; font-size:1rem; font-weight:700; cursor:pointer;">
+          🗓️ Pedidos de hoy
+        </button>
+        <button onclick="document.getElementById('modalResumenWA').style.display='none'"
+          style="padding:10px; border-radius:12px; border:1px solid #d1d5db; background:white; color:#6b7280; cursor:pointer;">
+          Cancelar
+        </button>
       </div>
     </div>
   </div>
@@ -1646,13 +1681,13 @@
       return '';
     }
 
-    function renderizarPedidos(lista, contenedorId, mostrarBotones = true) {
+    function renderizarPedidos(lista, contenedorId, mostrarBotones = true, ascendente = false) {
       let contenedor = document.getElementById(contenedorId);
       if (!contenedor) return;
       if (lista.length === 0) { contenedor.innerHTML = `<div class="empty-message">No hay pedidos con los filtros actuales.</div>`; return; }
       let grupos = {};
       lista.forEach(p => { let key = p.fechaEntrega || 'Sin fecha'; if (!grupos[key]) grupos[key] = []; grupos[key].push(p); });
-      let fechasOrdenadas = Object.keys(grupos).sort((a, b) => { if (a === 'Sin fecha') return 1; if (b === 'Sin fecha') return -1; return new Date(b) - new Date(a); });
+      let fechasOrdenadas = Object.keys(grupos).sort((a, b) => { if (a === 'Sin fecha') return 1; if (b === 'Sin fecha') return -1; return ascendente ? new Date(a) - new Date(b) : new Date(b) - new Date(a); });
       contenedor.innerHTML = '';
       for (let fecha of fechasOrdenadas) {
         let divFecha = document.createElement('div'); divFecha.className = 'fecha'; divFecha.innerHTML = `<h2>${formatearFechaLocal(fecha)}</h2>`;
@@ -1746,7 +1781,7 @@
       let pedidosFiltrados = aplicarFiltrosAPedidos(todosPedidos);
       let activos = pedidosFiltrados.filter(p => p.status !== 'Entregado');
       let historial = pedidosFiltrados.filter(p => p.status === 'Entregado');
-      renderizarPedidos(activos, 'listaActivos', true);
+      renderizarPedidos(activos, 'listaActivos', true, true);
       renderizarPedidos(historial, 'listaHistorial', true);
       actualizarDashboard();
       let activeTab = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
