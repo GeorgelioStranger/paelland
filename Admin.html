@@ -1678,6 +1678,15 @@
             let pc = pagoColors[p.metodoPago];
             pagoHtml = `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:8px; background:${pc.bg}; color:${pc.color}">${pc.icon} ${p.metodoPago}</span>`;
           }
+          if (p.anticipo > 0) {
+            const saldo = (p.total || 0) - p.anticipo;
+            pagoHtml += `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:6px; background:#fef9c3; color:#92400e;">💰 Anticipo: $${Math.round(p.anticipo).toLocaleString()}</span>`;
+            if (saldo > 0) {
+              pagoHtml += `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:4px; background:#fee2e2; color:#dc2626;">⚠️ Saldo: $${Math.round(saldo).toLocaleString()}</span>`;
+            } else {
+              pagoHtml += `<span style="display:inline-block; padding:3px 10px; border-radius:50px; font-size:0.68rem; font-weight:700; margin-left:4px; background:#dcfce7; color:#166534;">✅ Liquidado</span>`;
+            }
+          }
           let botonesHtml = '';
           if (mostrarBotones && p.status !== 'Entregado') {
             botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="descargarTicketPDF('${p._id || p.id}')">📥 PDF</button><button class="btn-proceso" style="background:#25D366;" onclick="enviarTicketWA('${p._id || p.id}',event)">📱 WA</button><button class="btn-proceso" onclick="cambiarStatus('${p._id || p.id}','En proceso')">🟡 En proceso</button><button class="btn-entregado" onclick="cambiarStatus('${p._id || p.id}','Entregado')">✅ Entregado</button><button class="btn-editar" style="background:#8b5cf6;" onclick="abrirEditorPedido('${p._id || p.id}')">✏️ Editar</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
@@ -1903,6 +1912,14 @@
         _pendingEntregadoId = id;
         const pedido = todosPedidos.find(p => p._id === id || String(p.id) === String(id));
         _pendingEsEvento = !!(pedido && pedido.tipo === 'evento');
+        // Si el anticipo ya cubre el total, marcar directamente sin preguntar método de pago
+        const anticipo = pedido?.anticipo || 0;
+        const total = pedido?.total || 0;
+        if (anticipo > 0 && anticipo >= total) {
+          _ejecutarCambioStatus(id, 'Entregado', pedido.metodoPagoAnticipo || null);
+          _pendingEntregadoId = null;
+          return;
+        }
         document.getElementById('modalMetodoPago').style.display = 'flex';
       } else {
         _ejecutarCambioStatus(id, nuevoStatus, null);
@@ -2571,7 +2588,21 @@
        <h3 style="margin-top:0">✏️ Editar Pedido #${p.id}</h3>
        <div style="background:#f1f5f9; padding:15px; border-radius:10px; margin-bottom:15px;">
          <label style="display:block; margin-bottom:5px; font-size:12px; color:#64748b;">TOTAL DEL PEDIDO ($)</label>
-         <input type="number" id="edit-total" value="${p.total || 0}" style="font-size:24px; font-weight:bold; color:var(--brand-red); width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:10px; box-sizing:border-box;">
+         <input type="number" id="edit-total" value="${p.total || 0}" style="font-size:24px; font-weight:bold; color:var(--brand-red); width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:10px; box-sizing:border-box;" oninput="actualizarSaldoEditor()">
+       </div>
+       <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:14px; margin-bottom:15px;">
+         <label style="display:block; margin-bottom:5px; font-size:12px; color:#92400e;">💰 ANTICIPO RECIBIDO ($)</label>
+         <input type="number" id="edit-anticipo" value="${p.anticipo || 0}" min="0" style="width:100%; border:1px solid #fde68a; border-radius:6px; padding:8px; box-sizing:border-box; font-size:16px;" oninput="actualizarSaldoEditor()">
+         <div style="margin-top:8px;">
+           <label style="font-size:11px; color:#92400e;">Método de pago del anticipo:</label>
+           <select id="edit-metodo-anticipo" style="width:100%; margin-top:4px; padding:6px; border-radius:6px; border:1px solid #fde68a;">
+             <option value="">Sin especificar</option>
+             <option value="Efectivo" ${(p.metodoPagoAnticipo==='Efectivo')?'selected':''}>💵 Efectivo</option>
+             <option value="Tarjeta" ${(p.metodoPagoAnticipo==='Tarjeta')?'selected':''}>💳 Tarjeta</option>
+             <option value="Transferencia" ${(p.metodoPagoAnticipo==='Transferencia')?'selected':''}>🏦 Transferencia</option>
+           </select>
+         </div>
+         <div id="edit-saldo-info" style="margin-top:6px; font-size:12px; font-weight:600; color:#dc2626;"></div>
        </div>
        <div style="max-height: 400px; overflow-y:auto; padding-right:5px; margin-bottom:15px;">
          <div style="margin-bottom:20px;">
@@ -2605,13 +2636,31 @@
       renderizarEditorPedido();
     };
 
+    window.actualizarSaldoEditor = function () {
+      const total = parseFloat(document.getElementById('edit-total')?.value) || 0;
+      const anticipo = parseFloat(document.getElementById('edit-anticipo')?.value) || 0;
+      const saldoDiv = document.getElementById('edit-saldo-info');
+      if (!saldoDiv) return;
+      if (anticipo > 0) {
+        const saldo = total - anticipo;
+        saldoDiv.textContent = saldo > 0 ? `⚠️ Saldo pendiente: $${Math.round(saldo).toLocaleString()}` : '✅ Pedido liquidado con el anticipo';
+        saldoDiv.style.color = saldo > 0 ? '#dc2626' : '#16a34a';
+      } else {
+        saldoDiv.textContent = '';
+      }
+    };
+
     window.guardarEdicionPedido = async function (id) {
       let newTotal = parseFloat(document.getElementById('edit-total').value) || 0;
       let newNotas = document.getElementById('edit-notas').value;
+      let newAnticipo = parseFloat(document.getElementById('edit-anticipo')?.value) || 0;
+      let newMetodoAnticipo = document.getElementById('edit-metodo-anticipo')?.value || null;
 
       // Preparar body
       pedidoEditando.total = newTotal;
       pedidoEditando.notas = newNotas;
+      pedidoEditando.anticipo = newAnticipo;
+      pedidoEditando.metodoPagoAnticipo = newMetodoAnticipo || null;
 
       try {
         let res = await authFetch('/pedidos/edit/' + id, {

@@ -866,6 +866,24 @@
             <span id="k-qtraslado-val">$0</span>
           </div>
           <div class="qline total"><span>Total</span><span id="k-qtotal">$0</span></div>
+          <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:12px; margin-top:10px;">
+            <div style="font-weight:600; font-size:0.82rem; color:#92400e; margin-bottom:6px;">💰 Anticipo recibido <span style="font-weight:400; color:#b45309;">(opcional)</span></div>
+            <input type="number" id="k-anticipo" placeholder="$0.00" min="0" step="0.01"
+              style="width:100%; border:1px solid #fde68a; border-radius:8px; padding:7px 10px; font-size:0.95rem; background:#fffef0; box-sizing:border-box;"
+              oninput="actualizarAnticipo('k')">
+            <div id="k-metodo-anticipo" style="display:none; margin-top:8px; display:none;">
+              <div style="font-size:0.78rem; color:#92400e; margin-bottom:4px;">Método de pago del anticipo:</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button type="button" onclick="seleccionarMetodoAnticipo('k','Efectivo')" id="k-ma-Efectivo"
+                  style="flex:1; padding:5px 8px; border-radius:8px; border:1.5px solid #d1d5db; background:white; font-size:0.78rem; cursor:pointer;">💵 Efectivo</button>
+                <button type="button" onclick="seleccionarMetodoAnticipo('k','Tarjeta')" id="k-ma-Tarjeta"
+                  style="flex:1; padding:5px 8px; border-radius:8px; border:1.5px solid #d1d5db; background:white; font-size:0.78rem; cursor:pointer;">💳 Tarjeta</button>
+                <button type="button" onclick="seleccionarMetodoAnticipo('k','Transferencia')" id="k-ma-Transferencia"
+                  style="flex:1; padding:5px 8px; border-radius:8px; border:1.5px solid #d1d5db; background:white; font-size:0.78rem; cursor:pointer;">🏦 Transf.</button>
+              </div>
+            </div>
+            <div id="k-saldo-info" style="display:none; font-size:0.82rem; color:#dc2626; font-weight:600; margin-top:6px;"></div>
+          </div>
           <div class="qbox-actions">
             <button id="k-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%"
               onclick="enviarWhatsAppAutomatico('k')">✅ Enviar a WhatsApp</button>
@@ -1004,6 +1022,24 @@
             <span id="e-qtraslado-val">$0</span>
           </div>
           <div class="qline total"><span>Total</span><span id="e-qtotal">$0</span></div>
+          <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:12px; margin-top:10px;">
+            <div style="font-weight:600; font-size:0.82rem; color:#92400e; margin-bottom:6px;">💰 Anticipo recibido <span style="font-weight:400; color:#b45309;">(opcional)</span></div>
+            <input type="number" id="e-anticipo" placeholder="$0.00" min="0" step="0.01"
+              style="width:100%; border:1px solid #fde68a; border-radius:8px; padding:7px 10px; font-size:0.95rem; background:#fffef0; box-sizing:border-box;"
+              oninput="actualizarAnticipo('e')">
+            <div id="e-metodo-anticipo" style="display:none;">
+              <div style="font-size:0.78rem; color:#92400e; margin-bottom:4px; margin-top:8px;">Método de pago del anticipo:</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button type="button" onclick="seleccionarMetodoAnticipo('e','Efectivo')" id="e-ma-Efectivo"
+                  style="flex:1; padding:5px 8px; border-radius:8px; border:1.5px solid #d1d5db; background:white; font-size:0.78rem; cursor:pointer;">💵 Efectivo</button>
+                <button type="button" onclick="seleccionarMetodoAnticipo('e','Tarjeta')" id="e-ma-Tarjeta"
+                  style="flex:1; padding:5px 8px; border-radius:8px; border:1.5px solid #d1d5db; background:white; font-size:0.78rem; cursor:pointer;">💳 Tarjeta</button>
+                <button type="button" onclick="seleccionarMetodoAnticipo('e','Transferencia')" id="e-ma-Transferencia"
+                  style="flex:1; padding:5px 8px; border-radius:8px; border:1.5px solid #d1d5db; background:white; font-size:0.78rem; cursor:pointer;">🏦 Transf.</button>
+              </div>
+            </div>
+            <div id="e-saldo-info" style="display:none; font-size:0.82rem; color:#dc2626; font-weight:600; margin-top:6px;"></div>
+          </div>
           <div class="qbox-actions">
             <button id="e-btn-enviar" class="btn btn-primary btn-disabled" style="width:100%"
               onclick="enviarWhatsAppAutomatico('e')">✅ Enviar a WhatsApp</button>
@@ -1485,6 +1521,10 @@
           data.costoEnvio = data.costoFijo + (data.distancia * data.costoKm);
         }
         data.total = parseFloat(document.getElementById("k-qtotal").textContent.replace('$', '').replace(/\./g, '').replace(',', ''));
+        const kAnticipo = parseFloat(document.getElementById('k-anticipo').value) || 0;
+        if (kAnticipo > 0 && !anticipoMetodo['k']) { alert('Selecciona el método de pago del anticipo.'); return null; }
+        data.anticipo = kAnticipo;
+        data.metodoPagoAnticipo = anticipoMetodo['k'] || null;
 
       } else {
         const checkC = document.getElementById("e-cliente").value.trim();
@@ -1517,8 +1557,48 @@
           data.costoEnvio = data.costoFijo + (data.distancia * data.costoKm);
         }
         data.total = parseFloat(document.getElementById("e-qtotal").textContent.replace('$', '').replace(/\./g, '').replace(',', ''));
+        const eAnticipo = parseFloat(document.getElementById('e-anticipo').value) || 0;
+        if (eAnticipo > 0 && !anticipoMetodo['e']) { alert('Selecciona el método de pago del anticipo.'); return null; }
+        data.anticipo = eAnticipo;
+        data.metodoPagoAnticipo = anticipoMetodo['e'] || null;
       }
       return data;
+    }
+
+    // ---------- ANTICIPO ----------
+    const anticipoMetodo = { k: null, e: null };
+
+    function actualizarAnticipo(tipo) {
+      const monto = parseFloat(document.getElementById(`${tipo}-anticipo`).value) || 0;
+      const totalEl = document.getElementById(`${tipo}-qtotal`);
+      const total = parseFloat((totalEl?.textContent || '0').replace(/[^0-9.]/g, '')) || 0;
+      const metodoDiv = document.getElementById(`${tipo}-metodo-anticipo`);
+      const saldoDiv = document.getElementById(`${tipo}-saldo-info`);
+      if (monto > 0) {
+        metodoDiv.style.display = 'block';
+        const saldo = total - monto;
+        saldoDiv.style.display = 'block';
+        saldoDiv.textContent = saldo > 0 ? `⚠️ Saldo pendiente: $${Math.round(saldo).toLocaleString('es-MX')}` : '✅ Pedido liquidado con el anticipo';
+        saldoDiv.style.color = saldo > 0 ? '#dc2626' : '#16a34a';
+      } else {
+        metodoDiv.style.display = 'none';
+        saldoDiv.style.display = 'none';
+        anticipoMetodo[tipo] = null;
+        ['Efectivo','Tarjeta','Transferencia'].forEach(m => {
+          const btn = document.getElementById(`${tipo}-ma-${m}`);
+          if (btn) { btn.style.background = 'white'; btn.style.borderColor = '#d1d5db'; }
+        });
+      }
+    }
+
+    function seleccionarMetodoAnticipo(tipo, metodo) {
+      anticipoMetodo[tipo] = metodo;
+      ['Efectivo','Tarjeta','Transferencia'].forEach(m => {
+        const btn = document.getElementById(`${tipo}-ma-${m}`);
+        if (!btn) return;
+        if (m === metodo) { btn.style.background = '#D85A30'; btn.style.color = 'white'; btn.style.borderColor = '#D85A30'; }
+        else { btn.style.background = 'white'; btn.style.color = ''; btn.style.borderColor = '#d1d5db'; }
+      });
     }
 
     function limpiarFormulario(tipo) {
@@ -1539,6 +1619,18 @@
         eItems = E_MENU.map(i => ({ ...i }));
         eInit();
       }
+      // Limpiar anticipo
+      const anticipoInput = document.getElementById(`${tipo}-anticipo`);
+      if (anticipoInput) anticipoInput.value = '';
+      anticipoMetodo[tipo] = null;
+      const metodoDiv = document.getElementById(`${tipo}-metodo-anticipo`);
+      if (metodoDiv) metodoDiv.style.display = 'none';
+      const saldoDiv = document.getElementById(`${tipo}-saldo-info`);
+      if (saldoDiv) saldoDiv.style.display = 'none';
+      ['Efectivo','Tarjeta','Transferencia'].forEach(m => {
+        const btn = document.getElementById(`${tipo}-ma-${m}`);
+        if (btn) { btn.style.background = 'white'; btn.style.color = ''; btn.style.borderColor = '#d1d5db'; }
+      });
     }
 
     // ---------- GUARDAR PEDIDO (localStorage + backend) ----------
@@ -1684,6 +1776,8 @@
         horaEntrega: data.hora,
         fechaEntrega: fechaEntregaReal,
         total: data.total,
+        anticipo: data.anticipo || 0,
+        metodoPagoAnticipo: data.metodoPagoAnticipo || null,
         atendidoPor: localStorage.getItem('user_name') || ''
       };
 

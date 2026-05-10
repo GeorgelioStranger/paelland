@@ -160,6 +160,16 @@ function generarTicketPDF(pedido) {
                     <td class="left">TOTAL M.N.</td>
                     <td class="right">$` + totalVenta.toLocaleString("es-MX") + `</td>
                 </tr>
+                ` + (pedido.anticipo > 0 ? (() => {
+                    const saldo = totalVenta - pedido.anticipo;
+                    let rows = `<tr><td class="left" style="color:#92400e; font-size:12px;">Anticipo pagado${pedido.metodoPagoAnticipo ? ' (' + pedido.metodoPagoAnticipo + ')' : ''}</td><td class="right" style="color:#92400e; font-size:12px;">-$` + pedido.anticipo.toLocaleString("es-MX") + `</td></tr>`;
+                    if (saldo > 0) {
+                        rows += `<tr><td class="left" style="color:#dc2626; font-weight:700; font-size:13px;">SALDO PENDIENTE</td><td class="right" style="color:#dc2626; font-weight:700; font-size:13px;">$` + saldo.toLocaleString("es-MX") + `</td></tr>`;
+                    } else {
+                        rows += `<tr><td colspan="2" style="color:#16a34a; font-size:11px; text-align:center; padding-top:4px;">✅ Pedido liquidado con anticipo</td></tr>`;
+                    }
+                    return rows;
+                })() : '') + `
             </tfoot>
         </table>
         <div class="divider"></div>

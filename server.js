@@ -54,6 +54,8 @@ const pedidoSchema = new mongoose.Schema({
   total: Number,
   status: { type: String, default: 'Pendiente' },
   metodoPago: String,
+  anticipo: { type: Number, default: 0 },
+  metodoPagoAnticipo: String,
   notas: String,
   extras: Array,
   createdAt: { type: Date, default: Date.now }
@@ -268,6 +270,9 @@ app.put('/pedidos/edit/:id', authMiddleware, async (req, res) => {
       extras: req.body.extras,
       notas: req.body.notas,
       total: req.body.total,
+      anticipo: req.body.anticipo ?? undefined,
+      metodoPagoAnticipo: req.body.metodoPagoAnticipo ?? undefined,
+      metodoPago: req.body.metodoPago ?? undefined,
       fechaEntrega: req.body.fechaEntrega,
       horaEntrega: req.body.horaEntrega,
       tipoEntrega: req.body.tipoEntrega,
@@ -665,8 +670,22 @@ async function generarPDFBuffer(pedido, userName = '') {
   const yTotal = doc.y;
   doc.text('TOTAL M.N.', L, yTotal, { width: 120, lineBreak: false });
   doc.text(`$${totalVenta.toLocaleString('es-MX')}`, L, yTotal, { width: CONTENT_W, align: 'right' });
-  doc.moveDown(1.2);
+  doc.moveDown(0.8);
 
+  // Anticipo y saldo pendiente
+  if (pedido.anticipo > 0) {
+    const saldo = totalVenta - pedido.anticipo;
+    doc.font('Helvetica').fontSize(9).fillColor('#92400e');
+    drawRow(`Anticipo (${pedido.metodoPagoAnticipo || 'pagado'})`, `-$${pedido.anticipo.toLocaleString('es-MX')}`);
+    if (saldo > 0) {
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#dc2626');
+      drawRow('SALDO PENDIENTE', `$${saldo.toLocaleString('es-MX')}`);
+    }
+    doc.font('Helvetica').fontSize(9).fillColor('#000000');
+    doc.moveDown(0.4);
+  }
+
+  doc.moveDown(0.4);
   doc.font('Helvetica').fontSize(10).text('¡Gracias por tu preferencia!', L, doc.y, { width: CONTENT_W, align: 'center' });
   doc.moveDown(0.8);
 
