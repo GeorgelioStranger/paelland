@@ -1407,6 +1407,58 @@
       if (p) generarTicketPDF(p);
     }
 
+    async function descargarTicketPDF(id) {
+      try {
+        const res = await fetch(`/pedidos/${id}/ticket-pdf`, {
+          headers: { 'Authorization': 'Bearer ' + localStorage.getItem('auth_token') }
+        });
+        if (!res.ok) { alert('Error al generar el PDF'); return; }
+        const blob = await res.blob();
+        const cd = res.headers.get('Content-Disposition') || '';
+        const fileName = cd.match(/filename="(.+)"/)?.[1] || 'ticket.pdf';
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName; a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) { alert('Error de conexión al generar PDF'); }
+    }
+
+    async function enviarTicketWA(id, event) {
+      const p = todosPedidos.find(x => x._id === id || String(x.id) === String(id));
+      if (!p) return;
+      if (!p.telefono) {
+        alert('Este pedido no tiene teléfono registrado. Descargando PDF...');
+        descargarTicketPDF(id);
+        return;
+      }
+      const btn = event?.currentTarget || event?.target;
+      const orig = btn ? btn.innerHTML : '';
+      if (btn) { btn.innerHTML = '⏳'; btn.disabled = true; }
+      try {
+        const payload = {
+          folio: p.folio, nombre: p.nombre || p.cliente,
+          telefono: p.telefono, tipo: p.tipo,
+          items: p.itemsDetalle || p.items || [],
+          extras: p.extras || [], notas: p.notas || '',
+          tipoEntrega: p.tipoEntrega || p.entrega,
+          direccion: p.direccion || '',
+          distancia: p.distancia || 0, costoKm: p.costoKm || 0,
+          costoFijo: p.costoFijo || 0, costoEnvio: p.costoEnvio || 0,
+          horaEntrega: p.horaEntrega, fechaEntrega: p.fechaEntrega,
+          total: p.total, atendidoPor: p.atendidoPor || localStorage.getItem('user_name') || ''
+        };
+        const res = await fetch('/pedidos/enviar-ticket-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('auth_token') },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (res.ok) alert('✅ Ticket enviado por WhatsApp a ' + (p.nombre || p.cliente));
+        else alert('Error: ' + (result.error || 'Desconocido'));
+      } catch (e) { alert('Error de conexión'); }
+      finally { if (btn) { btn.innerHTML = orig; btn.disabled = false; } }
+    }
+
     function aplicarFiltrosAPedidos(pedidos) {
       return pedidos.filter(p => {
         if (filtros.texto && !`${p.nombre} ${p.telefono}`.toLowerCase().includes(filtros.texto.toLowerCase())) return false;
@@ -1628,9 +1680,9 @@
           }
           let botonesHtml = '';
           if (mostrarBotones && p.status !== 'Entregado') {
-            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button><button class="btn-proceso" onclick="cambiarStatus('${p._id || p.id}','En proceso')">🟡 En proceso</button><button class="btn-entregado" onclick="cambiarStatus('${p._id || p.id}','Entregado')">✅ Entregado</button><button class="btn-editar" style="background:#8b5cf6;" onclick="abrirEditorPedido('${p._id || p.id}')">✏️ Editar</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
+            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="descargarTicketPDF('${p._id || p.id}')">📥 PDF</button><button class="btn-proceso" style="background:#25D366;" onclick="enviarTicketWA('${p._id || p.id}',event)">📱 WA</button><button class="btn-proceso" onclick="cambiarStatus('${p._id || p.id}','En proceso')">🟡 En proceso</button><button class="btn-entregado" onclick="cambiarStatus('${p._id || p.id}','Entregado')">✅ Entregado</button><button class="btn-editar" style="background:#8b5cf6;" onclick="abrirEditorPedido('${p._id || p.id}')">✏️ Editar</button><button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           } else if (mostrarBotones && p.status === 'Entregado') {
-            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="imprimirTicketPorId('${p._id || p.id}')">🖨️ Ticket</button>${userRole === 'admin' ? `<button style="background:#f59e0b; color:white; border:none; padding:6px 14px; border-radius:40px; font-weight:500; cursor:pointer; margin-right:8px; margin-top:12px;" onclick="revertirAPendiente('${p._id || p.id}')">↩️ Regresar</button>` : ''}<button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
+            botonesHtml = `<div><button class="btn-proceso" style="background:#4b5563;" onclick="descargarTicketPDF('${p._id || p.id}')">📥 PDF</button><button class="btn-proceso" style="background:#25D366;" onclick="enviarTicketWA('${p._id || p.id}',event)">📱 WA</button>${userRole === 'admin' ? `<button style="background:#f59e0b; color:white; border:none; padding:6px 14px; border-radius:40px; font-weight:500; cursor:pointer; margin-right:8px; margin-top:12px;" onclick="revertirAPendiente('${p._id || p.id}')">↩️ Regresar</button>` : ''}<button class="btn-eliminar" onclick="eliminarPedido('${p._id || p.id}')">🗑 Eliminar</button></div>`;
           }
           let div = document.createElement('div'); div.className = 'pedido';
           div.innerHTML = `<div><strong>${p.nombre || 'Sin nombre'}</strong> ${estadoHtml}${pagoHtml}</div>

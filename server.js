@@ -535,9 +535,185 @@ app.delete('/usuarios/:id', authMiddleware, async (req, res) => {
 const whatsappModule = require('./whatsapp-scheduler');
 whatsappModule.iniciarScheduler(app, Pedido);
 
-// =================== ENVÍO DE PDF POR WHATSAPP ===================
+// =================== GENERACIÓN DE PDF (helper reutilizable) ===================
 const PDFDocument = require('pdfkit');
 
+async function generarPDFBuffer(pedido, userName = '') {
+  const PAGE_W = 226.77;
+  const L = 30;
+  const R = PAGE_W - 30;
+  const CONTENT_W = R - L;
+
+  const doc = new PDFDocument({ margin: 30, size: [PAGE_W, 700] });
+  const buffers = [];
+  doc.on('data', buffers.push.bind(buffers));
+
+  const tipoTxt = pedido.tipo === 'venta_directa' ? 'VENTA DE MOSTRADOR'
+    : (pedido.tipo === 'evento' ? 'PEDIDO EVENTO' : 'PEDIDO POR KILO');
+
+  const now = new Date();
+  const fmtMX = (opts) => new Intl.DateTimeFormat('es-MX', { timeZone: 'America/Merida', ...opts }).format(now);
+  const fDate = fmtMX({ day: 'numeric', month: 'numeric', year: 'numeric' });
+  const fTime = fmtMX({ hour: '2-digit', minute: '2-digit', hour12: true });
+  const fechaTxt = `${fDate} ${fTime}`;
+
+  const folioVal = pedido.folio ? pedido.folio.toString().slice(-6).toUpperCase() : now.getTime().toString().slice(-6);
+  const nombreCliente = pedido.cliente || pedido.nombre || '';
+  const totalVenta = pedido.total || 0;
+  const atendidoPor = pedido.atendidoPor || userName || '';
+  const generadoPor = userName || 'Sistema';
+
+  // Normalizar items: acepta tanto 'items' (cotizador) como 'itemsDetalle' (DB)
+  const items = pedido.items || pedido.itemsDetalle || [];
+
+  const LOGO_MAX_H = 65;
+  const logoStartY = doc.y;
+  const logoPath = path.join(__dirname, 'logoPaelland.png');
+  try {
+    doc.image(logoPath, L, logoStartY, { fit: [CONTENT_W, LOGO_MAX_H], align: 'center', valign: 'top' });
+    doc.y = logoStartY + LOGO_MAX_H;
+  } catch (_) {
+    doc.font('Helvetica-Bold').fontSize(16).text('LA PAELLA', L, doc.y, { width: CONTENT_W, align: 'center' });
+  }
+  doc.moveDown(0.4);
+  doc.font('Helvetica').fontSize(10).text('Mérida, Yucatán', L, doc.y, { width: CONTENT_W, align: 'center' });
+  doc.moveDown(0.8);
+
+  const META_LABEL_W = 58;
+  const META_VAL_X = L + META_LABEL_W;
+  const META_VAL_W = CONTENT_W - META_LABEL_W;
+  doc.font('Helvetica').fontSize(9);
+
+  const drawMeta = (label, value) => {
+    const y = doc.y;
+    doc.text(label, L, y, { width: META_LABEL_W, lineBreak: false });
+    doc.text(value, META_VAL_X, y, { width: META_VAL_W });
+    doc.moveDown(0.15);
+  };
+  drawMeta('F. Emisión:', fechaTxt);
+  if (pedido.fechaEntrega) {
+    const [fy, fm, fd] = pedido.fechaEntrega.split('-');
+    const fEntregaTxt = `${fd}/${fm}/${fy}${pedido.horaEntrega ? ' ' + pedido.horaEntrega : ''}`;
+    drawMeta('F. Entrega:', fEntregaTxt);
+  }
+  drawMeta('Folio:', `#${folioVal}`);
+  drawMeta('Tipo:', tipoTxt);
+  if (nombreCliente) drawMeta('Cliente:', nombreCliente);
+  const tipoEnvioFinalMeta = pedido.tipoEntrega || pedido.entrega;
+  if (tipoEnvioFinalMeta === 'domicilio' && pedido.direccion) drawMeta('Dirección:', pedido.direccion);
+  if (atendidoPor) drawMeta('Atendido por:', atendidoPor);
+
+  doc.moveDown(0.5);
+  doc.moveTo(L, doc.y).lineTo(R, doc.y).dash(2, { space: 2 }).stroke();
+  doc.moveDown(0.5);
+
+  doc.font('Helvetica-Bold').fontSize(9);
+  const yHead = doc.y;
+  doc.text('CANT. / CONCEPTO', L, yHead, { width: 120, lineBreak: false });
+  doc.text('IMPORTE', L, yHead, { width: CONTENT_W, align: 'right' });
+  doc.moveDown(0.4);
+  doc.font('Helvetica').fontSize(9);
+
+  const drawRow = (label, priceStr) => {
+    const startY = doc.y;
+    doc.text(label, L, startY, { width: 120 });
+    const afterLabelY = doc.y;
+    doc.text(priceStr, L, startY, { width: CONTENT_W, align: 'right' });
+    if (afterLabelY > doc.y) {
+      doc.moveDown((afterLabelY - doc.y) / doc.currentLineHeight(true));
+    }
+  };
+
+  // Productos — soporta precio, precio_por_persona y precio_unitario
+  items.forEach(item => {
+    const qty = pedido.tipo === 'evento' ? (item.personas || 0) : (item.cantidad || 0);
+    if (qty <= 0) return;
+    const nombre = item.nombre || '';
+    const precio = item.precio || item.precio_por_persona || item.precio_unitario || 0;
+    const sub = qty * precio;
+    const label = pedido.tipo === 'evento' ? `${qty} pax ${nombre}` : `${qty}x ${nombre}`;
+    drawRow(label, `$${sub.toLocaleString('es-MX')}`);
+  });
+
+  // Extras
+  if (pedido.extras && Array.isArray(pedido.extras)) {
+    pedido.extras.forEach(ex => {
+      if (ex.nombre && ex.cantidad > 0) {
+        const sub = ex.cantidad * (ex.precio || 0);
+        drawRow(`+ ${ex.cantidad}x ${ex.nombre}`, `$${sub.toLocaleString('es-MX')}`);
+      }
+    });
+  }
+
+  // Envío
+  const tipoEnvioFinal = pedido.tipoEntrega || pedido.entrega;
+  if (tipoEnvioFinal === 'domicilio') {
+    let costoEnvio = pedido.costoEnvio || 0;
+    if (!costoEnvio && pedido.costoFijo != null) costoEnvio = pedido.costoFijo + ((pedido.distancia || 0) * (pedido.costoKm || 0));
+    if (costoEnvio > 0) drawRow('Envío Domicilio', `$${costoEnvio.toLocaleString('es-MX')}`);
+  } else if (pedido.tipo !== 'venta_directa') {
+    doc.fontSize(8).text('Recolección en Mostrador (Pick-up)', L, doc.y, { width: CONTENT_W, align: 'center', oblique: true });
+    doc.fontSize(9);
+  }
+
+  doc.moveDown(0.5);
+  doc.moveTo(L, doc.y).lineTo(R, doc.y).undash().lineWidth(1.5).stroke();
+  doc.lineWidth(1);
+  doc.moveDown(0.5);
+
+  doc.font('Helvetica-Bold').fontSize(13);
+  const yTotal = doc.y;
+  doc.text('TOTAL M.N.', L, yTotal, { width: 120, lineBreak: false });
+  doc.text(`$${totalVenta.toLocaleString('es-MX')}`, L, yTotal, { width: CONTENT_W, align: 'right' });
+  doc.moveDown(1.2);
+
+  doc.font('Helvetica').fontSize(10).text('¡Gracias por tu preferencia!', L, doc.y, { width: CONTENT_W, align: 'center' });
+  doc.moveDown(0.8);
+
+  doc.fillColor('#999999').font('Helvetica').fontSize(7)
+    .text(`Generado por: ${generadoPor}`, L, doc.y, { width: CONTENT_W, align: 'right' });
+  doc.fillColor('#000000');
+
+  doc.end();
+
+  const pdfBuffer = await new Promise((resolve, reject) => {
+    doc.on('end', () => resolve(Buffer.concat(buffers)));
+    doc.on('error', reject);
+  });
+
+  // Nombre de archivo
+  const clienteSlug = (nombreCliente || 'cliente')
+    .replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_áéíóúÁÉÍÓÚñÑ]/g, '');
+  const hoyMX = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+  const dd = String(hoyMX.getDate()).padStart(2, '0');
+  const mm = String(hoyMX.getMonth() + 1).padStart(2, '0');
+  const yy = hoyMX.getFullYear();
+  const fileName = `ticket_lapaella_${clienteSlug}_${dd}${mm}${yy}.pdf`;
+
+  return { buffer: pdfBuffer, fileName };
+}
+
+// =================== DESCARGAR TICKET PDF (desde Admin) ===================
+app.get('/pedidos/:id/ticket-pdf', authMiddleware, async (req, res) => {
+  try {
+    let pedido = null;
+    if (req.params.id.match(/^[a-f\d]{24}$/i)) {
+      pedido = await Pedido.findById(req.params.id);
+    }
+    if (!pedido) pedido = await Pedido.findOne({ id: Number(req.params.id) });
+    if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    const { buffer, fileName } = await generarPDFBuffer(pedido.toObject(), req.userName);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Error al generar PDF:', error);
+    res.status(500).json({ error: error.message || 'Error al generar PDF' });
+  }
+});
+
+// =================== ENVÍO DE PDF POR WHATSAPP ===================
 app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => {
   try {
     if (!whatsappModule.isWhatsAppReady) {
@@ -549,194 +725,48 @@ app.post('/pedidos/enviar-ticket-whatsapp', authMiddleware, async (req, res) => 
       return res.status(400).json({ error: 'Faltan datos del pedido o el teléfono.' });
     }
 
-    // 1. Generar el PDF en memoria
-    const PAGE_W = 226.77;
-    const L = 30;
-    const R = PAGE_W - 30;
-    const CONTENT_W = R - L;
-
-    const doc = new PDFDocument({ margin: 30, size: [PAGE_W, 700] });
-    const buffers = [];
-    doc.on('data', buffers.push.bind(buffers));
-
-    const tipoTxt = pedido.tipo === 'venta_directa' ? 'VENTA DE MOSTRADOR'
-      : (pedido.tipo === 'evento' ? 'PEDIDO EVENTO' : 'PEDIDO POR KILO');
-
-    const now = new Date();
-    const fmtMX = (opts) => new Intl.DateTimeFormat('es-MX', { timeZone: 'America/Merida', ...opts }).format(now);
-    const fDate = fmtMX({ day: 'numeric', month: 'numeric', year: 'numeric' });
-    const fTime = fmtMX({ hour: '2-digit', minute: '2-digit', hour12: true });
-    const fechaTxt = `${fDate} ${fTime}`;
-
-    const folioVal = pedido.folio ? pedido.folio.toString().slice(-6).toUpperCase() : now.getTime().toString().slice(-6);
+    const { buffer: pdfBuffer, fileName } = await generarPDFBuffer(pedido, req.userName);
     const nombreCliente = pedido.cliente || pedido.nombre || '';
     const totalVenta = pedido.total || 0;
-    const atendidoPor = pedido.atendidoPor || req.userName || '';
-    const generadoPor = req.userName || (req.userRole === 'admin' ? 'Admin' : 'Empleado');
 
-    // Logo centrado — pdfkit centra dentro del bounding box (L, ancho completo del contenido)
-    const LOGO_MAX_H = 65;
-    const logoStartY = doc.y;
-    const logoPath = path.join(__dirname, 'logoPaelland.png');
-    try {
-      doc.image(logoPath, L, logoStartY, { fit: [CONTENT_W, LOGO_MAX_H], align: 'center', valign: 'top' });
-      doc.y = logoStartY + LOGO_MAX_H; // image() no avanza doc.y, lo hacemos manual
-    } catch (_) {
-      doc.font('Helvetica-Bold').fontSize(16).text('LA PAELLA', L, doc.y, { width: CONTENT_W, align: 'center' });
-    }
-    doc.moveDown(0.4);
-    doc.font('Helvetica').fontSize(10).text('Mérida, Yucatán', L, doc.y, { width: CONTENT_W, align: 'center' });
-    doc.moveDown(0.8);
+    // Mensaje de texto WhatsApp
+    const items = pedido.items || pedido.itemsDetalle || [];
+    const clienteStr = nombreCliente || 'Cliente';
+    const fechaStr = pedido.fechaEntrega ? new Date(pedido.fechaEntrega + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const horaStr = pedido.horaEntrega ? `a las ${pedido.horaEntrega}` : '';
 
-    // Meta info: etiqueta fija + valor con más espacio para no cortar línea
-    const META_LABEL_W = 58;
-    const META_VAL_X = L + META_LABEL_W;
-    const META_VAL_W = CONTENT_W - META_LABEL_W;
-    doc.font('Helvetica').fontSize(9);
-
-    const drawMeta = (label, value) => {
-      const y = doc.y;
-      doc.text(label, L, y, { width: META_LABEL_W, lineBreak: false });
-      doc.text(value, META_VAL_X, y, { width: META_VAL_W });
-      doc.moveDown(0.15);
-    };
-    drawMeta('F. Emisión:', fechaTxt);
-    if (pedido.fechaEntrega) {
-      const [fy, fm, fd] = pedido.fechaEntrega.split('-');
-      const fEntregaTxt = `${fd}/${fm}/${fy}${pedido.horaEntrega ? ' ' + pedido.horaEntrega : ''}`;
-      drawMeta('F. Entrega:', fEntregaTxt);
-    }
-    drawMeta('Folio:', `#${folioVal}`);
-    drawMeta('Tipo:', tipoTxt);
-    if (nombreCliente) drawMeta('Cliente:', nombreCliente);
-    const tipoEnvioFinalMeta = pedido.tipoEntrega || pedido.entrega;
-    if (tipoEnvioFinalMeta === 'domicilio' && pedido.direccion) drawMeta('Dirección:', pedido.direccion);
-    if (atendidoPor) drawMeta('Atendido por:', atendidoPor);
-
-    doc.moveDown(0.5);
-    doc.moveTo(L, doc.y).lineTo(R, doc.y).dash(2, { space: 2 }).stroke();
-    doc.moveDown(0.5);
-
-    // Encabezado tabla (dos columnas con posición Y fija)
-    doc.font('Helvetica-Bold').fontSize(9);
-    const yHead = doc.y;
-    doc.text('CANT. / CONCEPTO', L, yHead, { width: 120, lineBreak: false });
-    doc.text('IMPORTE', L, yHead, { width: CONTENT_W, align: 'right' });
-    doc.moveDown(0.4);
-    doc.font('Helvetica').fontSize(9);
-
-    // Fila con concepto a la izquierda y precio anclado a la derecha en la misma Y
-    const drawRow = (label, priceStr) => {
-      const startY = doc.y;
-      doc.text(label, L, startY, { width: 120 });
-      const afterLabelY = doc.y;
-      doc.text(priceStr, L, startY, { width: CONTENT_W, align: 'right' });
-      if (afterLabelY > doc.y) {
-        doc.moveDown((afterLabelY - doc.y) / doc.currentLineHeight(true));
-      }
-    };
-
-    // Productos (solo con cantidad > 0)
-    if (pedido.items && Array.isArray(pedido.items)) {
-      pedido.items.forEach(item => {
-        const qty = pedido.tipo === 'evento' ? (item.personas || 0) : (item.cantidad || 0);
-        if (qty <= 0) return;
-        const nombre = item.nombre || '';
-        const sub = qty * (item.precio || 0);
-        const label = pedido.tipo === 'evento' ? `${qty} pax ${nombre}` : `${qty}x ${nombre}`;
-        drawRow(label, `$${sub.toLocaleString('es-MX')}`);
-      });
-    }
-
-    // Extras
-    if (pedido.extras && Array.isArray(pedido.extras)) {
-      pedido.extras.forEach(ex => {
-        if (ex.nombre && ex.cantidad > 0) {
-          const sub = ex.cantidad * (ex.precio || 0);
-          drawRow(`+ ${ex.cantidad}x ${ex.nombre}`, `$${sub.toLocaleString('es-MX')}`);
-        }
-      });
-    }
-
-    // Envío
-    const tipoEnvioFinal = pedido.tipoEntrega || pedido.entrega;
-    if (tipoEnvioFinal === 'domicilio') {
-      let costoEnvio = pedido.costoEnvio || 0;
-      if (!costoEnvio && pedido.costoFijo != null) costoEnvio = pedido.costoFijo + ((pedido.distancia || 0) * (pedido.costoKm || 0));
-      if (costoEnvio > 0) drawRow('Envío Domicilio', `$${costoEnvio.toLocaleString('es-MX')}`);
-    } else if (pedido.tipo !== 'venta_directa') {
-      doc.fontSize(8).text('Recolección en Mostrador (Pick-up)', L, doc.y, { width: CONTENT_W, align: 'center', oblique: true });
-      doc.fontSize(9);
-    }
-
-    doc.moveDown(0.5);
-    doc.moveTo(L, doc.y).lineTo(R, doc.y).undash().lineWidth(1.5).stroke();
-    doc.lineWidth(1);
-    doc.moveDown(0.5);
-
-    // Total (misma técnica de dos columnas)
-    doc.font('Helvetica-Bold').fontSize(13);
-    const yTotal = doc.y;
-    doc.text('TOTAL M.N.', L, yTotal, { width: 120, lineBreak: false });
-    doc.text(`$${totalVenta.toLocaleString('es-MX')}`, L, yTotal, { width: CONTENT_W, align: 'right' });
-    doc.moveDown(1.2);
-
-    doc.font('Helvetica').fontSize(10).text('¡Gracias por tu preferencia!', L, doc.y, { width: CONTENT_W, align: 'center' });
-    doc.moveDown(0.8);
-
-    // Generado por (discreto, gris, pequeño)
-    doc.fillColor('#999999').font('Helvetica').fontSize(7)
-      .text(`Generado por: ${generadoPor}`, L, doc.y, { width: CONTENT_W, align: 'right' });
-    doc.fillColor('#000000');
-
-    doc.end();
-
-    // Promesa para esperar que termine el PDF
-    const pdfBuffer = await new Promise((resolve, reject) => {
-      doc.on('end', () => resolve(Buffer.concat(buffers)));
-      doc.on('error', reject);
+    let lineasText = '';
+    items.forEach(it => {
+      const qty = pedido.tipo === 'evento' ? (it.personas || 0) : (it.cantidad || 0);
+      if (qty <= 0) return;
+      const precio = it.precio || it.precio_por_persona || it.precio_unitario || 0;
+      const sub = qty * precio;
+      lineasText += `  • ${it.nombre} × ${qty} = $${sub.toLocaleString('es-MX')}\n`;
     });
-
-    // 2. Generar el mensaje de texto (mismo formato actual)
-    const clienteStr = pedido.cliente || pedido.nombre || "Cliente";
-    const fechaStr = pedido.fecha ? new Date(pedido.fecha + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" }) : "";
-    const horaStr = pedido.hora ? `a las ${pedido.hora}` : "";
-    
-    let lineasText = "";
-    if (pedido.items) {
-      pedido.items.forEach(it => {
-        const qty = it.cantidad || it.personas || 1;
-        const sub = qty * (it.precio || 0);
-        lineasText += `  • ${it.nombre} × ${qty} = $${sub.toLocaleString("es-MX")}\n`;
-      });
-    }
     if (pedido.extras) {
       pedido.extras.forEach(ex => {
         if (ex.nombre && ex.cantidad > 0) {
           const sub = ex.cantidad * (ex.precio || 0);
-          lineasText += `  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString("es-MX")}\n`;
+          lineasText += `  • ${ex.nombre} × ${ex.cantidad} = $${sub.toLocaleString('es-MX')}\n`;
         }
       });
     }
-    
-    let trasladoStr = "";
-    if (tipoEnvioFinal === "domicilio") {
-      const dist = pedido.distancia || 0;
+
+    const tipoEnvioFinal = pedido.tipoEntrega || pedido.entrega;
+    let trasladoStr = '';
+    if (tipoEnvioFinal === 'domicilio') {
       let costoEnvio = pedido.costoEnvio || 0;
-      if (!costoEnvio && pedido.costoFijo != null) costoEnvio = pedido.costoFijo + (dist * (pedido.costoKm || 0));
-      trasladoStr = `\n*Entrega a domicilio*\nTraslado: $${Math.round(costoEnvio).toLocaleString("es-MX")}\n`;
+      if (!costoEnvio && pedido.costoFijo != null) costoEnvio = pedido.costoFijo + ((pedido.distancia || 0) * (pedido.costoKm || 0));
+      trasladoStr = `\n*Entrega a domicilio*\nTraslado: $${Math.round(costoEnvio).toLocaleString('es-MX')}\n`;
     } else if (pedido.tipo !== 'venta_directa') {
-      trasladoStr = "\n*Pick up en local*\n";
+      trasladoStr = '\n*Pick up en local*\n';
     }
 
-    const notasStr = pedido.notas ? `\n*Notas:* ${pedido.notas}\n` : "";
-    const tituloMsg = pedido.tipo === 'evento' ? 'Pedido CONFIRMADA - EVENTO' : 'PEDIDO CONFIRMADO - PAELLA';
+    const notasStr = pedido.notas ? `\n*Notas:* ${pedido.notas}\n` : '';
+    const tituloMsg = pedido.tipo === 'evento' ? 'Pedido CONFIRMADO - EVENTO' : 'PEDIDO CONFIRMADO - PAELLA';
+    const mensajeTexto = `*${tituloMsg}*\n👤 ${clienteStr}\n📅 ${fechaStr} ${horaStr}\n\n*Productos:*\n${lineasText}${trasladoStr}${notasStr}\n*Total a pagar: $${Math.round(totalVenta).toLocaleString('es-MX')}*\n\nGracias por tu preferencia.`;
 
-    const mensajeTexto = `*${tituloMsg}*\n👤 ${clienteStr}\n📅 ${fechaStr} ${horaStr}\n\n*Productos:*\n${lineasText}${trasladoStr}${notasStr}\n*Total a pagar: $${Math.round(totalVenta).toLocaleString("es-MX")}*\n\nGracias por tu preferencia.`;
-
-    // 3. Enviar vía WhatsApp
     await whatsappModule.enviarPDFCliente(pedido.telefono, mensajeTexto, pdfBuffer, nombreCliente);
-
     res.json({ ok: true, mensaje: 'Mensaje y PDF enviados correctamente.' });
 
   } catch (error) {
